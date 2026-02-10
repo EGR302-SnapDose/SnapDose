@@ -1,55 +1,70 @@
-# EGR302-JR-Design-Group-3
-This is our GitHub repository for EGR302 JR Design Group 3.
+# SnapDose
 
-Within this repository, you will find the code for our type-1 diabetes app, which allows users to view their blood sugar history, administer insulin, and determine the calorie content of a food item.
+A comprehensive Type 1 Diabetes management application that centralizes blood sugar monitoring, AI-assisted carbohydrate estimation, and insulin pump control into a single interface.
 
-# Welcome to your Expo app 👋
+## Overview
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+SnapDose integrates real-time CGM data from Dexcom, computer vision-based carb estimation via the Gemini API, and direct insulin pump communication to eliminate the need for toggling between multiple apps. The goal is to reduce cognitive load, minimize manual entry errors, and give users better glycemic control.
 
-## Get started
+## Architecture
 
-1. Install dependencies
+- **Mobile App** -- React Native (Expo), targeting iOS and Android
+- **Backend API** -- Java Spring Boot, hosted on Google Cloud Run
+- **Database** -- Firestore (user profiles, meal logs, dosing history)
+- **Image Storage** -- Google Cloud Storage
+- **AI Analysis** -- Gemini API via Vertex AI for carbohydrate estimation from food photos
+- **CGM Integration** -- Dexcom API for real-time glucose data
+- **Pump Simulator** -- M5Stack CoreS3 (ESP32-P4) microcontroller, receiving bolus commands over secure connection
 
-   ```bash
-   npm install
-   ```
+## Getting Started
 
-2. Start the app
+### Prerequisites
 
-   ```bash
-   npx expo start
-   ```
+- Node.js (LTS)
+- npm
+- Expo CLI
+- iOS Simulator, Android Emulator, or Expo Go on a physical device
 
-In the output, you'll find options to open the app in a
+### Installation
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+```bash
+git clone https://github.com/<org>/EGR302-JR-Design-Group-3.git
+cd EGR302-JR-Design-Group-3
+npm install
+```
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+### Running the App
 
-## Get a fresh project
+```bash
+npx expo start
+```
 
-When you're ready, run:
+From there, open the app on your preferred target:
+
+- Press `i` for iOS Simulator
+- Press `a` for Android Emulator
+- Scan the QR code with Expo Go on a physical device
+
+### Microcontroller Setup
+
+The insulin pump simulator runs on an [M5Stack Tab5](https://www.amazon.com/dp/B0FHVKV21Y) IoT controller (ESP32-P4). It receives bolus delivery commands from the Spring Boot API and confirms successful delivery back to the app. Refer to the `/microcontroller` directory for firmware and pairing instructions.
+
+### Reset Project
+
+To start with a clean slate:
 
 ```bash
 npm run reset-project
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+This moves starter code to `app-example/` and creates a fresh `app/` directory.
 
-## Learn more
+## Team
 
-To learn more about developing your project with Expo, look at the following resources:
+- Ryan Stoffel (Team Lead)
+- Micah Suk
+- Payton Henry
+- Mili Anderson
+- Elijah Tabor
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+EGR 302: Jr. Design Project, Spring 2026 -- California Baptist University
