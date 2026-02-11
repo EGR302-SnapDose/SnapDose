@@ -1,55 +1,56 @@
-# EGR302-JR-Design-Group-3
-This is our GitHub repository for EGR302 JR Design Group 3.
+# SnapDose
 
-Within this repository, you will find the code for our type-1 diabetes app, which allows users to view their blood sugar history, administer insulin, and determine the calorie content of a food item.
+A comprehensive Type 1 Diabetes management application that centralizes blood sugar monitoring, AI-assisted carbohydrate estimation, and insulin pump control into a single interface.
 
-# Welcome to your Expo app 👋
+## Overview
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+SnapDose integrates real-time CGM data from Dexcom, computer vision-based carb estimation via the Gemini API, and direct insulin pump communication to eliminate the need for toggling between multiple apps. The goal is to reduce cognitive load, minimize manual entry errors, and give users better glycemic control.
 
-## Get started
+## Architecture
 
-1. Install dependencies
+- **Mobile App** -- React Native (Expo), targeting iOS and Android
+- **Backend API** -- Java Spring Boot, hosted on Google Cloud Run
+- **Database** -- Firestore (user profiles, meal logs, dosing history)
+- **Image Storage** -- Google Cloud Storage
+- **AI Analysis** -- Gemini API via Vertex AI for carbohydrate estimation from food photos
+- **CGM Integration** -- Dexcom API for real-time glucose data
+- **Pump Simulator** -- M5Stack CoreS3 (ESP32-P4) microcontroller, receiving bolus commands over secure connection
 
-   ```bash
-   npm install
-   ```
+## Getting Started
 
-2. Start the app
+### Prerequisites
 
-   ```bash
-   npx expo start
-   ```
+- Node.js (LTS)
+- npm
+- Expo CLI
+- iOS Simulator, Android Emulator, or Expo Go on a physical device
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+### Installation
 
 ```bash
-npm run reset-project
+git clone https://github.com/<org>/EGR302-JR-Design-Group-3.git
+cd EGR302-JR-Design-Group-3
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Running the App
 
-## Learn more
+```bash
+npx expo start
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+From there, open the app on your preferred target:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- Press `i` for iOS Simulator
+- Press `a` for Android Emulator
+- Scan the QR code with Expo Go on a physical device
 
-## Join the community
+## Team
 
-Join our community of developers creating universal apps.
+- Ryan Stoffel (Team Lead)
+- Payton Henry (Project Lead)
+- Micah Suk
+- Mili Anderson
+- Elijah Tabor
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+EGR 302: Jr. Design Project, Spring 2026 -- California Baptist University
