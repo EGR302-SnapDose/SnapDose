@@ -47,3 +47,7 @@ app-example
 
 expo-env.d.ts
 # @end expo-cli
+
+# React Native Dependencies
+/react-native-app/package-lock.json
+/react-native-app/package.json
