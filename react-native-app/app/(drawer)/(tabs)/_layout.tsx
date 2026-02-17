@@ -34,6 +34,15 @@ export default function TabLayout() {
             }}
         >
             <Tabs.Screen
+                name="camera"
+                options={{
+                    title: "Snap",
+                    tabBarIcon: ({ color }) => (
+                        <IconSymbol size={28} name="camera.fill" color={color} />
+                    )
+                }}
+            />
+            <Tabs.Screen
                 name="index"
                 options={{
                     title: "SnapDose",
@@ -43,7 +52,7 @@ export default function TabLayout() {
                 }}
             />
             <Tabs.Screen
-                name="explore"
+                name="dose"
                 options={{
                     title: "Dose Insulin",
                     tabBarIcon: ({ color }) => (
