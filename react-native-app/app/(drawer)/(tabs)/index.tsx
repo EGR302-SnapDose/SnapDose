@@ -7,34 +7,31 @@ import { ScrollView, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
-  const insets = useSafeAreaInsets();
+    const insets = useSafeAreaInsets();
 
-  return (
-    <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <ThemedText type="title" style={styles.header}>
-          SnapDose
-        </ThemedText>
-        <GlucoseCard />
-        <RecentMealsCard />
-        <QuickActions />
-      </ScrollView>
-    </ThemedView>
-  );
+    return (
+        <ThemedView style={[styles.container]}>
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
+                <GlucoseCard />
+                <RecentMealsCard />
+                <QuickActions />
+            </ScrollView>
+        </ThemedView>
+    );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  header: {
-    marginBottom: 20,
-  },
+    container: {
+        flex: 1,
+    },
+    scrollContent: {
+        padding: 20,
+        paddingBottom: 40,
+    },
+    header: {
+        marginBottom: 20,
+    },
 });
