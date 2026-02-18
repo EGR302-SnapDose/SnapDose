@@ -1,6 +1,6 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { useThemeColor } from "@/hooks/use-theme-color";
+import { useAccentColor } from "@/context/accent-color";
 import { StyleSheet, View } from "react-native";
 
 interface InsulinOnBoardCardProps {
@@ -8,7 +8,7 @@ interface InsulinOnBoardCardProps {
 }
 
 export function InsulinOnBoardCard({ activeInsulin }: InsulinOnBoardCardProps) {
-  const accent = useThemeColor({}, "accent");
+  const accent = useAccentColor();
 
   return (
     <ThemedView style={[styles.card, { backgroundColor: accent + "15" }]}>

@@ -39,7 +39,11 @@ const palette = {
   gray300: '#D1D5DB',
   gray400: '#9CA3AF',   // ~tertiaryLabel
   gray500: '#6B7280',   // ~secondaryLabel
+  gray600: '#4B5563',
+  gray700: '#374151',
+  gray800: '#1F2937',
   gray900: '#111827',   // ~label
+  gray950: '#0F172A',
 
   white: '#FFFFFF',
   black: '#000000',
@@ -411,6 +415,38 @@ export const glucoseRange = {
 
   isUrgent(value: number): boolean {
     return value < this.URGENT_LOW || value > this.URGENT_HIGH;
+  },
+} as const;
+
+// ---------------------------------------------------------------------------
+// Colors (light/dark) — backward compatibility for useThemeColor hook
+// Maps legacy color names to semantic tokens. Both themes use the same
+// values since SnapDose currently only supports light mode.
+// ---------------------------------------------------------------------------
+export const Colors = {
+  light: {
+    text: colors.textPrimary,
+    background: colors.background,
+    tint: colors.primary,
+    icon: colors.tabInactive,
+    tabIconDefault: colors.tabInactive,
+    tabIconSelected: colors.tabActive,
+    accent: colors.accent,
+    surface: colors.surface,
+    border: colors.border,
+    primary: colors.primary,
+  },
+  dark: {
+    text: palette.gray50,              // Light text for dark bg
+    background: palette.black,          // Pure black background
+    tint: palette.blue500,             // Lighter blue for visibility
+    icon: palette.gray400,             // Muted gray icons
+    tabIconDefault: palette.gray500,   // Inactive tab icons
+    tabIconSelected: palette.blue500,  // Active tab (lighter blue)
+    accent: '#34D399',                 // Brighter emerald for dark mode
+    surface: '#1A1A1A',                // Slightly elevated surface
+    border: palette.gray700,           // Visible borders on dark (#374151)
+    primary: palette.blue500,          // Primary action color
   },
 } as const;
 

@@ -1,3 +1,8 @@
+import { Tabs } from "expo-router";
+import React from "react";
+import { Pressable } from "react-native";
+import { DrawerActions, useNavigation } from "@react-navigation/native";
+import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { colors } from "@/constants/theme";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -43,6 +48,21 @@ export default function TabLayout() {
             screenOptions={{
                 tabBarActiveTintColor: colors.tabActive,
                 headerShown: false,
+                tabBarButton: HapticTab,
+                headerLeft: () => (
+                    <Pressable
+                        onPress={() =>
+                            navigation.dispatch(DrawerActions.toggleDrawer())
+                        }
+                        style={{ marginLeft: 16 }}
+                    >
+                        <IconSymbol
+                            name="chevron.right"
+                            size={24}
+                            color={Colors[colorScheme ?? "light"].icon}
+                        />
+                    </Pressable>
+                ),
             }}
         >
             <Tabs.Screen
@@ -50,12 +70,8 @@ export default function TabLayout() {
                 options={{
                     title: "Snap",
                     tabBarIcon: ({ color }) => (
-                        <IconSymbol
-                            size={28}
-                            name="camera.fill"
-                            color={color}
-                        />
-                    ),
+                        <IconSymbol size={28} name="camera.fill" color={color} />
+                    )
                 }}
             />
             <Tabs.Screen
@@ -72,22 +88,19 @@ export default function TabLayout() {
                 options={{
                     title: "Dose Insulin",
                     tabBarIcon: ({ color }) => (
-                        <MaterialCommunityIcons name="pill" size={28} color={color} />
+                        <IconSymbol
+                            size={28}
+                            name="paperplane.fill"
+                            color={color}
+                        />
                     ),
-                }}
-            />
-            <Tabs.Screen
-                name="settings"
-                options={{
-                    title: "Settings",
-                    href: null,
                 }}
             />
             <Tabs.Screen
                 name="food-gallery"
                 options={{
                     title: "Food Gallery",
-                    href: null,
+                    href: null, // hides from tab bar, keeps bottom nav when on this screen
                 }}
             />
         </Tabs>
