@@ -1,3 +1,4 @@
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import {
     DarkTheme,
     DefaultTheme,
@@ -6,7 +7,6 @@ import {
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
-import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export default function RootLayout() {
     const colorScheme = useColorScheme();
@@ -16,6 +16,10 @@ export default function RootLayout() {
             value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
         >
             <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="index" options={{ headerShown: false }} />
+                <Stack.Screen name="login" options={{ headerShown: false }} />
+                <Stack.Screen name="register" options={{ headerShown: false }} />
+                <Stack.Screen name="onboarding" />
                 <Stack.Screen name="(drawer)" />
                 <Stack.Screen
                     name="modal"
