@@ -1,15 +1,14 @@
-// app/(drawer)/(tabs)/settings.tsx
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from "react-native";
 
 export default function SettingsScreen() {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Settings</Text>
-    </View>
-  );
+    return (
+        <View style={styles.container}>
+            <Text style={styles.title}>Settings</Text>
+        </View>
+    );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  title: { fontSize: 24, fontWeight: 'bold' },
+    container: { flex: 1, padding: 20, backgroundColor: "#fff" },
+    title: { fontSize: 24, fontWeight: "bold" },
 });
