@@ -1,3 +1,6 @@
+import { ThemedView } from '@/components/themed-view';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemeColor } from '@/hooks/use-theme-color';
 import { loginUser } from '@/services/auth-service';
 import { checkOnboardingStatus } from '@/services/user-service';
 import { useRouter } from 'expo-router';
@@ -9,6 +12,12 @@ export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+
+    const textColor = useThemeColor({}, 'text');
+    const subtitleColor = useThemeColor({ light: '#888', dark: '#999' }, 'icon');
+    const inputBackground = useThemeColor({ light: '#f0f0f0', dark: '#1A1A1A' }, 'background');
+    const inputPlaceholder = useThemeColor({ light: '#aaa', dark: '#666' }, 'icon');
+    const colorScheme = useColorScheme();
 
     const handleLogin = async () => {
         if (!email || !password) {
@@ -33,15 +42,15 @@ export default function LoginScreen() {
     };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>SnapDose</Text>
-      <Text style={styles.subtitle}>Login to your account</Text>
+    <ThemedView style={styles.container}>
+      <Text style={[styles.title, { color: textColor }]}>SnapDose</Text>
+      <Text style={[styles.subtitle, { color: subtitleColor }]}>Login to your account</Text>
 
       <View style={styles.form}>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: inputBackground, color: textColor }]}
           placeholder="Email"
-          placeholderTextColor="#666"
+          placeholderTextColor={inputPlaceholder}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -49,16 +58,16 @@ export default function LoginScreen() {
         />
 
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: inputBackground, color: textColor }]}
           placeholder="Password"
-          placeholderTextColor="#666"
+          placeholderTextColor={inputPlaceholder}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
         />
 
-        <TouchableOpacity 
-          style={styles.button} 
+        <TouchableOpacity
+          style={styles.button}
           onPress={handleLogin}
           disabled={loading}
         >
@@ -70,32 +79,29 @@ export default function LoginScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => router.push('/auth/register')}>
-          <Text style={styles.linkText}>
+          <Text style={[styles.linkText, { color: subtitleColor }]}>
             Don't have an account? <Text style={styles.linkTextBold}>Create one here</Text>
           </Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
     justifyContent: 'center',
     padding: 20,
   },
   title: {
     fontSize: 48,
     fontWeight: 'bold',
-    color: '#fff',
     textAlign: 'center',
     marginBottom: 10,
   },
   subtitle: {
     fontSize: 18,
-    color: '#888',
     textAlign: 'center',
     marginBottom: 40,
   },
@@ -103,11 +109,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   input: {
-    backgroundColor: '#1A1A1A',
     borderRadius: 10,
     padding: 15,
     marginBottom: 15,
-    color: '#fff',
     fontSize: 16,
   },
   button: {
@@ -116,20 +120,19 @@ const styles = StyleSheet.create({
     padding: 15,
     alignItems: 'center',
     marginBottom: 10,
-    },
-    buttonText: {
+  },
+  buttonText: {
     color: '#fff',
     fontSize: 18,
     fontWeight: '600',
-    },
-    linkText: {
-    color: '#888',
+  },
+  linkText: {
     textAlign: 'center',
     marginTop: 20,
     fontSize: 14,
-    },
-    linkTextBold: {
+  },
+  linkTextBold: {
     color: '#007AFF',
     fontWeight: '600',
-    },
+  },
 });

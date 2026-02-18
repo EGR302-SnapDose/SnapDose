@@ -1,7 +1,11 @@
+import { ThemedView } from '@/components/themed-view';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemeColor } from '@/hooks/use-theme-color';
 import { registerUser } from '@/services/auth-service';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -9,6 +13,12 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const textColor = useThemeColor({}, 'text');
+  const subtitleColor = useThemeColor({ light: '#888', dark: '#999' }, 'icon');
+  const inputBackground = useThemeColor({ light: '#f0f0f0', dark: '#1A1A1A' }, 'background');
+  const inputPlaceholder = useThemeColor({ light: '#aaa', dark: '#666' }, 'icon');
+  const colorScheme = useColorScheme();
 
   const handleRegister = async () => {
     if (!email || !password || !confirmPassword) {
@@ -39,15 +49,15 @@ export default function RegisterScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Create Account</Text>
-      <Text style={styles.subtitle}>Join SnapDose today</Text>
+    <ThemedView style={styles.container}>
+      <Text style={[styles.title, { color: textColor }]}>Create Account</Text>
+      <Text style={[styles.subtitle, { color: subtitleColor }]}>Join SnapDose today</Text>
 
       <View style={styles.form}>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: inputBackground, color: textColor }]}
           placeholder="Email"
-          placeholderTextColor="#666"
+          placeholderTextColor={inputPlaceholder}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -55,25 +65,25 @@ export default function RegisterScreen() {
         />
 
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: inputBackground, color: textColor }]}
           placeholder="Password"
-          placeholderTextColor="#666"
+          placeholderTextColor={inputPlaceholder}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
         />
 
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: inputBackground, color: textColor }]}
           placeholder="Confirm Password"
-          placeholderTextColor="#666"
+          placeholderTextColor={inputPlaceholder}
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           secureTextEntry
         />
 
-        <TouchableOpacity 
-          style={styles.button} 
+        <TouchableOpacity
+          style={styles.button}
           onPress={handleRegister}
           disabled={loading}
         >
@@ -85,32 +95,29 @@ export default function RegisterScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.linkText}>
+          <Text style={[styles.linkText, { color: subtitleColor }]}>
             Already have an account? <Text style={styles.linkTextBold}>Login here</Text>
           </Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
     justifyContent: 'center',
     padding: 20,
   },
   title: {
     fontSize: 48,
     fontWeight: 'bold',
-    color: '#fff',
     textAlign: 'center',
     marginBottom: 10,
   },
   subtitle: {
     fontSize: 18,
-    color: '#888',
     textAlign: 'center',
     marginBottom: 40,
   },
@@ -118,11 +125,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   input: {
-    backgroundColor: '#1A1A1A',
     borderRadius: 10,
     padding: 15,
     marginBottom: 15,
-    color: '#fff',
     fontSize: 16,
   },
   button: {
@@ -138,7 +143,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   linkText: {
-    color: '#888',
     textAlign: 'center',
     marginTop: 20,
     fontSize: 14,
