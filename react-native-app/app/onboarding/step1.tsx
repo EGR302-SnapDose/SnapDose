@@ -1,13 +1,22 @@
 import OnboardingLayout from '@/components/onboarding/onboarding-layout';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { useThemeColor } from '@/hooks/use-theme-color';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
+
 
 export default function Step1Screen() {
   const [name, setName] = useState('');
   const [accentColor, setAccentColor] = useState('#EF4444');
   const router = useRouter();
+
+  const inputBackground = useThemeColor({ light: '#F0F0F0', dark: '#1A1A1A' }, 'background');
+  const inputColor = useThemeColor({ light: '#000000', dark: '#FFFFFF' }, 'text');
+  const inputBorderColor = useThemeColor({ light: '#CCCCCC', dark: '#333333' }, 'icon');
+  const placeholderColor = useThemeColor({ light: '#999999', dark: '#555555' }, 'icon');
 
   useEffect(() => {
     AsyncStorage.getItem('onboarding_accentColor').then((color) => {
@@ -37,19 +46,23 @@ export default function Step1Screen() {
       canProceed={name.trim().length > 0}
       accentColor={accentColor}
     >
-      <View style={styles.container}>
+      <ThemedView style={styles.container}>
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Full Name</Text>
+          <ThemedText style={styles.label}>Full Name</ThemedText>
           <TextInput
-            style={styles.input}
+            style={[styles.input, {
+              backgroundColor: inputBackground,
+              color: inputColor,
+              borderColor: inputBorderColor,
+            }]}
             value={name}
             onChangeText={setName}
             placeholder="John Doe"
-            placeholderTextColor="#555"
+            placeholderTextColor={placeholderColor}
             maxLength={50}
           />
         </View>
-      </View>
+      </ThemedView>
     </OnboardingLayout>
   );
 }
@@ -65,19 +78,15 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: '#FFF',
     marginBottom: 8,
     fontWeight: '600',
   },
   input: {
     width: '100%',
     height: 56,
-    backgroundColor: '#1A1A1A',
     borderRadius: 12,
     paddingHorizontal: 20,
     fontSize: 16,
-    color: '#FFF',
     borderWidth: 1,
-    borderColor: '#333',
   },
 });

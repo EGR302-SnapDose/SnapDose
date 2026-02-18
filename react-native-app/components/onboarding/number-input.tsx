@@ -1,3 +1,4 @@
+import { useThemeColor } from '@/hooks/use-theme-color';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -20,6 +21,8 @@ export default function NumberInput({
 }: NumberInputProps) {
   const canDecrement = min === undefined || value > min;
   const canIncrement = max === undefined || value < max;
+  const valueColor = useThemeColor({ light: '#000000', dark: '#FFFFFF' }, 'text');
+  const labelColor = useThemeColor({ light: '#555555', dark: '#888888' }, 'text');
 
   return (
     <View style={styles.container}>
@@ -32,8 +35,8 @@ export default function NumberInput({
       </TouchableOpacity>
       
       <View style={styles.valueContainer}>
-        <Text style={styles.value}>{value}</Text>
-        {label && <Text style={styles.label}>{label}</Text>}
+        <Text style={[styles.value, { color: valueColor }]}>{value}</Text>
+        {label && <Text style={[styles.label, { color: labelColor }]}>{label}</Text>}
       </View>
       
       <TouchableOpacity
@@ -55,8 +58,8 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   button: {
-    width: 60,
-    height: 60,
+    width: 40,
+    height: 40,
     borderRadius: 30,
     backgroundColor: '#2A2A2A',
     justifyContent: 'center',
@@ -71,23 +74,22 @@ const styles = StyleSheet.create({
     fontSize: 32,
     color: '#FFF',
     fontWeight: '300',
+    marginTop: -9,
   },
   buttonTextDisabled: {
     color: '#666',
   },
   valueContainer: {
     alignItems: 'center',
-    minWidth: 100,
+    minWidth: 60,
   },
   value: {
-    fontSize: 72,
+    fontSize: 52,
     fontWeight: '700',
-    color: '#FFF',
     lineHeight: 80,
   },
   label: {
     fontSize: 14,
-    color: '#888',
     marginTop: 4,
   },
 });
