@@ -1,9 +1,14 @@
 import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { auth, db } from "@/config/firebase";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { doc, getDoc } from "firebase/firestore";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -11,14 +16,48 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+interface UserProfile {
+  displayName: string;
+  email: string;
+  profile: {
+    diabetesType: string;
+    dateOfBirth: { toDate: () => Date };
+    diagnosisYear: number;
+    glucoseUnit: string;
+    height: { feet: number; inches: number; cm: number };
+    weight: { lbs: number; kg: number };
+    insulinUnits: string;
+  };
+  insulinSettings: {
+    correctionFactor: number;
+    insulinToCarbRatio: number;
+  };
+}
+
+function calcAge(dob: Date): number {
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const m = today.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+  return age;
+}
+
+function formatDiabetesType(type: string): string {
+  if (type === "type1") return "Type 1 Diabetes";
+  if (type === "type2") return "Type 2 Diabetes";
+  return type;
+}
+
 function SectionCard({
   title,
   children,
   cardBg,
+  rowBg,
 }: {
   title: string;
   children: React.ReactNode;
   cardBg: string;
+  rowBg: string;
 }) {
   return (
     <View style={[styles.sectionCard, { backgroundColor: cardBg }]}>
@@ -74,17 +113,70 @@ export default function ProfileScreen() {
   const iconColor = colorScheme === "dark" ? "#8a8a8a" : "#888";
   const accentRed = "#e84040";
 
-  const displayName = "DISPLAY_NAME";
-  const initials = "DN";
-  const diabetesType = "DIABETES_TYPE";
-  const age = "AGE";
-  const weightLbs = "WEIGHT";
-  const heightStr = "HEIGHT";
-  const glucoseUnit = "mg/dL";
-  const carbRatio = "CARB_RATIO";
-  const correctionFactor = "CORRECTION_FACTOR";
-  const email = "EMAIL";
-  const diagnosisYear = "DIAGNOSIS_YEAR";
+  const [userData, setUserData] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) {
+      setError("Not logged in.");
+      setLoading(false);
+      return;
+    }
+
+    getDoc(doc(db, "users", uid))
+      .then((snap) => {
+        if (snap.exists()) {
+          setUserData(snap.data() as UserProfile);
+        } else {
+          setError("Profile not found.");
+        }
+      })
+      .catch(() => setError("Failed to load profile."))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <ThemedView style={styles.centered}>
+        <ActivityIndicator size="large" color={accentRed} />
+      </ThemedView>
+    );
+  }
+
+  if (error || !userData) {
+    return (
+      <ThemedView style={styles.centered}>
+        <ThemedText>{error ?? "Something went wrong."}</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  const { profile, insulinSettings, displayName } = userData;
+  const dob = profile.dateOfBirth?.toDate?.();
+  const age = dob ? calcAge(dob) : "—";
+  const weightLbs = profile.weight?.lbs ?? "—";
+  const heightStr =
+    profile.height?.feet != null
+      ? `${profile.height.feet}'${profile.height.inches}"`
+      : "—";
+  const glucoseUnit = profile.glucoseUnit ?? "mg/dL";
+  const carbRatio = insulinSettings?.insulinToCarbRatio
+    ? `1:${insulinSettings.insulinToCarbRatio}g`
+    : "—";
+  const correctionFactor = insulinSettings?.correctionFactor
+    ? `${insulinSettings.correctionFactor} ${glucoseUnit}`
+    : "—";
+
+  const initials = displayName
+    ? displayName
+        .split(" ")
+        .map((w: string) => w[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : "?";
 
   return (
     <SafeAreaView
@@ -105,7 +197,7 @@ export default function ProfileScreen() {
 
           <ThemedText style={styles.profileName}>{displayName}</ThemedText>
           <ThemedText style={[styles.profileSub, { color: theme.icon }]}>
-            {diabetesType}
+            {formatDiabetesType(profile.diabetesType)}
           </ThemedText>
 
           <TouchableOpacity
@@ -117,7 +209,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        <SectionCard title="Basic Information" cardBg={cardBg}>
+        <SectionCard title="Basic Information" cardBg={cardBg} rowBg={rowBg}>
           <InfoRow
             icon={<Ionicons name="calendar-outline" size={18} color={iconColor} />}
             label="Age"
@@ -139,7 +231,8 @@ export default function ProfileScreen() {
           />
         </SectionCard>
 
-        <SectionCard title="Target Glucose Range" cardBg={cardBg}>
+        {/* ── Target Glucose Range ── */}
+        <SectionCard title="Target Glucose Range" cardBg={cardBg} rowBg={rowBg}>
           <InfoRow
             icon={<MaterialCommunityIcons name="trending-up" size={18} color={iconColor} />}
             label="Maximum"
@@ -155,7 +248,7 @@ export default function ProfileScreen() {
           />
         </SectionCard>
 
-        <SectionCard title="Insulin Settings" cardBg={cardBg}>
+        <SectionCard title="Insulin Settings" cardBg={cardBg} rowBg={rowBg}>
           <InfoRow
             icon={<MaterialCommunityIcons name="pulse" size={18} color={iconColor} />}
             label="Carb Ratio"
@@ -171,18 +264,18 @@ export default function ProfileScreen() {
           />
         </SectionCard>
 
-        <SectionCard title="Account" cardBg={cardBg}>
+        <SectionCard title="Account" cardBg={cardBg} rowBg={rowBg}>
           <InfoRow
             icon={<Ionicons name="mail-outline" size={18} color={iconColor} />}
-            label="Email"
-            value={email}
+            label="Email "
+            value={userData.email}
             rowBg={rowBg}
             shrinkValue
           />
           <InfoRow
             icon={<Ionicons name="calendar-outline" size={18} color={iconColor} />}
             label="Diagnosis Year"
-            value={diagnosisYear}
+            value={`${profile.diagnosisYear}`}
             rowBg={rowBg}
             isLast
           />
@@ -196,6 +289,11 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
   },
+  centered: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   scroll: {
     flex: 1,
   },
@@ -205,6 +303,7 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     gap: 14,
   },
+
   profileCard: {
     borderRadius: 18,
     padding: 24,
@@ -244,6 +343,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.3,
   },
+
   sectionCard: {
     borderRadius: 18,
     padding: 16,
@@ -253,6 +353,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 12,
   },
+
   infoRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -278,11 +379,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "500",
   },
-  infoValueShrink: {
+infoValueShrink: {
     flexShrink: 1,
     maxWidth: "70%",
     textAlign: "right",
-  },
+},
   rowGap: {
     height: 6,
   },
