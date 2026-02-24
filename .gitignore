@@ -51,3 +51,5 @@ expo-env.d.ts
 # React Native Dependencies
 /react-native-app/package-lock.json
 /react-native-app/package.json
+
+firmware/.pio/
