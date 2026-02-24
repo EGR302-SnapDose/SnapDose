@@ -1,14 +1,17 @@
-import { Drawer } from "expo-router/drawer";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { DrawerContentScrollView } from "@react-navigation/drawer";
-import { TouchableOpacity, StyleSheet, Alert } from "react-native";
-import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { router, usePathname } from "expo-router";
 import { logout } from "@/services/logout-service";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { DrawerContentScrollView } from "@react-navigation/drawer";
+import { router, usePathname } from "expo-router";
+import { Drawer } from "expo-router/drawer";
+import { useEffect, useState } from "react";
+import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const DRAWER_ITEMS = [
     { label: "Home", icon: "house.fill", path: "/", match: ["/"] },
@@ -32,6 +35,23 @@ function CustomDrawerContent(props: any) {
     const iconDefault = Colors[colorScheme ?? "light"].icon;
     const activeBg = colorScheme === "dark" ? "#1e1e1e" : "#f0f0f0";
     const pathname = usePathname();
+    const insets = useSafeAreaInsets();
+    const [displayName, setDisplayName] = useState<string>("");
+
+    useEffect(() => {
+        AsyncStorage.getItem("onboarding_displayName").then((name) => {
+            if (name) setDisplayName(name);
+        });
+    }, []);
+
+    const initials = displayName
+        ? displayName
+              .split(" ")
+              .map((w) => w[0])
+              .join("")
+              .toUpperCase()
+              .slice(0, 2)
+        : "?";
 
     const handleLogout = () => {
         Alert.alert("Logout", "Are you sure you want to log out?", [
@@ -46,6 +66,19 @@ function CustomDrawerContent(props: any) {
 
     return (
         <ThemedView style={{ flex: 1 }}>
+            <View style={[styles.drawerHeader, { paddingTop: insets.top }]}>
+                <TouchableOpacity
+                    onPress={() => {
+                        props.navigation.closeDrawer();
+                        router.navigate("/profile" as any);
+                    }}
+                    style={[styles.profileButton, { backgroundColor: colorScheme === "dark" ? "#333" : "#ddd" }]}
+                >
+                    <ThemedText style={styles.profileInitials}>
+                        {initials}
+                    </ThemedText>
+                </TouchableOpacity>
+            </View>
             <DrawerContentScrollView
                 {...props}
                 scrollEnabled={false}
@@ -136,12 +169,38 @@ export default function DrawerLayout() {
                         drawerLabel: "Settings",
                     }}
                 />
+                <Drawer.Screen
+                    name="profile"
+                    options={{
+                        headerShown: true,
+                        title: "Profile",
+                        drawerLabel: "Profile",
+                        drawerItemStyle: { display: "none" },
+                    }}
+                />
             </Drawer>
         </GestureHandlerRootView>
     );
 }
 
 const styles = StyleSheet.create({
+    drawerHeader: {
+        paddingLeft: 24,
+    },
+    profileButton: {
+        marginTop: 15,
+        marginBottom: 4,
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    profileInitials: {
+        fontSize: 20,
+        fontWeight: "700",
+        color: "#fff",
+    },
     item: {
         flexDirection: "row",
         alignItems: "center",
