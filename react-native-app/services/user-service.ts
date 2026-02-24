@@ -1,10 +1,8 @@
-import { db } from '@/config/firebase';
+import { auth, db } from '@/config/firebase';
 import { OnboardingData } from '@/types/user';
-import { getAuth } from 'firebase/auth';
 import { doc, getDoc, setDoc, Timestamp, updateDoc } from 'firebase/firestore';
 
 export async function saveOnboardingData(data: OnboardingData) {
-  const auth = getAuth();
   const user = auth.currentUser;
 
   if (!user) {
@@ -74,7 +72,6 @@ export async function saveOnboardingData(data: OnboardingData) {
 }
 
 export async function checkOnboardingStatus(): Promise<boolean> {
-  const auth = getAuth();
   const user = auth.currentUser;
 
   if (!user) {

@@ -1,8 +1,8 @@
-import { getAuth, signOut } from "firebase/auth";
+import { auth } from "@/config/firebase";
 import { router } from "expo-router";
+import { signOut } from "firebase/auth";
 
 export async function logout() {
-  const auth = getAuth();
   await signOut(auth);
   router.replace("/auth/login");
 }

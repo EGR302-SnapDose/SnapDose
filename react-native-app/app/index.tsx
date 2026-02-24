@@ -1,6 +1,7 @@
+import { auth } from '@/config/firebase';
 import { checkOnboardingStatus } from '@/services/user-service';
 import { useRouter } from 'expo-router';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
@@ -9,8 +10,6 @@ export default function Index() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const auth = getAuth();
-    
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const hasCompletedOnboarding = await checkOnboardingStatus();
