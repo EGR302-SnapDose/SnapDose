@@ -1,13 +1,14 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { auth, db } from "@/config/firebase";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { logout } from "@/services/logout-service";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { DrawerContentScrollView } from "@react-navigation/drawer";
 import { router, usePathname } from "expo-router";
 import { Drawer } from "expo-router/drawer";
+import { doc, getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -39,8 +40,13 @@ function CustomDrawerContent(props: any) {
     const [displayName, setDisplayName] = useState<string>("");
 
     useEffect(() => {
-        AsyncStorage.getItem("onboarding_displayName").then((name) => {
-            if (name) setDisplayName(name);
+        const uid = auth.currentUser?.uid;
+        if (!uid) return;
+        getDoc(doc(db, "users", uid)).then((snap) => {
+            if (snap.exists()) {
+                const name = snap.data()?.displayName;
+                if (name) setDisplayName(name);
+            }
         });
     }, []);
 
@@ -72,9 +78,10 @@ function CustomDrawerContent(props: any) {
                         props.navigation.closeDrawer();
                         router.navigate("/profile" as any);
                     }}
-                    style={[styles.profileButton, { backgroundColor: colorScheme === "dark" ? "#333" : "#ddd" }]}
+                        style={[styles.profileButton, { backgroundColor: colorScheme === "dark" ? "#2e1a1a" : "#fde8e8" }]}
+
                 >
-                    <ThemedText style={styles.profileInitials}>
+                    <ThemedText style={[styles.profileInitials, { color: "#e84040" }]}>
                         {initials}
                     </ThemedText>
                 </TouchableOpacity>
