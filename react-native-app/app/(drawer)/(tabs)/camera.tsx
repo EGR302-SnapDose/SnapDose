@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { SafeAreaView, StyleSheet, View } from 'react-native';
 import { CameraView, CameraType, Camera } from 'expo-camera';
+import { router } from 'expo-router';
 import { useCameraPermission } from '@/hooks/use-camera-permissions';
 import { CameraPermissionPrompt } from '@/components/camera/CameraPermissionPrompt';
-import { CameraTopBar } from '@/components/camera/CameraTopBar';
-import { CaptureButton } from '@/components/camera/CaptureButton';
+import { CameraControls } from '@/components/camera/CaptureButton';
 
 export type CapturedPhoto = {
   uri: string;
@@ -42,7 +42,7 @@ export default function CameraScreen() {
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
         base64: true,
-        exif: false, // changed to false to keep payload smaller for AI
+        exif: false,
       });
       if (photo) console.log('Photo taken:', photo.uri);
     } catch (error) {
@@ -56,28 +56,35 @@ export default function CameraScreen() {
     return (
       <CameraPermissionPrompt
         onRequestPermission={handleRequestPermission}
-        onCancel={() => {}}
+        onCancel={() => router.back()}
       />
     );
   }
 
   return (
     <View style={styles.container}>
-      <CameraView ref={cameraRef} style={styles.camera} facing={facing}>
-        <SafeAreaView style={styles.overlay}>
-          <CameraTopBar onCancel={() => {}} onFlip={toggleFacing} />
-          <View style={styles.bottomBar}>
-            <CaptureButton onPress={handleCapture} isCapturing={isCapturing} />
-          </View>
-        </SafeAreaView>
-      </CameraView>
+      <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
+      <SafeAreaView style={styles.controls}>
+        <CameraControls
+          onCapture={handleCapture}
+          onFlip={toggleFacing}
+          onBack={() => router.push('/(drawer)/(tabs)')}
+          isCapturing={isCapturing}
+        />
+      </SafeAreaView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
-  camera: { flex: 1 },
-  overlay: { flex: 1, justifyContent: 'space-between' },
-  bottomBar: { alignItems: 'center', paddingBottom: 40 },
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  camera: {
+    flex: 1,
+  },
+  controls: {
+    justifyContent: 'flex-end',
+  },
 });
