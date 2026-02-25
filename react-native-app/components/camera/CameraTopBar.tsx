@@ -1,37 +1,44 @@
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ThemedText } from '@/components/themed-text';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
 interface CameraTopBarProps {
-    onCancel: () => void;
-    onFlip: () => void;
+  onCancel: () => void;
+  onFlip: () => void;
 }
 
 export function CameraTopBar({ onCancel, onFlip }: CameraTopBarProps) {
-    return (
-    <View style={styles.topBar}>
+  const overlayBg = useThemeColor(
+    { light: 'rgba(255,255,255,0.15)', dark: 'rgba(0,0,0,0.3)' },
+    'background'
+  );
+
+  return (
+    <View style={[styles.topBar, { backgroundColor: overlayBg }]}>
       <TouchableOpacity style={styles.button} onPress={onCancel}>
-        <Text style={styles.buttonText}>Cancel</Text>
+        <ThemedText style={styles.buttonText}>Cancel</ThemedText>
       </TouchableOpacity>
       <TouchableOpacity style={styles.button} onPress={onFlip}>
-        <Text style={styles.buttonText}>Flip</Text>
+        <ThemedText style={styles.buttonText}>Flip</ThemedText>
       </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-    topBar: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingTop: Platform.OS === 'android' ? 16 : 0,
-    },
-    button: {
-        padding: 8,
-    },
-    buttonText: {
-        color: '#fff',
-        fontSize: 17,
-        fontWeight: '500',
-    },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    paddingTop: Platform.OS === 'android' ? 16 : 12,
+  },
+  button: {
+    padding: 8,
+  },
+  buttonText: {
+    fontSize: 17,
+    fontWeight: '500',
+  },
 });
