@@ -3,6 +3,8 @@ import { SafeAreaView, StyleSheet, View } from 'react-native';
 import { CameraView, CameraType, Camera } from 'expo-camera';
 import { router } from 'expo-router';
 import { useCameraPermission } from '@/hooks/use-camera-permissions';
+import { usePhotoStorage } from '@/hooks/use-photo-storage';
+import { getSavedPhotos } from '@/services/photo-storage';
 import { CameraPermissionPrompt } from '@/components/camera/CameraPermissionPrompt';
 import { CameraControls } from '@/components/camera/CaptureButton';
 
@@ -19,6 +21,7 @@ export default function CameraScreen() {
   const [facing, setFacing] = useState<CameraType>('back');
   const [granted, setGranted] = useState(false);
   const { askForPermission } = useCameraPermission();
+  const { savePhoto } = usePhotoStorage();
 
   useEffect(() => {
     Camera.getCameraPermissionsAsync().then((permission) => {
@@ -44,7 +47,17 @@ export default function CameraScreen() {
         base64: true,
         exif: false,
       });
-      if (photo) console.log('Photo taken:', photo.uri);
+      if (photo) {
+        const stored = await savePhoto(photo.uri, photo.base64, photo.width, photo.height);
+        if (stored) {
+          console.log('Photo saved locally:', stored.uri);
+
+          // debug: verify it actually saved
+          const allPhotos = await getSavedPhotos();
+          console.log('Total saved photos:', allPhotos.length);
+          console.log('Saved photos:', JSON.stringify(allPhotos, null, 2));
+        }
+      }
     } catch (error) {
       console.error('Failed to take photo:', error);
     } finally {
