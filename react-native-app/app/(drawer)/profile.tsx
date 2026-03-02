@@ -202,7 +202,38 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={[styles.editButton, { backgroundColor: accentRed }]}
-            onPress={() => router.push("/edit-profile" as any)}
+            onPress={() =>
+              router.push({
+                pathname: "/edit-profile" as any,
+                params: {
+                  displayName,
+                  diabetesType: profile.diabetesType,
+                  // Convert Firestore Timestamp → "YYYY-MM-DD" string for the form
+                  dateOfBirth: dob
+                    ? dob.toISOString().split("T")[0]
+                    : "",
+                  diagnosisYear: profile.diagnosisYear
+                    ? String(profile.diagnosisYear)
+                    : "",
+                  glucoseUnit: profile.glucoseUnit ?? "mg/dL",
+                  heightFeet: profile.height?.feet != null
+                    ? String(profile.height.feet)
+                    : "",
+                  heightInches: profile.height?.inches != null
+                    ? String(profile.height.inches)
+                    : "",
+                  weightLbs: profile.weight?.lbs != null
+                    ? String(profile.weight.lbs)
+                    : "",
+                  insulinToCarbRatio: insulinSettings?.insulinToCarbRatio
+                    ? String(insulinSettings.insulinToCarbRatio)
+                    : "",
+                  correctionFactor: insulinSettings?.correctionFactor
+                    ? String(insulinSettings.correctionFactor)
+                    : "",
+                },
+              })
+            }
             activeOpacity={0.85}
           >
             <ThemedText style={styles.editButtonText}>Edit Profile</ThemedText>
