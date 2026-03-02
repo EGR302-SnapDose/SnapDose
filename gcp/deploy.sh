@@ -5,7 +5,6 @@ PROJECT_ID="egr302-snapdose"
 BUCKET_NAME="snapdose-meal-images"
 REGION="us-central1"
 FUNCTION_NAME="snapdose-uploads"
-GEMINI_API_KEY="AIzaSyAV2VtZXUgI-Q4T_soUs_kzqXuRWjDvF3Q"   # Snap-55
 
 gcloud config set project $PROJECT_ID
 
