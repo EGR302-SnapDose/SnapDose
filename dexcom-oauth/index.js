@@ -12,6 +12,13 @@ const DEXCOM_BASE_URL =
 const APP_REDIRECT =
   process.env.DEXCOM_APP_REDIRECT || "snapdose://dexcom-connected";
 
+const SHARE_BASE_URL = "https://share2.dexcom.com/ShareWebServices/Services";
+const SHARE_APP_ID = "d89443d2-327c-4a6f-89e5-496bbb0317db";
+const SHARE_USERNAME = process.env.DEXCOM_SHARE_USERNAME;
+const SHARE_PASSWORD = process.env.DEXCOM_SHARE_PASSWORD;
+
+let shareSessionId = null;
+
 functions.http("dexcomAuth", async (req, res) => {
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -28,6 +35,7 @@ functions.http("dexcomAuth", async (req, res) => {
   if (path === "/status") return handleStatus(req, res);
   if (path === "/egvs") return handleEgvs(req, res);
   if (path === "/latest") return handleLatest(req, res);
+  if (path === "/realtime") return handleRealtime(req, res);
 
   res.status(404).json({ error: "Not found" });
 });
@@ -171,31 +179,11 @@ async function handleLatest(req, res) {
   try {
     const accessToken = await getValidAccessToken(userId);
 
-    const rangeResponse = await fetch(
-      `${DEXCOM_BASE_URL}/v3/users/self/dataRange`,
-      { headers: { Authorization: `Bearer ${accessToken}` } },
-    );
+    const now = new Date();
+    const twelveHoursAgo = new Date(now.getTime() - 12 * 60 * 60 * 1000);
 
-    if (!rangeResponse.ok) {
-      const errorText = await rangeResponse.text();
-      console.error("Dexcom dataRange failed:", errorText);
-      return res
-        .status(rangeResponse.status)
-        .json({ error: "Failed to fetch data range" });
-    }
-
-    const rangeData = await rangeResponse.json();
-    const egvEnd = rangeData.egvs?.end?.systemTime;
-
-    if (!egvEnd) {
-      return res.json({ records: [], latest: null });
-    }
-
-    const end = new Date(egvEnd);
-    const start = new Date(end.getTime() - 3 * 60 * 60 * 1000);
-
-    const startDate = start.toISOString().replace(".000Z", "");
-    const endDate = end.toISOString().replace(".000Z", "");
+    const startDate = twelveHoursAgo.toISOString().split(".")[0];
+    const endDate = now.toISOString().split(".")[0];
 
     const egvResponse = await fetch(
       `${DEXCOM_BASE_URL}/v3/users/self/egvs?startDate=${startDate}&endDate=${endDate}`,
@@ -212,6 +200,7 @@ async function handleLatest(req, res) {
 
     const data = await egvResponse.json();
     const records = data.records || [];
+    records.sort((a, b) => new Date(a.systemTime) - new Date(b.systemTime));
     const latest = records.length > 0 ? records[records.length - 1] : null;
 
     res.json({ records, latest });
@@ -221,6 +210,142 @@ async function handleLatest(req, res) {
       return res.status(401).json({ error: "Dexcom not connected" });
     }
     res.status(500).json({ error: "Internal error fetching glucose data" });
+  }
+}
+
+async function getShareSessionId() {
+  if (!SHARE_USERNAME || !SHARE_PASSWORD) {
+    throw new Error("Share credentials not configured");
+  }
+
+  const accountRes = await fetch(
+    `${SHARE_BASE_URL}/General/AuthenticatePublisherAccount`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        accountName: SHARE_USERNAME,
+        password: SHARE_PASSWORD,
+        applicationId: SHARE_APP_ID,
+      }),
+    },
+  );
+
+  if (!accountRes.ok) {
+    throw new Error("Share authentication failed");
+  }
+
+  const accountId = (await accountRes.text()).replace(/"/g, "");
+
+  const sessionRes = await fetch(
+    `${SHARE_BASE_URL}/General/LoginPublisherAccountById`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        accountId,
+        password: SHARE_PASSWORD,
+        applicationId: SHARE_APP_ID,
+      }),
+    },
+  );
+
+  if (!sessionRes.ok) {
+    throw new Error("Share session creation failed");
+  }
+
+  return (await sessionRes.text()).replace(/"/g, "");
+}
+
+async function getShareGlucose(minutes, maxCount) {
+  if (!shareSessionId) {
+    shareSessionId = await getShareSessionId();
+  }
+
+  const dataRes = await fetch(
+    `${SHARE_BASE_URL}/Publisher/ReadPublisherLatestGlucoseValues`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId: shareSessionId,
+        minutes,
+        maxCount,
+      }),
+    },
+  );
+
+  if (!dataRes.ok) {
+    shareSessionId = await getShareSessionId();
+    const retryRes = await fetch(
+      `${SHARE_BASE_URL}/Publisher/ReadPublisherLatestGlucoseValues`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: shareSessionId,
+          minutes,
+          maxCount,
+        }),
+      },
+    );
+
+    if (!retryRes.ok) {
+      throw new Error("Share glucose fetch failed after retry");
+    }
+
+    return retryRes.json();
+  }
+
+  return dataRes.json();
+}
+
+function parseShareTimestamp(dtString) {
+  const match = dtString.match(/Date\((\d+)/);
+  if (match) {
+    return new Date(parseInt(match[1]));
+  }
+  return new Date(dtString);
+}
+
+function mapShareTrend(trend) {
+  const mapping = {
+    Flat: "flat",
+    FortyFiveDown: "fortyFiveDown",
+    FortyFiveUp: "fortyFiveUp",
+    SingleDown: "singleDown",
+    SingleUp: "singleUp",
+    DoubleDown: "doubleDown",
+    DoubleUp: "doubleUp",
+    None: "none",
+    NonComputable: "notComputable",
+    RateOutOfRange: "rateOutOfRange",
+  };
+  return mapping[trend] || "flat";
+}
+
+async function handleRealtime(req, res) {
+  const { minutes, maxCount } = req.query;
+
+  try {
+    const readings = await getShareGlucose(
+      parseInt(minutes) || 10,
+      parseInt(maxCount) || 1,
+    );
+
+    const mapped = readings.map((r) => ({
+      value: r.Value,
+      trend: mapShareTrend(r.Trend),
+      systemTime: parseShareTimestamp(r.ST).toISOString(),
+      displayTime: parseShareTimestamp(r.DT).toISOString(),
+    }));
+
+    const latest = mapped.length > 0 ? mapped[0] : null;
+
+    res.json({ readings: mapped, latest });
+  } catch (err) {
+    console.error("Realtime fetch error:", err);
+    res.status(500).json({ error: "Failed to fetch real-time glucose data" });
   }
 }
 
