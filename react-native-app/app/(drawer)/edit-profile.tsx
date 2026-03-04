@@ -1,31 +1,56 @@
 import { ThemedText } from "@/components/themed-text";
-import { auth, db } from "@/config/firebase";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { doc, updateDoc } from "firebase/firestore";
-import { useState } from "react";
+import { getApp, getApps, initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View,
+  doc,
+  getDoc,
+  getFirestore,
+  serverTimestamp,
+  Timestamp,
+  updateDoc,
+} from "firebase/firestore";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+// ---------------------------------------------------------------------------
+// Firebase — initialise once, re-use if already initialised
+// ---------------------------------------------------------------------------
+const firebaseConfig = {
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+};
+
+const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const auth = getAuth(firebaseApp);
+const db = getFirestore(firebaseApp);
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 interface EditableProfile {
   displayName: string;
+  email: string;
   diabetesType: "type1" | "type2" | string;
-  dateOfBirth: string; // ISO string "YYYY-MM-DD" for editing
+  dateOfBirth: string; // "YYYY-MM-DD" while editing
   diagnosisYear: string;
   glucoseUnit: "mg/dL" | "mmol/L";
   heightFeet: string;
@@ -35,8 +60,39 @@ interface EditableProfile {
   correctionFactor: string;
 }
 
+const EMPTY_FORM: EditableProfile = {
+  displayName: "",
+  email: "",
+  diabetesType: "type1",
+  dateOfBirth: "",
+  diagnosisYear: "",
+  glucoseUnit: "mg/dL",
+  heightFeet: "",
+  heightInches: "",
+  weightLbs: "",
+  insulinToCarbRatio: "",
+  correctionFactor: "",
+};
+
+// Safely converts a Firestore Timestamp (or anything date-like) to "YYYY-MM-DD"
+function timestampToISO(ts: unknown): string {
+  if (!ts) return "";
+  try {
+    const date =
+      ts instanceof Timestamp
+        ? ts.toDate()
+        : typeof (ts as any).toDate === "function"
+        ? (ts as any).toDate()
+        : new Date(ts as any);
+    if (isNaN(date.getTime())) return "";
+    return date.toISOString().split("T")[0];
+  } catch {
+    return "";
+  }
+}
+
 // ---------------------------------------------------------------------------
-// Small reusable field components
+// Reusable UI pieces
 // ---------------------------------------------------------------------------
 function FieldLabel({ label }: { label: string }) {
   return <ThemedText style={styles.label}>{label}</ThemedText>;
@@ -49,23 +105,31 @@ function StyledInput({
   keyboardType = "default",
   inputBg,
   textColor,
+  editable = true,
 }: {
   value: string;
   onChangeText: (t: string) => void;
   placeholder?: string;
-  keyboardType?: "default" | "numeric" | "decimal-pad";
+  keyboardType?: "default" | "numeric" | "decimal-pad" | "email-address";
   inputBg: string;
   textColor: string;
+  editable?: boolean;
 }) {
   return (
     <TextInput
-      style={[styles.input, { backgroundColor: inputBg, color: textColor }]}
+      style={[
+        styles.input,
+        { backgroundColor: inputBg, color: textColor },
+        !editable && { opacity: 0.45 },
+      ]}
       value={value}
       onChangeText={onChangeText}
       placeholder={placeholder}
       placeholderTextColor="#888"
       keyboardType={keyboardType}
       autoCorrect={false}
+      autoCapitalize="none"
+      editable={editable}
     />
   );
 }
@@ -75,35 +139,29 @@ function SegmentControl({
   selected,
   onSelect,
   accentColor,
-  cardBg,
+  pillBg,
   textColor,
 }: {
   options: { label: string; value: string }[];
   selected: string;
   onSelect: (v: string) => void;
   accentColor: string;
-  cardBg: string;
+  pillBg: string;
   textColor: string;
 }) {
   return (
-    <View style={[styles.segmentWrap, { backgroundColor: cardBg }]}>
+    <View style={[styles.segmentWrap, { backgroundColor: pillBg }]}>
       {options.map((opt) => {
         const active = selected === opt.value;
         return (
           <TouchableOpacity
             key={opt.value}
-            style={[
-              styles.segmentBtn,
-              active && { backgroundColor: accentColor },
-            ]}
+            style={[styles.segmentBtn, active && { backgroundColor: accentColor }]}
             onPress={() => onSelect(opt.value)}
             activeOpacity={0.8}
           >
             <ThemedText
-              style={[
-                styles.segmentText,
-                { color: active ? "#fff" : textColor },
-              ]}
+              style={[styles.segmentText, { color: active ? "#fff" : textColor }]}
             >
               {opt.label}
             </ThemedText>
@@ -141,87 +199,166 @@ export default function EditProfileScreen() {
   const inputBg = colorScheme === "dark" ? "#2a2a2a" : "#e8e8e8";
   const accentRed = "#e84040";
 
-  // Pull initial values from router params or leave blank so user fills them in.
-  // In a real app you'd pass the existing values via router.push params or a
-  // shared state/context so the form is pre-populated.
-  const [form, setForm] = useState<EditableProfile>({
-    displayName: (router as any).params?.displayName ?? "",
-    diabetesType: (router as any).params?.diabetesType ?? "type1",
-    dateOfBirth: (router as any).params?.dateOfBirth ?? "",
-    diagnosisYear: (router as any).params?.diagnosisYear ?? "",
-    glucoseUnit: (router as any).params?.glucoseUnit ?? "mg/dL",
-    heightFeet: (router as any).params?.heightFeet ?? "",
-    heightInches: (router as any).params?.heightInches ?? "",
-    weightLbs: (router as any).params?.weightLbs ?? "",
-    insulinToCarbRatio: (router as any).params?.insulinToCarbRatio ?? "",
-    correctionFactor: (router as any).params?.correctionFactor ?? "",
-  });
-
+  const [form, setForm] = useState<EditableProfile>(EMPTY_FORM);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  function setField<K extends keyof EditableProfile>(
-    key: K,
-    value: EditableProfile[K]
-  ) {
+  // ── Fetch existing profile from Firestore on mount ──────────────────────
+  useEffect(() => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) {
+      setLoadError("You must be logged in to edit your profile.");
+      setLoadingProfile(false);
+      return;
+    }
+
+    getDoc(doc(db, "users", uid))
+      .then((snap) => {
+        if (!snap.exists()) {
+          // No doc yet — form stays blank so user can fill from scratch
+          return;
+        }
+
+        const data = snap.data();
+        const p = data.profile ?? {};
+        const ins = data.insulinSettings ?? {};
+
+        setForm({
+          displayName:        data.displayName ?? "",
+          email:              data.email ?? auth.currentUser?.email ?? "",
+          diabetesType:       p.diabetesType ?? "type1",
+          dateOfBirth:        timestampToISO(p.dateOfBirth),
+          diagnosisYear:      p.diagnosisYear != null ? String(p.diagnosisYear) : "",
+          glucoseUnit:        p.glucoseUnit ?? "mg/dL",
+          heightFeet:         p.height?.feet   != null ? String(p.height.feet)   : "",
+          heightInches:       p.height?.inches != null ? String(p.height.inches) : "",
+          weightLbs:          p.weight?.lbs    != null ? String(p.weight.lbs)    : "",
+          insulinToCarbRatio: ins.insulinToCarbRatio != null ? String(ins.insulinToCarbRatio) : "",
+          correctionFactor:   ins.correctionFactor   != null ? String(ins.correctionFactor)   : "",
+        });
+      })
+      .catch((err) => {
+        console.error("Failed to load profile:", err);
+        setLoadError("Failed to load profile. Please try again.");
+      })
+      .finally(() => setLoadingProfile(false));
+  }, []);
+
+  function setField<K extends keyof EditableProfile>(key: K, value: EditableProfile[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  // ── Validate & write back to Firestore ───────────────────────────────────
   async function handleSave() {
     const uid = auth.currentUser?.uid;
     if (!uid) {
       Alert.alert("Error", "You must be logged in to save changes.");
       return;
     }
-
-    // Basic validation
     if (!form.displayName.trim()) {
-      Alert.alert("Validation", "Display name is required.");
+      Alert.alert("Validation", "Display name cannot be empty.");
       return;
+    }
+
+    let dobTimestamp: Timestamp | null = null;
+    if (form.dateOfBirth.trim()) {
+      const parsed = new Date(form.dateOfBirth.trim());
+      if (isNaN(parsed.getTime())) {
+        Alert.alert("Validation", "Date of birth must be YYYY-MM-DD.");
+        return;
+      }
+      if (parsed > new Date()) {
+        Alert.alert("Validation", "Date of birth cannot be in the future.");
+        return;
+      }
+      dobTimestamp = Timestamp.fromDate(parsed);
     }
 
     setSaving(true);
     try {
-      // Parse DOB string "YYYY-MM-DD" → Firestore Timestamp-compatible Date
-      let dobDate: Date | null = null;
-      if (form.dateOfBirth) {
-        const parsed = new Date(form.dateOfBirth);
-        if (!isNaN(parsed.getTime())) dobDate = parsed;
-      }
+      const feetNum   = parseInt(form.heightFeet,   10) || 0;
+      const inchesNum = parseInt(form.heightInches, 10) || 0;
+      const cmNum     = Math.round((feetNum * 12 + inchesNum) * 2.54);
+      const lbsNum    = parseFloat(form.weightLbs) || 0;
+      const kgNum     = Math.round(lbsNum * 0.453592 * 10) / 10;
 
       const payload: Record<string, unknown> = {
-        displayName: form.displayName.trim(),
-        "profile.diabetesType": form.diabetesType,
-        "profile.glucoseUnit": form.glucoseUnit,
-        "profile.diagnosisYear": parseInt(form.diagnosisYear) || null,
-        "profile.height.feet": parseInt(form.heightFeet) || 0,
-        "profile.height.inches": parseInt(form.heightInches) || 0,
-        "profile.weight.lbs": parseFloat(form.weightLbs) || 0,
-        "insulinSettings.insulinToCarbRatio":
-          parseFloat(form.insulinToCarbRatio) || 0,
-        "insulinSettings.correctionFactor":
-          parseFloat(form.correctionFactor) || 0,
+        displayName:                          form.displayName.trim(),
+        "profile.diabetesType":               form.diabetesType,
+        "profile.glucoseUnit":                form.glucoseUnit,
+        "profile.diagnosisYear":              form.diagnosisYear ? parseInt(form.diagnosisYear, 10) : null,
+        "profile.height.feet":                feetNum,
+        "profile.height.inches":              inchesNum,
+        "profile.height.cm":                  cmNum,
+        "profile.weight.lbs":                 lbsNum,
+        "profile.weight.kg":                  kgNum,
+        "insulinSettings.insulinToCarbRatio": form.insulinToCarbRatio ? parseFloat(form.insulinToCarbRatio) : 0,
+        "insulinSettings.correctionFactor":   form.correctionFactor   ? parseFloat(form.correctionFactor)   : 0,
+        updatedAt:                            serverTimestamp(),
       };
 
-      if (dobDate) {
-        payload["profile.dateOfBirth"] = dobDate;
+      if (dobTimestamp) {
+        payload["profile.dateOfBirth"] = dobTimestamp;
       }
 
       await updateDoc(doc(db, "users", uid), payload);
       Alert.alert("Saved", "Your profile has been updated.", [
         { text: "OK", onPress: () => router.back() },
       ]);
-    } catch (err) {
-      console.error(err);
-      Alert.alert("Error", "Failed to save profile. Please try again.");
+    } catch (err: any) {
+      console.error("Save error:", err);
+      Alert.alert(
+        "Error",
+        err?.code === "permission-denied"
+          ? "Permission denied. Check your Firestore security rules."
+          : "Failed to save. Please check your connection and try again."
+      );
     } finally {
       setSaving(false);
     }
   }
 
+  // ── Loading state ─────────────────────────────────────────────────────────
+  if (loadingProfile) {
+    return (
+      <SafeAreaView
+        style={[styles.safe, { backgroundColor: theme.background }]}
+        edges={["top", "bottom"]}
+      >
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={accentRed} />
+          <ThemedText style={styles.loadingText}>Loading profile...</ThemedText>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Error state ───────────────────────────────────────────────────────────
+  if (loadError) {
+    return (
+      <SafeAreaView
+        style={[styles.safe, { backgroundColor: theme.background }]}
+        edges={["top", "bottom"]}
+      >
+        <View style={styles.centered}>
+          <ThemedText style={styles.errorText}>{loadError}</ThemedText>
+          <TouchableOpacity
+            style={[styles.saveButton, { backgroundColor: accentRed, marginTop: 20 }]}
+            onPress={() => router.back()}
+          >
+            <ThemedText style={styles.saveButtonText}>Go Back</ThemedText>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Main form ─────────────────────────────────────────────────────────────
   return (
     <SafeAreaView
       style={[styles.safe, { backgroundColor: theme.background }]}
-      edges={["bottom"]}
+      edges={["top", "bottom"]}
     >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: inputBg }]}>
@@ -257,6 +394,17 @@ export default function EditProfileScreen() {
               textColor={theme.text}
             />
 
+            <FieldLabel label="Email (read-only)" />
+            <StyledInput
+              value={form.email}
+              onChangeText={() => {}}
+              placeholder="—"
+              keyboardType="email-address"
+              inputBg={inputBg}
+              textColor={theme.text}
+              editable={false}
+            />
+
             <FieldLabel label="Date of Birth (YYYY-MM-DD)" />
             <StyledInput
               value={form.dateOfBirth}
@@ -275,7 +423,7 @@ export default function EditProfileScreen() {
               selected={form.diabetesType}
               onSelect={(v) => setField("diabetesType", v)}
               accentColor={accentRed}
-              cardBg={inputBg}
+              pillBg={inputBg}
               textColor={theme.text}
             />
 
@@ -339,14 +487,14 @@ export default function EditProfileScreen() {
               selected={form.glucoseUnit}
               onSelect={(v) => setField("glucoseUnit", v as "mg/dL" | "mmol/L")}
               accentColor={accentRed}
-              cardBg={inputBg}
+              pillBg={inputBg}
               textColor={theme.text}
             />
           </SectionCard>
 
           {/* ── Insulin Settings ── */}
           <SectionCard title="Insulin Settings" cardBg={cardBg}>
-            <FieldLabel label="Insulin-to-Carb Ratio (grams per unit)" />
+            <FieldLabel label="Insulin-to-Carb Ratio (g carbs per unit)" />
             <StyledInput
               value={form.insulinToCarbRatio}
               onChangeText={(v) => setField("insulinToCarbRatio", v)}
@@ -356,7 +504,7 @@ export default function EditProfileScreen() {
               textColor={theme.text}
             />
 
-            <FieldLabel label={`Correction Factor (${form.glucoseUnit} per unit)`} />
+            <FieldLabel label={`Correction Factor (${form.glucoseUnit} drop per unit)`} />
             <StyledInput
               value={form.correctionFactor}
               onChangeText={(v) => setField("correctionFactor", v)}
@@ -367,9 +515,13 @@ export default function EditProfileScreen() {
             />
           </SectionCard>
 
-          {/* ── Save Button ── */}
+          {/* ── Save ── */}
           <TouchableOpacity
-            style={[styles.saveButton, { backgroundColor: accentRed }]}
+            style={[
+              styles.saveButton,
+              { backgroundColor: accentRed },
+              saving && { opacity: 0.7 },
+            ]}
             onPress={handleSave}
             activeOpacity={0.85}
             disabled={saving}
@@ -391,6 +543,22 @@ export default function EditProfileScreen() {
 // ---------------------------------------------------------------------------
 const styles = StyleSheet.create({
   safe: { flex: 1 },
+  centered: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 15,
+    opacity: 0.6,
+  },
+  errorText: {
+    fontSize: 15,
+    textAlign: "center",
+    opacity: 0.75,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
