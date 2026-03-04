@@ -2,8 +2,8 @@
 # SnapDose Pipeline – deploy script
 
 PROJECT_ID="egr302-snapdose"
-BUCKET_NAME="snapdose-meal-images"
-REGION="us-central1"
+BUCKET_NAME="egr302-snapdose.firebasestorage.app"
+REGION="us-west1"
 FUNCTION_NAME="snapdose-uploads"
 
 gcloud config set project $PROJECT_ID
@@ -16,12 +16,6 @@ gcloud services enable \
   firestore.googleapis.com \
   run.googleapis.com \
   eventarc.googleapis.com
-
-echo "=== Creating GCS bucket (skip if exists) ==="
-gcloud storage buckets create gs://$BUCKET_NAME \
-  --location=$REGION \
-  --uniform-bucket-level-access 2>/dev/null || echo "Bucket already exists, continuing..."
-
 echo "=== Deploying Cloud Function ==="
 gcloud functions deploy $FUNCTION_NAME \
   --gen2 \
