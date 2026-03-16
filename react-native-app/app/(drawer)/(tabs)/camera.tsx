@@ -93,6 +93,13 @@ export default function CameraScreen() {
         console.error("Upload failed:", result.error);
       }
       setPreviewPhoto(null);
+
+      // Navigate to results screen with a mealId param (replace with
+      // actual Firestore doc ID once AI is wired up)
+      router.push({
+        pathname: "./results",
+        params: { mealId: photo.fileName }, // replace with actual Firestore doc ID once AI is wired up
+      });
       setShowToast(true);
       toastTimer.current = setTimeout(() => setShowToast(false), 2500);
     } catch (error) {
