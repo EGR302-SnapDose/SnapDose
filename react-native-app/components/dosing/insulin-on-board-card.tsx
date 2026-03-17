@@ -25,27 +25,28 @@ export function InsulinOnBoardCard({ activeInsulin }: InsulinOnBoardCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    padding: 20,
     borderRadius: 12,
     marginBottom: 20,
   },
   label: {
     fontSize: 14,
     opacity: 0.7,
-    marginBottom: 8,
+    marginBottom: 12,
   },
   valueContainer: {
     flexDirection: "row",
     alignItems: "baseline",
-    gap: 8,
+    gap: 6,
   },
   value: {
     fontSize: 32,
     fontWeight: "700",
+    lineHeight: 38,
   },
   unit: {
     fontSize: 14,
     opacity: 0.6,
+    lineHeight: 20,
   },
 });
