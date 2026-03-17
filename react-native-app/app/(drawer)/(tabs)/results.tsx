@@ -9,7 +9,7 @@ import { FoodsDetectedList } from '@/components/results/FoodsDetectedList';
 import { EditCarbsField } from '@/components/results/EditCarbsField';
 import { useMeal } from '@/hooks/use-meal';
 import { updateCarbEstimate } from '@/services/meal-service';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons'; 
 
 export default function ResultsScreen() {
   const { mealId } = useLocalSearchParams<{ mealId: string }>();
