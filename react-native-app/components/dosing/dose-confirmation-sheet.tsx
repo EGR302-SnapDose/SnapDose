@@ -44,16 +44,27 @@ export function DoseConfirmationSheet({
     { light: "#E5E5E5", dark: "#2A2A2A" },
     "icon",
   );
+  const warningBgColor = useThemeColor(
+    { light: "#f6eb8a", dark: "#a08000aa" },
+    "background",
+  );
+  const warningTextColor = useThemeColor(
+    { light: "#333333", dark: "#ffd11a" },
+    "text",
+  );
 
   const [dosingPhase, setDosingPhase] = useState<
     "confirming" | "dosing" | "complete" | "cancelled"
   >("confirming");
+  const [warningAcknowledged, setWarningAcknowledged] = useState(false);
+  const [showConfirmButton, setShowConfirmButton] = useState(false);
   const sliderWidthRef = useRef(0);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const slidePosition = useRef(0);
   const checkmarkScale = useRef(new Animated.Value(0)).current;
   const checkmarkOpacity = useRef(new Animated.Value(0)).current;
   const dosingTimerRef = useRef<number | null>(null);
+  const warningTimerRef = useRef<number | null>(null);
   const SLIDER_THRESHOLD = 0.85;
 
   useEffect(() => {
@@ -61,13 +72,30 @@ export function DoseConfirmationSheet({
       slideAnim.setValue(0);
       slidePosition.current = 0;
       setDosingPhase("confirming");
+      setWarningAcknowledged(false);
+      setShowConfirmButton(false);
       checkmarkScale.setValue(0);
       checkmarkOpacity.setValue(0);
       if (dosingTimerRef.current) {
         clearTimeout(dosingTimerRef.current);
         dosingTimerRef.current = null;
       }
+      if (warningTimerRef.current) {
+        clearTimeout(warningTimerRef.current);
+        warningTimerRef.current = null;
+      }
+    } else {
+      // Start the warning timer when sheet opens
+      warningTimerRef.current = setTimeout(() => {
+        setShowConfirmButton(true);
+      }, 3000);
     }
+    return () => {
+      if (warningTimerRef.current) {
+        clearTimeout(warningTimerRef.current);
+        warningTimerRef.current = null;
+      }
+    };
   }, [visible]);
 
   useEffect(() => {
@@ -234,50 +262,73 @@ export function DoseConfirmationSheet({
                   </ThemedText>
                 </View>
               </View>
-
               <View style={styles.sliderContainer}>
-                <ThemedText style={styles.sliderLabel}>
-                  Slide to Confirm
-                </ThemedText>
-                <View
-                  style={[
-                    styles.sliderTrack,
-                    { backgroundColor: accent + "20" },
-                  ]}
-                  onLayout={(e) => {
-                    sliderWidthRef.current = e.nativeEvent.layout.width;
-                  }}
-                >
-                  <Animated.View
+                {warningAcknowledged && (
+                  <ThemedText style={styles.sliderLabel}>
+                    Slide to Confirm
+                  </ThemedText>
+                )}
+
+                {!warningAcknowledged ? (
+                  <View
                     style={[
-                      styles.sliderTrail,
+                      styles.warningOverlay,
                       {
-                        backgroundColor: accent + "60",
-                        width: slideAnim.interpolate({
-                          inputRange: [0, 1000],
-                          outputRange: [60, 1060],
-                          extrapolate: "clamp",
-                        }),
+                        backgroundColor: warningBgColor,
                       },
                     ]}
-                  />
-                  <Animated.View
-                    style={[
-                      styles.sliderThumb,
-                      {
-                        backgroundColor: accent,
-                        transform: [{ translateX: slideAnim }],
-                      },
-                    ]}
-                    {...panResponder.panHandlers}
                   >
-                    <Ionicons
-                      name="chevron-forward"
-                      size={24}
-                      color="#FFFFFF"
+                    <ThemedText
+                      style={[styles.warningText, { color: warningTextColor }]}
+                    >
+                      ⚠️ Always verify dose before delivery. Consult your
+                      healthcare provider for proper dosing.
+                    </ThemedText>
+                    {showConfirmButton && (
+                      <Pressable
+                        style={[styles.warningButton, { backgroundColor: accent }]}
+                        onPress={() => setWarningAcknowledged(true)}
+                      >
+                        <ThemedText style={styles.warningButtonText}>
+                          I Understand
+                        </ThemedText>
+                      </Pressable>
+                    )}
+                  </View>
+                ) : (
+                  <View
+                    style={[styles.sliderTrack, { backgroundColor: accent + "20" }]}
+                    onLayout={(e) => {
+                      sliderWidthRef.current = e.nativeEvent.layout.width;
+                    }}
+                  >
+                    <Animated.View
+                      style={[
+                        styles.sliderTrail,
+                        {
+                          backgroundColor: accent + "60",
+                          width: slideAnim.interpolate({
+                            inputRange: [0, 1000],
+                            outputRange: [60, 1060],
+                            extrapolate: "clamp",
+                          }),
+                        },
+                      ]}
                     />
-                  </Animated.View>
-                </View>
+                    <Animated.View
+                      style={[
+                        styles.sliderThumb,
+                        {
+                          backgroundColor: accent,
+                          transform: [{ translateX: slideAnim }],
+                        },
+                      ]}
+                      {...panResponder.panHandlers}
+                    >
+                      <Ionicons name="chevron-forward" size={24} color="#FFFFFF" />
+                    </Animated.View>
+                  </View>
+                )}
               </View>
 
               <Pressable style={styles.cancelButton} onPress={onCancel}>
@@ -420,28 +471,28 @@ const styles = StyleSheet.create({
   },
   doseRow: {
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 8,
   },
   doseLabel: {
     fontSize: 16,
     opacity: 0.7,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   doseValue: {
     fontSize: 48,
     fontWeight: "700",
     lineHeight: 60,
-    paddingVertical: 16,
+    paddingVertical: 8,
   },
   divider: {
     height: 1,
     backgroundColor: "#E5E5E5",
-    marginVertical: 16,
+    marginVertical: 10,
   },
   detailRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 8,
+    paddingVertical: 4,
   },
   detailLabel: {
     fontSize: 15,
@@ -453,7 +504,7 @@ const styles = StyleSheet.create({
   },
   mathRow: {
     alignItems: "center",
-    paddingVertical: 8,
+    paddingVertical: 4,
   },
   mathText: {
     fontSize: 16,
@@ -463,6 +514,7 @@ const styles = StyleSheet.create({
   },
   sliderContainer: {
     marginBottom: 24,
+    position: "relative",
   },
   sliderLabel: {
     textAlign: "center",
@@ -521,6 +573,33 @@ const styles = StyleSheet.create({
   },
   closeButtonText: {
     fontSize: 16,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+warningOverlay: {
+  borderRadius: 16,
+  justifyContent: "center",
+  alignItems: "center",
+  paddingHorizontal: 20,
+  paddingVertical: 16,
+  gap: 12,
+  borderWidth: 2,
+  borderColor: "#DAA520",
+},
+  warningText: {
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  warningButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  warningButtonText: {
+    fontSize: 14,
     fontWeight: "600",
     color: "#FFFFFF",
   },
