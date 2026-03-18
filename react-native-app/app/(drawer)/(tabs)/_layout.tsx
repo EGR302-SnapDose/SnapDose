@@ -92,12 +92,6 @@ export default function TabLayout() {
                     href: null,
                 }}
             />
-            <Tabs.Screen
-                name="camera/results"
-                options={{
-                    href: null,
-                }}
-            />
         </Tabs>
     );
 }

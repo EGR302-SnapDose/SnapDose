@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { SafeAreaView, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, CameraType, Camera } from 'expo-camera';
 import { router } from 'expo-router';
 import { useCameraPermission } from '@/hooks/use-camera-permissions';
 import { usePhotoStorage } from '@/hooks/use-photo-storage';
 import { StoredPhoto } from '@/services/photo-storage';
+import { uploadImageToGCS } from '@/services/gcs-upload-service';
 import { CameraPermissionPrompt } from '@/components/camera/CameraPermissionPrompt';
 import { CameraControls } from '@/components/camera/CaptureButton';
 import { PhotoPreview } from '@/components/camera/PhotoPreview';
@@ -27,6 +29,7 @@ export default function CameraScreen() {
   const [granted, setGranted] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState<StoredPhoto | null>(null);
   const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('Photo uploaded!');
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { askForPermission } = useCameraPermission();
   const { savePhoto, removePhoto } = usePhotoStorage();
@@ -79,15 +82,31 @@ export default function CameraScreen() {
   const handleUsePhoto = async (photo: StoredPhoto) => {
     setIsProcessing(true);
     try {
-      // TODO: send photo.base64 to AI API here
+      const uploadResult = await uploadImageToGCS(photo.uri, photo.fileName);
+
+      if (!uploadResult.success || !uploadResult.fileName) {
+        throw new Error(uploadResult.error ?? 'Upload failed');
+      }
+
+      // Don't create a Firestore doc — Cloud Function creates it
+      // Pass imagePath so results screen can find the CF document
       setPreviewPhoto(null);
+      setToastMessage('Photo uploaded!');
       setShowToast(true);
+
       toastTimer.current = setTimeout(() => {
         setShowToast(false);
-        router.push('/(drawer)/(tabs)/camera/results' as any);
+        router.push({
+          pathname: '/(drawer)/(tabs)/camera/results' as any,
+          params: { imagePath: uploadResult.fileName },
+        });
       }, 1500);
+
     } catch (error) {
       console.error('Failed to process photo:', error);
+      setToastMessage('Upload failed, please try again.');
+      setShowToast(true);
+      toastTimer.current = setTimeout(() => setShowToast(false), 2500);
     } finally {
       setIsProcessing(false);
     }
@@ -124,19 +143,13 @@ export default function CameraScreen() {
           isCapturing={isCapturing}
         />
       </SafeAreaView>
-      <Toast visible={showToast} message="Photo saved!" />
+      <Toast visible={showToast} message={toastMessage} />
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  camera: {
-    flex: 1,
-  },
-  controls: {
-    justifyContent: 'flex-end',
-  },
+  container: { flex: 1 },
+  camera: { flex: 1 },
+  controls: { justifyContent: 'flex-end' },
 });

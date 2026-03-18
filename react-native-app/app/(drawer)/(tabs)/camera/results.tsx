@@ -7,13 +7,13 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import { CarbEstimateDisplay } from '@/components/results/CarbEstimateDisplay';
 import { FoodsDetectedList } from '@/components/results/FoodsDetectedList';
 import { EditCarbsField } from '@/components/results/EditCarbsField';
-import { useMeal } from '@/hooks/use-meal';
+import { useMealByImage } from '@/hooks/use-meal-by-image';
 import { updateCarbEstimate } from '@/services/meal-service';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ResultsScreen() {
-  const { mealId } = useLocalSearchParams<{ mealId: string }>();
-  const { meal, isLoading, error } = useMeal(mealId);
+  const { imagePath } = useLocalSearchParams<{ imagePath: string }>();
+  const { meal, isLoading, error } = useMealByImage(imagePath);
   const [adjustedCarbs, setAdjustedCarbs] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -22,14 +22,14 @@ export default function ResultsScreen() {
   const mutedColor = useThemeColor({ light: '#888888', dark: '#888888' }, 'icon');
   const errorColor = '#FF3B30';
 
-  const isProcessing = meal?.status === 'pending' || meal?.status === 'processing';
+  const isProcessing = !meal || meal?.status === 'pending' || meal?.status === 'processing';
   const finalCarbs = adjustedCarbs ?? meal?.estimated_carbs_grams ?? 0;
 
   const handleConfirm = async () => {
-    if (!mealId) return;
+    if (!meal?.id) return;
     setIsSaving(true);
     try {
-      await updateCarbEstimate(mealId, finalCarbs);
+      await updateCarbEstimate(meal.id, finalCarbs);
       router.dismissAll();
     } catch (err) {
       Alert.alert('Error', 'Failed to save carb estimate. Please try again.');
