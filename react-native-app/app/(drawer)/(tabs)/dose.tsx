@@ -1,112 +1,177 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { useThemeColor } from "@/hooks/use-theme-color";
 
-export default function TabTwoScreen() {
+import { CarbsInput } from "@/components/dosing/carbs-input";
+import { CorrectionInput } from "@/components/dosing/correction-input";
+import { DoseCalculation } from "@/components/dosing/dose-calculation";
+import { DoseModeSelector } from "@/components/dosing/dose-mode-selector";
+import { InsulinOnBoardCard } from "@/components/dosing/insulin-on-board-card";
+import { TodayDosesList } from "@/components/dosing/today-doses-list";
+
+import { auth, db } from "@/config/firebase";
+import { doc, onSnapshot } from "firebase/firestore";
+
+interface Dose {
+  id: string;
+  time: string;
+  amount: number;
+  type: "Meal" | "Correction";
+}
+
+export default function DoseScreen() {
+  const insets = useSafeAreaInsets();
+  const accent = useThemeColor({}, "accent");
+
+  const [mode, setMode] = useState<"meal" | "correction">("meal");
+  const [carbs, setCarbs] = useState(0);
+  const [correctionInsulin, setCorrectionInsulin] = useState(0);
+  const [activeInsulin, setActiveInsulin] = useState(2.5);
+  const [carbRatio, setCarbRatio] = useState(10);
+  const [correctionFactor, setCorrectionFactor] = useState(50);
+  const [todayDoses, setTodayDoses] = useState<Dose[]>([
+    { id: "1", time: "08:30 AM", amount: 2.5, type: "Meal" },
+  ]);
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const userRef = doc(db, "users", user.uid);
+
+    const unsubscribe = onSnapshot(
+      userRef,
+      (docSnapshot) => {
+        if (docSnapshot.exists()) {
+          const data = docSnapshot.data();
+          setCarbRatio(data.insulinSettings?.insulinToCarbRatio || 10);
+          setCorrectionFactor(data.insulinSettings?.correctionFactor || 50);
+        }
+      },
+      (error) => {
+        console.error("Failed to load insulin settings:", error);
+      },
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  const calculateRecommendedDose = () => {
+    if (mode === "meal") {
+      const carbBasedDose = carbs / carbRatio;
+      const adjustedDose = Math.max(0, carbBasedDose - activeInsulin);
+      return adjustedDose;
+    } else {
+      // Correction mode: Correction Insulin - IOB = Net Dose
+      const netDose = Math.max(0, correctionInsulin - activeInsulin);
+      return netDose;
+    }
+  };
+
+  const recommendedDose = calculateRecommendedDose();
+
+  const handleDoseConfirm = () => {
+    // TODO: Save dose to Firestore
+    const newDose: Dose = {
+      id: Date.now().toString(),
+      time: new Date().toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      }),
+      amount: recommendedDose,
+      type: mode === "meal" ? "Meal" : "Correction",
+    };
+    setTodayDoses([newDose, ...todayDoses]);
+
+    if (mode === "meal") {
+      setCarbs(0);
+    } else {
+      setCorrectionInsulin(0);
+    }
+  };
+
+  const totalTodayDoses = todayDoses.reduce(
+    (sum, dose) => sum + dose.amount,
+    0,
+  );
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
+    <ThemedView
+      style={[
+        styles.container,
+        { paddingTop: insets.top, paddingBottom: insets.bottom },
+      ]}
+    >
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <View style={styles.header}>
+          <ThemedText type="title" style={styles.headerTitle}>
+            Insulin Dosing
+          </ThemedText>
+          <ThemedText style={styles.subtitle}>
+            Calculate and log your insulin dose
+          </ThemedText>
+        </View>
+
+        <InsulinOnBoardCard activeInsulin={activeInsulin} />
+
+        <DoseModeSelector mode={mode} onModeChange={setMode} />
+
+        {mode === "meal" ? (
+          <CarbsInput value={carbs} onValueChange={setCarbs} />
+        ) : (
+          <CorrectionInput
+            value={correctionInsulin}
+            onValueChange={setCorrectionInsulin}
+          />
+        )}
+
+        <DoseCalculation
+          mode={mode}
+          carbs={carbs}
+          baseDose={carbRatio}
+          correctionInsulin={correctionInsulin}
+          insulinOnBoard={activeInsulin}
+          recommendedDose={recommendedDose}
+          onCalculate={handleDoseConfirm}
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+
+        <TodayDosesList doses={todayDoses} totalDoses={totalTodayDoses} />
+      </ScrollView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
   },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 32,
+  },
+  header: {
+    marginBottom: 24,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    opacity: 0.6,
   },
 });
