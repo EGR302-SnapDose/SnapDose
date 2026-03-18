@@ -9,6 +9,7 @@ import { useThemeColor } from "@/hooks/use-theme-color";
 import { CarbsInput } from "@/components/dosing/carbs-input";
 import { CorrectionInput } from "@/components/dosing/correction-input";
 import { DoseCalculation } from "@/components/dosing/dose-calculation";
+import { DoseConfirmationSheet } from "@/components/dosing/dose-confirmation-sheet";
 import { DoseModeSelector } from "@/components/dosing/dose-mode-selector";
 import { InsulinOnBoardCard } from "@/components/dosing/insulin-on-board-card";
 import { TodayDosesList } from "@/components/dosing/today-doses-list";
@@ -33,6 +34,7 @@ export default function DoseScreen() {
   const [activeInsulin, setActiveInsulin] = useState(2.5);
   const [carbRatio, setCarbRatio] = useState(10);
   const [correctionFactor, setCorrectionFactor] = useState(50);
+  const [showConfirmationSheet, setShowConfirmationSheet] = useState(false);
   const [todayDoses, setTodayDoses] = useState<Dose[]>([
     { id: "1", time: "08:30 AM", amount: 2.5, type: "Meal" },
   ]);
@@ -75,7 +77,11 @@ export default function DoseScreen() {
   const recommendedDose = calculateRecommendedDose();
 
   const handleDoseConfirm = () => {
-    // TODO: Save dose to Firestore
+    setShowConfirmationSheet(true);
+  };
+
+  const handleSliderConfirm = () => {
+    // Save dose to Firestore
     const newDose: Dose = {
       id: Date.now().toString(),
       time: new Date().toLocaleTimeString("en-US", {
@@ -88,11 +94,18 @@ export default function DoseScreen() {
     };
     setTodayDoses([newDose, ...todayDoses]);
 
+    // Reset the appropriate input based on mode
     if (mode === "meal") {
       setCarbs(0);
     } else {
       setCorrectionInsulin(0);
     }
+
+    // Don't close the modal here - let the user close it manually after seeing the completion
+  };
+
+  const handleCancelConfirmation = () => {
+    setShowConfirmationSheet(false);
   };
 
   const totalTodayDoses = todayDoses.reduce(
@@ -146,6 +159,18 @@ export default function DoseScreen() {
 
         <TodayDosesList doses={todayDoses} totalDoses={totalTodayDoses} />
       </ScrollView>
+
+      <DoseConfirmationSheet
+        visible={showConfirmationSheet}
+        mode={mode}
+        dose={recommendedDose}
+        carbs={carbs}
+        carbRatio={carbRatio}
+        correctionInsulin={correctionInsulin}
+        insulinOnBoard={activeInsulin}
+        onConfirm={handleSliderConfirm}
+        onCancel={handleCancelConfirmation}
+      />
     </ThemedView>
   );
 }
