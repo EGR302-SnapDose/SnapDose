@@ -53,7 +53,7 @@ export function DoseConfirmationSheet({
   const slidePosition = useRef(0);
   const checkmarkScale = useRef(new Animated.Value(0)).current;
   const checkmarkOpacity = useRef(new Animated.Value(0)).current;
-  const dosingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const dosingTimerRef = useRef<number | null>(null);
   const SLIDER_THRESHOLD = 0.85;
 
   useEffect(() => {
@@ -72,7 +72,6 @@ export function DoseConfirmationSheet({
 
   useEffect(() => {
     if (dosingPhase === "dosing") {
-      // After 4 seconds, log the dose and show completion
       dosingTimerRef.current = setTimeout(() => {
         onConfirm();
         setDosingPhase("complete");
@@ -85,7 +84,6 @@ export function DoseConfirmationSheet({
         }
       };
     } else if (dosingPhase === "complete" || dosingPhase === "cancelled") {
-      // Animate the icon in with a bounce effect
       Animated.parallel([
         Animated.spring(checkmarkScale, {
           toValue: 1,
@@ -293,8 +291,8 @@ export function DoseConfirmationSheet({
                   {dosingPhase === "dosing"
                     ? "Dosing"
                     : dosingPhase === "complete"
-                    ? "Complete"
-                    : "Cancelled"}
+                      ? "Complete"
+                      : "Cancelled"}
                 </ThemedText>
               </View>
 
@@ -305,7 +303,10 @@ export function DoseConfirmationSheet({
                   <Animated.View
                     style={[
                       styles.checkmarkCircle,
-                      { borderColor: dosingPhase === "complete" ? accent : "#FF3B30" },
+                      {
+                        borderColor:
+                          dosingPhase === "complete" ? accent : "#FF3B30",
+                      },
                       {
                         opacity: checkmarkOpacity,
                         transform: [{ scale: checkmarkScale }],
@@ -323,10 +324,15 @@ export function DoseConfirmationSheet({
 
               {dosingPhase === "dosing" ? (
                 <Pressable
-                  style={[styles.cancelDosingButton, { borderColor: "#FF3B30" }]}
+                  style={[
+                    styles.cancelDosingButton,
+                    { borderColor: "#FF3B30" },
+                  ]}
                   onPress={handleCancelDosing}
                 >
-                  <ThemedText style={[styles.cancelDosingText, { color: "#FF3B30" }]}>
+                  <ThemedText
+                    style={[styles.cancelDosingText, { color: "#FF3B30" }]}
+                  >
                     Cancel
                   </ThemedText>
                 </Pressable>
