@@ -7,24 +7,32 @@ interface DoseModeSelectorProps {
   onModeChange: (mode: "meal" | "correction") => void;
 }
 
-export function DoseModeSelector({ mode, onModeChange }: DoseModeSelectorProps) {
+export function DoseModeSelector({
+  mode,
+  onModeChange,
+}: DoseModeSelectorProps) {
   const accent = useThemeColor({}, "accent");
-  const buttonBg = useThemeColor({ light: "#F5F5F5", dark: "#1E2022" }, "background");
+  const buttonBg = useThemeColor(
+    { light: "#F5F5F5", dark: "#1E2022" },
+    "background",
+  );
+  const borderColor = useThemeColor(
+    { light: "#E5E5E5", dark: "#2A2A2A" },
+    "icon",
+  );
 
   return (
     <View style={styles.container}>
       <Pressable
         style={[
           styles.button,
+          { backgroundColor: buttonBg, borderColor: borderColor },
           mode === "meal" && { backgroundColor: accent },
         ]}
         onPress={() => onModeChange("meal")}
       >
         <ThemedText
-          style={[
-            styles.buttonText,
-            mode === "meal" && { color: "#FFFFFF" },
-          ]}
+          style={[styles.buttonText, mode === "meal" && { color: "#FFFFFF" }]}
         >
           Meal Dose
         </ThemedText>
@@ -33,6 +41,7 @@ export function DoseModeSelector({ mode, onModeChange }: DoseModeSelectorProps) 
       <Pressable
         style={[
           styles.button,
+          { backgroundColor: buttonBg, borderColor: borderColor },
           mode === "correction" && { backgroundColor: accent },
         ]}
         onPress={() => onModeChange("correction")}
@@ -61,9 +70,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: "center",
-    backgroundColor: "#F5F5F5",
     borderWidth: 1,
-    borderColor: "#E5E5E5",
   },
   buttonText: {
     fontSize: 15,

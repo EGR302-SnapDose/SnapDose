@@ -1,54 +1,75 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import React, { useEffect, useState } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { useThemeColor } from "@/hooks/use-theme-color";
 
-import { CarbsInput } from '@/components/dosing/carbs-input';
-import { DoseCalculation } from '@/components/dosing/dose-calculation';
-import { DoseModeSelector } from '@/components/dosing/dose-mode-selector';
-import { InsulinOnBoardCard } from '@/components/dosing/insulin-on-board-card';
-import { TodayDosesList } from '@/components/dosing/today-doses-list';
+import { CarbsInput } from "@/components/dosing/carbs-input";
+import { CorrectionInput } from "@/components/dosing/correction-input";
+import { DoseCalculation } from "@/components/dosing/dose-calculation";
+import { DoseModeSelector } from "@/components/dosing/dose-mode-selector";
+import { InsulinOnBoardCard } from "@/components/dosing/insulin-on-board-card";
+import { TodayDosesList } from "@/components/dosing/today-doses-list";
+
+import { auth, db } from "@/config/firebase";
+import { doc, onSnapshot } from "firebase/firestore";
 
 interface Dose {
   id: string;
   time: string;
   amount: number;
-  type: 'Meal' | 'Correction';
+  type: "Meal" | "Correction";
 }
 
 export default function DoseScreen() {
   const insets = useSafeAreaInsets();
-  const accent = useThemeColor({}, 'accent');
+  const accent = useThemeColor({}, "accent");
 
-  // State management
-  const [mode, setMode] = useState<'meal' | 'correction'>('meal');
+  const [mode, setMode] = useState<"meal" | "correction">("meal");
   const [carbs, setCarbs] = useState(0);
+  const [correctionInsulin, setCorrectionInsulin] = useState(0);
   const [activeInsulin, setActiveInsulin] = useState(2.5);
   const [carbRatio, setCarbRatio] = useState(10);
+  const [correctionFactor, setCorrectionFactor] = useState(50);
   const [todayDoses, setTodayDoses] = useState<Dose[]>([
-    { id: '1', time: '08:30 AM', amount: 8.5, type: 'Meal' },
-    { id: '2', time: '12:45 PM', amount: 2.0, type: 'Correction' },
-    { id: '3', time: '06:00 PM', amount: 10.2, type: 'Meal' },
+    { id: "1", time: "08:30 AM", amount: 2.5, type: "Meal" },
   ]);
 
-  // Load user settings on mount
   useEffect(() => {
-    const loadSettings = async () => {
-      const savedCarbRatio = await AsyncStorage.getItem('userCarbRatio');
-      if (savedCarbRatio) setCarbRatio(parseInt(savedCarbRatio));
-    };
-    loadSettings();
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const userRef = doc(db, "users", user.uid);
+
+    const unsubscribe = onSnapshot(
+      userRef,
+      (docSnapshot) => {
+        if (docSnapshot.exists()) {
+          const data = docSnapshot.data();
+          setCarbRatio(data.insulinSettings?.insulinToCarbRatio || 10);
+          setCorrectionFactor(data.insulinSettings?.correctionFactor || 50);
+        }
+      },
+      (error) => {
+        console.error("Failed to load insulin settings:", error);
+      },
+    );
+
+    return () => unsubscribe();
   }, []);
 
-  // Calculate recommended dose
   const calculateRecommendedDose = () => {
-    const carbBasedDose = carbs / carbRatio;
-    const adjustedDose = Math.max(0, carbBasedDose - activeInsulin);
-    return adjustedDose;
+    if (mode === "meal") {
+      const carbBasedDose = carbs / carbRatio;
+      const adjustedDose = Math.max(0, carbBasedDose - activeInsulin);
+      return adjustedDose;
+    } else {
+      // Correction mode: Correction Insulin - IOB = Net Dose
+      const netDose = Math.max(0, correctionInsulin - activeInsulin);
+      return netDose;
+    }
   };
 
   const recommendedDose = calculateRecommendedDose();
@@ -57,28 +78,40 @@ export default function DoseScreen() {
     // TODO: Save dose to Firestore
     const newDose: Dose = {
       id: Date.now().toString(),
-      time: new Date().toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
+      time: new Date().toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
       }),
       amount: recommendedDose,
-      type: mode === 'meal' ? 'Meal' : 'Correction',
+      type: mode === "meal" ? "Meal" : "Correction",
     };
     setTodayDoses([newDose, ...todayDoses]);
-    setCarbs(0);
+
+    if (mode === "meal") {
+      setCarbs(0);
+    } else {
+      setCorrectionInsulin(0);
+    }
   };
 
-  const totalTodayDoses = todayDoses.reduce((sum, dose) => sum + dose.amount, 0);
+  const totalTodayDoses = todayDoses.reduce(
+    (sum, dose) => sum + dose.amount,
+    0,
+  );
 
   return (
-    <ThemedView style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    <ThemedView
+      style={[
+        styles.container,
+        { paddingTop: insets.top, paddingBottom: insets.bottom },
+      ]}
+    >
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Header */}
         <View style={styles.header}>
           <ThemedText type="title" style={styles.headerTitle}>
             Insulin Dosing
@@ -88,25 +121,29 @@ export default function DoseScreen() {
           </ThemedText>
         </View>
 
-        {/* Insulin On Board Card */}
         <InsulinOnBoardCard activeInsulin={activeInsulin} />
 
-        {/* Dose Mode Selector */}
         <DoseModeSelector mode={mode} onModeChange={setMode} />
 
-        {/* Carbs Input */}
-        <CarbsInput value={carbs} onValueChange={setCarbs} />
+        {mode === "meal" ? (
+          <CarbsInput value={carbs} onValueChange={setCarbs} />
+        ) : (
+          <CorrectionInput
+            value={correctionInsulin}
+            onValueChange={setCorrectionInsulin}
+          />
+        )}
 
-        {/* Dose Calculation */}
         <DoseCalculation
+          mode={mode}
           carbs={carbs}
           baseDose={carbRatio}
+          correctionInsulin={correctionInsulin}
           insulinOnBoard={activeInsulin}
           recommendedDose={recommendedDose}
           onCalculate={handleDoseConfirm}
         />
 
-        {/* Today's Doses List */}
         <TodayDosesList doses={todayDoses} totalDoses={totalTodayDoses} />
       </ScrollView>
     </ThemedView>
@@ -130,7 +167,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 4,
   },
   subtitle: {
