@@ -25,7 +25,14 @@ def on_image_upload(cloud_event):
         print(f"Skipping non-image file: {file_name}")
         return
 
-    print(f"Processing: gs://{bucket_name}/{file_name}")
+    # Extract UID from path: users/{UID}/image.jpg
+    path_parts = file_name.split("/")
+    if len(path_parts) < 2:
+        print(f"ERROR: File not in user folder. Expected: users/{{UID}}/image.jpg, got: {file_name}")
+        return
+
+    uid = path_parts[0]
+    print(f"Processing: gs://{bucket_name}/{file_name} for user: {uid}")
 
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
@@ -64,7 +71,7 @@ def on_image_upload(cloud_event):
 
     #  Snap-52 Write to Firestore
     db  = firestore.Client(project=PROJECT_ID)
-    doc = db.collection("meal_carb_estimates").document()
+    doc = db.collection("users").document(uid).collection("meal_carb_estimation").document()
     doc.set({
         "image_bucket":          bucket_name,
         "image_path":            file_name,
