@@ -138,23 +138,22 @@ export default function DoseScreen() {
           ...newDose,
           timestamp: new Date(),
           mode: mode,
-          carbsEntered: mode === "meal" ? carbs : null,
           correctionInsulin: mode === "correction" ? correctionInsulin : null,
         });
 
-        // Also save insulin boluses to the boluses collection for IOB calculation
-        // Only save if this is actual insulin being delivered
-        if (recommendedDose > 0) {
-          const bolusesRef = doc(
+        // Save carb information separately if in meal mode
+        if (mode === "meal" && carbs > 0) {
+          const carbEstimationRef = doc(
             db,
             "users",
             user.uid,
-            "boluses",
+            "meal_carb_estimation",
             newDose.id,
           );
-          await setDoc(bolusesRef, {
-            units: recommendedDose,
+          await setDoc(carbEstimationRef, {
+            carbsEntered: carbs,
             timestamp: new Date(),
+            mode: "manual_entry",
           });
         }
       } catch (error) {
