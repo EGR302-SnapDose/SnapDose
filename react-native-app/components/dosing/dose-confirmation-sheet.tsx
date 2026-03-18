@@ -1,0 +1,410 @@
+import { ThemedText } from "@/components/themed-text";
+import { useThemeColor } from "@/hooks/use-theme-color";
+import { Ionicons } from "@expo/vector-icons";
+import { useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Animated,
+  Modal,
+  PanResponder,
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
+
+interface DoseConfirmationSheetProps {
+  visible: boolean;
+  mode: "meal" | "correction";
+  dose: number;
+  carbs?: number;
+  carbRatio?: number;
+  correctionInsulin?: number;
+  insulinOnBoard: number;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+export function DoseConfirmationSheet({
+  visible,
+  mode,
+  dose,
+  carbs,
+  carbRatio,
+  correctionInsulin,
+  insulinOnBoard,
+  onConfirm,
+  onCancel,
+}: DoseConfirmationSheetProps) {
+  const accent = useThemeColor({}, "accent");
+  const backgroundColor = useThemeColor(
+    { light: "#FFFFFF", dark: "#1C1C1E" },
+    "background",
+  );
+  const borderColor = useThemeColor(
+    { light: "#E5E5E5", dark: "#2A2A2A" },
+    "icon",
+  );
+
+  const [dosingPhase, setDosingPhase] = useState<"confirming" | "dosing" | "complete">("confirming");
+  const sliderWidthRef = useRef(0);
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const slidePosition = useRef(0);
+  const SLIDER_THRESHOLD = 0.85;
+
+  useEffect(() => {
+    if (!visible) {
+      slideAnim.setValue(0);
+      slidePosition.current = 0;
+      setDosingPhase("confirming");
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    if (dosingPhase === "dosing") {
+      // Call onConfirm immediately to log the dose
+      onConfirm();
+
+      // After 4 seconds, show completion
+      const timer = setTimeout(() => {
+        setDosingPhase("complete");
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [dosingPhase]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponderCapture: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponderCapture: () => true,
+      onPanResponderGrant: () => {
+        slideAnim.setOffset(slidePosition.current);
+        slideAnim.setValue(0);
+      },
+      onPanResponderMove: (_, gestureState) => {
+        const maxSlide = sliderWidthRef.current - 60;
+        const newValue = Math.max(0, Math.min(gestureState.dx, maxSlide));
+        slideAnim.setValue(newValue);
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        slideAnim.flattenOffset();
+        const maxSlide = sliderWidthRef.current - 60;
+        const currentValue = slidePosition.current + gestureState.dx;
+        const clampedValue = Math.max(0, Math.min(currentValue, maxSlide));
+        const progress = clampedValue / maxSlide;
+
+        if (progress >= SLIDER_THRESHOLD) {
+          slidePosition.current = maxSlide;
+          Animated.spring(slideAnim, {
+            toValue: maxSlide,
+            useNativeDriver: false,
+          }).start(() => {
+            setDosingPhase("dosing");
+          });
+        } else {
+          slidePosition.current = 0;
+          Animated.spring(slideAnim, {
+            toValue: 0,
+            useNativeDriver: false,
+          }).start();
+        }
+      },
+    }),
+  ).current;
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onCancel}
+    >
+      <Pressable style={styles.overlay} onPress={dosingPhase === "confirming" ? onCancel : undefined}>
+        <Pressable
+          style={[
+            dosingPhase === "confirming" ? styles.sheet : styles.dosingSheet,
+            { backgroundColor }
+          ]}
+          onPress={(e) => e.stopPropagation()}
+        >
+          <View style={styles.handle} />
+
+          {dosingPhase === "confirming" ? (
+            <>
+              <View style={styles.header}>
+                <ThemedText style={styles.title}>Confirm Your Dose</ThemedText>
+              </View>
+
+              <View style={[styles.doseInfo, { borderColor }]}>
+                <View style={styles.doseRow}>
+                  <ThemedText style={styles.doseLabel}>
+                    {mode === "meal" ? "Adjusted Dose" : "Net Dose"}
+                  </ThemedText>
+                  <ThemedText style={[styles.doseValue, { color: accent }]}>
+                    {dose.toFixed(1)}u
+                  </ThemedText>
+                </View>
+
+                <View style={styles.divider} />
+
+                {mode === "meal" ? (
+                  <>
+                    <View style={styles.detailRow}>
+                      <ThemedText style={styles.detailLabel}>Carbs:</ThemedText>
+                      <ThemedText style={styles.detailValue}>{carbs}g</ThemedText>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <ThemedText style={styles.detailLabel}>
+                        Carb Ratio:
+                      </ThemedText>
+                      <ThemedText style={styles.detailValue}>
+                        1:{carbRatio}
+                      </ThemedText>
+                    </View>
+                  </>
+                ) : (
+                  <View style={styles.detailRow}>
+                    <ThemedText style={styles.detailLabel}>
+                      Correction Insulin:
+                    </ThemedText>
+                    <ThemedText style={styles.detailValue}>
+                      {correctionInsulin?.toFixed(1)}u
+                    </ThemedText>
+                  </View>
+                )}
+
+                <View style={styles.detailRow}>
+                  <ThemedText style={styles.detailLabel}>
+                    Insulin on Board:
+                  </ThemedText>
+                  <ThemedText style={styles.detailValue}>
+                    {insulinOnBoard.toFixed(1)}u
+                  </ThemedText>
+                </View>
+              </View>
+
+              <View style={styles.sliderContainer}>
+                <ThemedText style={styles.sliderLabel}>Slide to Confirm</ThemedText>
+                <View
+                  style={[styles.sliderTrack, { backgroundColor: accent + "20" }]}
+                  onLayout={(e) => {
+                    sliderWidthRef.current = e.nativeEvent.layout.width;
+                  }}
+                >
+                  <Animated.View
+                    style={[
+                      styles.sliderTrail,
+                      {
+                        backgroundColor: accent + "60",
+                        width: slideAnim.interpolate({
+                          inputRange: [0, 1000],
+                          outputRange: [60, 1060],
+                          extrapolate: 'clamp',
+                        }),
+                      },
+                    ]}
+                  />
+                  <Animated.View
+                    style={[
+                      styles.sliderThumb,
+                      {
+                        backgroundColor: accent,
+                        transform: [{ translateX: slideAnim }],
+                      },
+                    ]}
+                    {...panResponder.panHandlers}
+                  >
+                    <Ionicons name="chevron-forward" size={24} color="#FFFFFF" />
+                  </Animated.View>
+                </View>
+              </View>
+
+              <Pressable style={styles.cancelButton} onPress={onCancel}>
+                <ThemedText style={styles.cancelText}>Cancel</ThemedText>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <View style={styles.dosingHeader}>
+                <ThemedText style={styles.dosingTitle}>
+                  {dosingPhase === "dosing" ? "Dosing" : "Complete"}
+                </ThemedText>
+              </View>
+
+              <View style={styles.statusContainer}>
+                {dosingPhase === "dosing" ? (
+                  <ActivityIndicator size="large" color={accent} />
+                ) : (
+                  <View style={[styles.checkmarkCircle, { borderColor: accent }]}>
+                    <Ionicons name="checkmark" size={48} color={accent} />
+                  </View>
+                )}
+              </View>
+
+              <Pressable
+                style={[styles.closeButton, { backgroundColor: accent }]}
+                onPress={onCancel}
+              >
+                <ThemedText style={styles.closeButtonText}>Close</ThemedText>
+              </Pressable>
+            </>
+          )}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  sheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 40,
+  },
+  dosingSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 40,
+    minHeight: 280,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    backgroundColor: "#D1D1D6",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 24,
+  },
+  header: {
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "700",
+    marginTop: 12,
+  },
+  dosingHeader: {
+    alignItems: "center",
+    marginBottom: 32,
+  },
+  dosingTitle: {
+    fontSize: 28,
+    fontWeight: "700",
+    marginTop: 12,
+  },
+  statusContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 32,
+  },
+  checkmarkCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  doseInfo: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+  },
+  doseRow: {
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  doseLabel: {
+    fontSize: 16,
+    opacity: 0.7,
+    marginBottom: 8,
+  },
+  doseValue: {
+    fontSize: 48,
+    fontWeight: "700",
+    lineHeight: 60,
+    paddingVertical: 16,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#E5E5E5",
+    marginVertical: 16,
+  },
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 8,
+  },
+  detailLabel: {
+    fontSize: 15,
+    opacity: 0.7,
+  },
+  detailValue: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  sliderContainer: {
+    marginBottom: 24,
+  },
+  sliderLabel: {
+    textAlign: "center",
+    fontSize: 14,
+    opacity: 0.7,
+    marginBottom: 12,
+  },
+  sliderTrack: {
+    height: 60,
+    borderRadius: 30,
+    position: "relative",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  sliderTrail: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    height: 60,
+    borderRadius: 30,
+  },
+  sliderThumb: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    position: "absolute",
+    left: 0,
+  },
+  cancelButton: {
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  cancelText: {
+    fontSize: 16,
+    fontWeight: "600",
+    opacity: 0.6,
+  },
+  closeButton: {
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: 24,
+  },
+  closeButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+});
