@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback } from "react";
 import { getAuth } from "firebase/auth";
 import * as WebBrowser from "expo-web-browser";
 import { useFocusEffect } from "@react-navigation/native";
+import PumpPairingSection from '@/components/ui/PumpPairingSection';
 
 const API_BASE =
     "https://us-central1-egr302-snapdose.cloudfunctions.net/dexcom-auth";
@@ -68,8 +69,8 @@ export default function SettingsScreen() {
                             {loading
                                 ? "Checking..."
                                 : dexcomConnected
-                                  ? "Connected"
-                                  : "Not connected"}
+                                    ? "Connected"
+                                    : "Not connected"}
                         </Text>
                     </View>
 
@@ -96,71 +97,72 @@ export default function SettingsScreen() {
                     )}
                 </View>
             </View>
-           
+{/* Pump Connection Section */}
+                <PumpPairingSection />
 
-        {/* Units Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Units</Text>
-                    <View style={styles.row}>
-                        <View style={styles.rowText}>
-                            <Text style={styles.label}>Blood Glucose</Text>
-                            <Text style={styles.status}>mg/dL</Text>
-                        </View>
-                    </View>
-                    <View style={styles.row}>
-                        <View style={styles.rowText}>
-                            <Text style={styles.label}>Carbohydrates</Text>
-                            <Text style={styles.status}>grams</Text>
-                        </View>
+            {/* Units Section */}
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Units</Text>
+                <View style={styles.row}>
+                    <View style={styles.rowText}>
+                        <Text style={styles.label}>Blood Glucose</Text>
+                        <Text style={styles.status}>mg/dL</Text>
                     </View>
                 </View>
-
-                {/* Notifications Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Notifications</Text>
-                    <View style={styles.row}>
-                        <View style={styles.rowText}>
-                            <Text style={styles.label}>High Glucose Alerts</Text>
-                            <Text style={styles.status}>Enabled</Text>
-                        </View>
-                    </View>
-                    <View style={styles.row}>
-                        <View style={styles.rowText}>
-                            <Text style={styles.label}>Low Glucose Alerts</Text>
-                            <Text style={styles.status}>Enabled</Text>
-                        </View>
-                    </View>
-                    <View style={styles.row}>
-                        <View style={styles.rowText}>
-                            <Text style={styles.label}>Meal Reminders</Text>
-                            <Text style={styles.status}>Disabled</Text>
-                        </View>
-                    </View>
-                </View>
-
-                {/* App Preferences Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>App Preferences</Text>
-                    <View style={styles.row}>
-                        <View style={styles.rowText}>
-                            <Text style={styles.label}>Theme</Text>
-                            <Text style={styles.status}>Light</Text>
-                        </View>
-                    </View>
-                    <View style={styles.row}>
-                        <View style={styles.rowText}>
-                            <Text style={styles.label}>Language</Text>
-                            <Text style={styles.status}>English</Text>
-                        </View>
-                    </View>
-                    <View style={styles.row}>
-                        <View style={styles.rowText}>
-                            <Text style={styles.label}>App Version</Text>
-                            <Text style={styles.status}>1.0.0</Text>
-                        </View>
+                <View style={styles.row}>
+                    <View style={styles.rowText}>
+                        <Text style={styles.label}>Carbohydrates</Text>
+                        <Text style={styles.status}>grams</Text>
                     </View>
                 </View>
             </View>
+
+            {/* Notifications Section */}
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Notifications</Text>
+                <View style={styles.row}>
+                    <View style={styles.rowText}>
+                        <Text style={styles.label}>High Glucose Alerts</Text>
+                        <Text style={styles.status}>Enabled</Text>
+                    </View>
+                </View>
+                <View style={styles.row}>
+                    <View style={styles.rowText}>
+                        <Text style={styles.label}>Low Glucose Alerts</Text>
+                        <Text style={styles.status}>Enabled</Text>
+                    </View>
+                </View>
+                <View style={styles.row}>
+                    <View style={styles.rowText}>
+                        <Text style={styles.label}>Meal Reminders</Text>
+                        <Text style={styles.status}>Disabled</Text>
+                    </View>
+                </View>
+            </View>
+
+            {/* App Preferences Section */}
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>App Preferences</Text>
+                <View style={styles.row}>
+                    <View style={styles.rowText}>
+                        <Text style={styles.label}>Theme</Text>
+                        <Text style={styles.status}>Light</Text>
+                    </View>
+                </View>
+                <View style={styles.row}>
+                    <View style={styles.rowText}>
+                        <Text style={styles.label}>Language</Text>
+                        <Text style={styles.status}>English</Text>
+                    </View>
+                </View>
+                <View style={styles.row}>
+                    <View style={styles.rowText}>
+                        <Text style={styles.label}>App Version</Text>
+                        <Text style={styles.status}>1.0.0</Text>
+                    </View>
+                </View>
+            </View>
+        </View>
     );
 }
 
