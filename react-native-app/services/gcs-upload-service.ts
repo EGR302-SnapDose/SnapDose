@@ -2,10 +2,10 @@
 import "@/config/firebase";
 import { getAuth } from "firebase/auth";
 import {
-    getDownloadURL,
-    getStorage,
-    ref,
-    uploadBytesResumable,
+  getDownloadURL,
+  getStorage,
+  ref,
+  uploadBytesResumable,
 } from "firebase/storage";
 
 export type UploadProgress = {
@@ -37,7 +37,7 @@ export const uploadImageToGCS = async (
     const blob = await response.blob();
 
     // Drop straight into bucket root
-    const uploadFileName = `${Date.now()}_${fileName}`;
+    const uploadFileName = `${user.uid}/${Date.now()}_${fileName}`;
     const storage = getStorage();
     const storageRef = ref(storage, uploadFileName);
 
