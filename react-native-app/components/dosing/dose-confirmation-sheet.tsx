@@ -45,10 +45,15 @@ export function DoseConfirmationSheet({
     "icon",
   );
 
-  const [dosingPhase, setDosingPhase] = useState<"confirming" | "dosing" | "complete">("confirming");
+  const [dosingPhase, setDosingPhase] = useState<
+    "confirming" | "dosing" | "complete" | "cancelled"
+  >("confirming");
   const sliderWidthRef = useRef(0);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const slidePosition = useRef(0);
+  const checkmarkScale = useRef(new Animated.Value(0)).current;
+  const checkmarkOpacity = useRef(new Animated.Value(0)).current;
+  const dosingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const SLIDER_THRESHOLD = 0.85;
 
   useEffect(() => {
@@ -56,21 +61,54 @@ export function DoseConfirmationSheet({
       slideAnim.setValue(0);
       slidePosition.current = 0;
       setDosingPhase("confirming");
+      checkmarkScale.setValue(0);
+      checkmarkOpacity.setValue(0);
+      if (dosingTimerRef.current) {
+        clearTimeout(dosingTimerRef.current);
+        dosingTimerRef.current = null;
+      }
     }
   }, [visible]);
 
   useEffect(() => {
     if (dosingPhase === "dosing") {
-      // Call onConfirm immediately to log the dose
-      onConfirm();
-
-      // After 4 seconds, show completion
-      const timer = setTimeout(() => {
+      // After 4 seconds, log the dose and show completion
+      dosingTimerRef.current = setTimeout(() => {
+        onConfirm();
         setDosingPhase("complete");
       }, 4000);
-      return () => clearTimeout(timer);
+
+      return () => {
+        if (dosingTimerRef.current) {
+          clearTimeout(dosingTimerRef.current);
+          dosingTimerRef.current = null;
+        }
+      };
+    } else if (dosingPhase === "complete" || dosingPhase === "cancelled") {
+      // Animate the icon in with a bounce effect
+      Animated.parallel([
+        Animated.spring(checkmarkScale, {
+          toValue: 1,
+          tension: 50,
+          friction: 5,
+          useNativeDriver: true,
+        }),
+        Animated.timing(checkmarkOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
   }, [dosingPhase]);
+
+  const handleCancelDosing = () => {
+    if (dosingTimerRef.current) {
+      clearTimeout(dosingTimerRef.current);
+      dosingTimerRef.current = null;
+    }
+    setDosingPhase("cancelled");
+  };
 
   const panResponder = useRef(
     PanResponder.create({
@@ -120,11 +158,14 @@ export function DoseConfirmationSheet({
       animationType="fade"
       onRequestClose={onCancel}
     >
-      <Pressable style={styles.overlay} onPress={dosingPhase === "confirming" ? onCancel : undefined}>
+      <Pressable
+        style={styles.overlay}
+        onPress={dosingPhase === "confirming" ? onCancel : undefined}
+      >
         <Pressable
           style={[
             dosingPhase === "confirming" ? styles.sheet : styles.dosingSheet,
-            { backgroundColor }
+            { backgroundColor },
           ]}
           onPress={(e) => e.stopPropagation()}
         >
@@ -152,7 +193,9 @@ export function DoseConfirmationSheet({
                   <>
                     <View style={styles.detailRow}>
                       <ThemedText style={styles.detailLabel}>Carbs:</ThemedText>
-                      <ThemedText style={styles.detailValue}>{carbs}g</ThemedText>
+                      <ThemedText style={styles.detailValue}>
+                        {carbs}g
+                      </ThemedText>
                     </View>
                     <View style={styles.detailRow}>
                       <ThemedText style={styles.detailLabel}>
@@ -182,12 +225,27 @@ export function DoseConfirmationSheet({
                     {insulinOnBoard.toFixed(1)}u
                   </ThemedText>
                 </View>
+
+                <View style={styles.divider} />
+
+                <View style={styles.mathRow}>
+                  <ThemedText style={styles.mathText}>
+                    {mode === "meal"
+                      ? `${(carbs! / carbRatio!).toFixed(1)}u - ${insulinOnBoard.toFixed(1)}u = ${dose.toFixed(1)}u`
+                      : `${correctionInsulin?.toFixed(1)}u - ${insulinOnBoard.toFixed(1)}u = ${dose.toFixed(1)}u`}
+                  </ThemedText>
+                </View>
               </View>
 
               <View style={styles.sliderContainer}>
-                <ThemedText style={styles.sliderLabel}>Slide to Confirm</ThemedText>
+                <ThemedText style={styles.sliderLabel}>
+                  Slide to Confirm
+                </ThemedText>
                 <View
-                  style={[styles.sliderTrack, { backgroundColor: accent + "20" }]}
+                  style={[
+                    styles.sliderTrack,
+                    { backgroundColor: accent + "20" },
+                  ]}
                   onLayout={(e) => {
                     sliderWidthRef.current = e.nativeEvent.layout.width;
                   }}
@@ -200,7 +258,7 @@ export function DoseConfirmationSheet({
                         width: slideAnim.interpolate({
                           inputRange: [0, 1000],
                           outputRange: [60, 1060],
-                          extrapolate: 'clamp',
+                          extrapolate: "clamp",
                         }),
                       },
                     ]}
@@ -215,7 +273,11 @@ export function DoseConfirmationSheet({
                     ]}
                     {...panResponder.panHandlers}
                   >
-                    <Ionicons name="chevron-forward" size={24} color="#FFFFFF" />
+                    <Ionicons
+                      name="chevron-forward"
+                      size={24}
+                      color="#FFFFFF"
+                    />
                   </Animated.View>
                 </View>
               </View>
@@ -228,7 +290,11 @@ export function DoseConfirmationSheet({
             <>
               <View style={styles.dosingHeader}>
                 <ThemedText style={styles.dosingTitle}>
-                  {dosingPhase === "dosing" ? "Dosing" : "Complete"}
+                  {dosingPhase === "dosing"
+                    ? "Dosing"
+                    : dosingPhase === "complete"
+                    ? "Complete"
+                    : "Cancelled"}
                 </ThemedText>
               </View>
 
@@ -236,18 +302,42 @@ export function DoseConfirmationSheet({
                 {dosingPhase === "dosing" ? (
                   <ActivityIndicator size="large" color={accent} />
                 ) : (
-                  <View style={[styles.checkmarkCircle, { borderColor: accent }]}>
-                    <Ionicons name="checkmark" size={48} color={accent} />
-                  </View>
+                  <Animated.View
+                    style={[
+                      styles.checkmarkCircle,
+                      { borderColor: dosingPhase === "complete" ? accent : "#FF3B30" },
+                      {
+                        opacity: checkmarkOpacity,
+                        transform: [{ scale: checkmarkScale }],
+                      },
+                    ]}
+                  >
+                    {dosingPhase === "complete" ? (
+                      <Ionicons name="checkmark" size={48} color={accent} />
+                    ) : (
+                      <Ionicons name="close" size={48} color="#FF3B30" />
+                    )}
+                  </Animated.View>
                 )}
               </View>
 
-              <Pressable
-                style={[styles.closeButton, { backgroundColor: accent }]}
-                onPress={onCancel}
-              >
-                <ThemedText style={styles.closeButtonText}>Close</ThemedText>
-              </Pressable>
+              {dosingPhase === "dosing" ? (
+                <Pressable
+                  style={[styles.cancelDosingButton, { borderColor: "#FF3B30" }]}
+                  onPress={handleCancelDosing}
+                >
+                  <ThemedText style={[styles.cancelDosingText, { color: "#FF3B30" }]}>
+                    Cancel
+                  </ThemedText>
+                </Pressable>
+              ) : (
+                <Pressable
+                  style={[styles.closeButton, { backgroundColor: accent }]}
+                  onPress={onCancel}
+                >
+                  <ThemedText style={styles.closeButtonText}>Close</ThemedText>
+                </Pressable>
+              )}
             </>
           )}
         </Pressable>
@@ -299,9 +389,9 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   dosingTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "700",
-    marginTop: 12,
+    marginTop: 22,
   },
   statusContainer: {
     alignItems: "center",
@@ -309,9 +399,9 @@ const styles = StyleSheet.create({
     marginVertical: 32,
   },
   checkmarkCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 125,
+    height: 125,
+    borderRadius: 100,
     borderWidth: 3,
     alignItems: "center",
     justifyContent: "center",
@@ -355,6 +445,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
   },
+  mathRow: {
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  mathText: {
+    fontSize: 16,
+    fontWeight: "700",
+    fontFamily: "monospace",
+    opacity: 0.8,
+  },
   sliderContainer: {
     marginBottom: 24,
   },
@@ -395,6 +495,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     opacity: 0.6,
+  },
+  cancelDosingButton: {
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    alignItems: "center",
+    marginTop: 24,
+  },
+  cancelDosingText: {
+    fontSize: 16,
+    fontWeight: "600",
   },
   closeButton: {
     paddingVertical: 16,

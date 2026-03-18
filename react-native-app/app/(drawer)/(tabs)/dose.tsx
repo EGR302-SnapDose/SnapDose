@@ -101,8 +101,7 @@ export default function DoseScreen() {
       setCorrectionInsulin(0);
     }
 
-    // Close the modal
-    setShowConfirmationSheet(false);
+    // Don't close the modal here - let the user close it manually after seeing the completion
   };
 
   const handleCancelConfirmation = () => {
