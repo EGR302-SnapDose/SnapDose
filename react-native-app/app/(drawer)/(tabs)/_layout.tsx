@@ -1,12 +1,11 @@
-import { Tabs } from "expo-router";
-import React from "react";
-import { Pressable, TouchableOpacity, View, Alert } from "react-native";
-import { DrawerActions, useNavigation } from "@react-navigation/native";
-import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import { Tabs } from "expo-router";
+import React from "react";
+import { Alert, TouchableOpacity, View } from "react-native";
 import { logout } from "../../../services/logout-service";
 
 function LogoutButton() {
@@ -75,11 +74,7 @@ export default function TabLayout() {
                 options={{
                     title: "Dose Insulin",
                     tabBarIcon: ({ color }) => (
-                        <IconSymbol
-                            size={28}
-                            name="paperplane.fill"
-                            color={color}
-                        />
+                        <MaterialCommunityIcons name="pill" size={28} color={color} />
                     ),
                 }}
             />
