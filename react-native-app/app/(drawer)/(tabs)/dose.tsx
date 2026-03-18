@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { useIOB, refreshIOB } from "@/hooks/use-iob";
 
 import { CarbsInput } from "@/components/dosing/carbs-input";
 import { CorrectionInput } from "@/components/dosing/correction-input";
@@ -15,7 +16,7 @@ import { InsulinOnBoardCard } from "@/components/dosing/insulin-on-board-card";
 import { TodayDosesList } from "@/components/dosing/today-doses-list";
 
 import { auth, db } from "@/config/firebase";
-import { doc, onSnapshot } from "firebase/firestore";
+import { collection, doc, onSnapshot, setDoc } from "firebase/firestore";
 
 interface Dose {
   id: string;
@@ -31,13 +32,12 @@ export default function DoseScreen() {
   const [mode, setMode] = useState<"meal" | "correction">("meal");
   const [carbs, setCarbs] = useState(0);
   const [correctionInsulin, setCorrectionInsulin] = useState(0);
-  const [activeInsulin, setActiveInsulin] = useState(2.5);
+  const activeInsulin = useIOB();
   const [carbRatio, setCarbRatio] = useState(10);
   const [correctionFactor, setCorrectionFactor] = useState(50);
   const [showConfirmationSheet, setShowConfirmationSheet] = useState(false);
-  const [todayDoses, setTodayDoses] = useState<Dose[]>([
-    { id: "1", time: "08:30 AM", amount: 2.5, type: "Meal" },
-  ]);
+  const [todayDoses, setTodayDoses] = useState<Dose[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -62,6 +62,36 @@ export default function DoseScreen() {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const dosesRef = collection(db, "users", user.uid, "doses");
+
+    const unsubscribe = onSnapshot(
+      dosesRef,
+      (snapshot) => {
+        const doses: Dose[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          doses.push({
+            id: doc.id,
+            time: data.time,
+            amount: data.amount,
+            type: data.type,
+          });
+        });
+        // Sort by id (timestamp) in descending order (newest first)
+        setTodayDoses(doses.sort((a, b) => parseInt(b.id) - parseInt(a.id)));
+      },
+      (error) => {
+        console.error("Failed to load doses:", error);
+      },
+    );
+
+    return () => unsubscribe();
+  }, []);
+
   const calculateRecommendedDose = () => {
     if (mode === "meal") {
       const carbBasedDose = carbs / carbRatio;
@@ -80,7 +110,7 @@ export default function DoseScreen() {
     setShowConfirmationSheet(true);
   };
 
-  const handleSliderConfirm = () => {
+  const handleSliderConfirm = async () => {
     // Save dose to Firestore
     const newDose: Dose = {
       id: Date.now().toString(),
@@ -92,7 +122,47 @@ export default function DoseScreen() {
       amount: recommendedDose,
       type: mode === "meal" ? "Meal" : "Correction",
     };
-    setTodayDoses([newDose, ...todayDoses]);
+
+    // Save to Firebase
+    const user = auth.currentUser;
+    if (user) {
+      try {
+        const dosesRef = doc(
+          db,
+          "users",
+          user.uid,
+          "doses",
+          newDose.id,
+        );
+        await setDoc(dosesRef, {
+          ...newDose,
+          timestamp: new Date(),
+          mode: mode,
+          correctionInsulin: mode === "correction" ? correctionInsulin : null,
+        });
+
+        // Save carb information separately if in meal mode
+        if (mode === "meal" && carbs > 0) {
+          const carbEstimationRef = doc(
+            db,
+            "users",
+            user.uid,
+            "meal_carb_estimation",
+            newDose.id,
+          );
+          await setDoc(carbEstimationRef, {
+            carbsEntered: carbs,
+            timestamp: new Date(),
+            mode: "manual_entry",
+          });
+        }
+      } catch (error) {
+        console.error("Failed to save dose to Firebase:", error);
+      }
+    }
+
+    // Refresh IOB immediately after dose is saved
+    refreshIOB();
 
     // Reset the appropriate input based on mode
     if (mode === "meal") {
@@ -113,6 +183,15 @@ export default function DoseScreen() {
     0,
   );
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    // Immediately refresh IOB data
+    refreshIOB();
+    // Wait a moment then stop the refresh animation
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setIsRefreshing(false);
+  };
+
   return (
     <ThemedView
       style={[
@@ -124,6 +203,13 @@ export default function DoseScreen() {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={accent}
+          />
+        }
       >
         <View style={styles.header}>
           <ThemedText type="title" style={styles.headerTitle}>
