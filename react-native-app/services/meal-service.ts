@@ -1,93 +1,151 @@
 import {
-    collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, orderBy, Unsubscribe, Timestamp, serverTimestamp, } 
-from 'firebase/firestore';
+  collection,
+  doc,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  orderBy,
+  where,
+  limit,
+  Unsubscribe,
+  Timestamp,
+  serverTimestamp,
+} from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import { db } from '@/config/firebase';
 import { MealCarbEstimate } from '@/types/meal';
 
-const COLLECTION = 'meal_carb_estimates';
+const COLLECTION = 'meal_carb_estimation';
 
-// Convert Firestore doc to MealCarbEstimate
+const getMealCollection = () => {
+  const auth = getAuth();
+  const userId = auth.currentUser?.uid;
+  if (!userId) throw new Error('User not authenticated');
+  return collection(db, 'users', userId, COLLECTION);
+};
+
+const getMealDoc = (mealId: string) => {
+  const auth = getAuth();
+  const userId = auth.currentUser?.uid;
+  if (!userId) throw new Error('User not authenticated');
+  return doc(db, 'users', userId, COLLECTION, mealId);
+};
+
 const fromFirestore = (id: string, data: Record<string, any>): MealCarbEstimate => ({
-    id,
-    confidence: data.confidence ?? 'low',
-    created_at: data.created_at instanceof Timestamp ? data.created_at.toDate() : new Date(data.created_at),
-    estimated_carbs_grams: data.estimated_carbs_grams ?? 0,
-    foods_detected: data.foods_detected ?? [],
-    image_bucket: data.image_bucket ?? '',
-    image_gs_uri: data.image_gs_uri ?? '',
-    image_path: data.image_path ?? '',
-    notes: data.notes ?? '',
-    raw_gemini_response: data.raw_gemini_response ?? '',
-    status: data.status ?? 'pending',
+  id,
+  confidence: data.confidence ?? 'low',
+  created_at: data.created_at instanceof Timestamp
+    ? data.created_at.toDate()
+    : new Date(data.created_at),
+  estimated_carbs_grams: data.estimated_carbs_grams ?? 0,
+  foods_detected: data.foods_detected ?? [],
+  image_bucket: data.image_bucket ?? '',
+  image_gs_uri: data.image_gs_uri ?? '',
+  image_path: data.image_path ?? '',
+  notes: data.notes ?? '',
+  raw_gemini_response: data.raw_gemini_response ?? '',
+  status: data.status ?? 'pending',
 });
 
-// Real-time listener for all meals, sorted by most recent
 export const subscribeMeals = (
-    onUpdate: (meals: MealCarbEstimate[]) => void,
-    onError?: (error: Error) => void
+  onUpdate: (meals: MealCarbEstimate[]) => void,
+  onError?: (error: Error) => void
 ): Unsubscribe => {
-    const q = query(collection(db, COLLECTION), orderBy('created_at', 'desc'));
-
-    return onSnapshot(
-        q, 
-        (snapshot) => {
-            const meals = snapshot.docs.map((doc) => fromFirestore(doc.id, doc.data()));
-            onUpdate(meals);
-        },
-        (error) => {
-            console.error('Firestore listener error:', error);
-            onError?.(error);
-        }
-    );
+  const q = query(getMealCollection(), orderBy('created_at', 'desc'));
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const meals = snapshot.docs.map((doc) => fromFirestore(doc.id, doc.data()));
+      onUpdate(meals);
+    },
+    (error) => {
+      console.error('Firestore listener error:', error);
+      onError?.(error);
+    }
+  );
 };
 
-// Real-time listener for a single meal document
 export const subscribeMeal = (
-    mealId: string,
-    onUpdate: (meal: MealCarbEstimate | null) => void,
-    onError?: (error: Error) => void
+  mealId: string,
+  onUpdate: (meal: MealCarbEstimate | null) => void,
+  onError?: (error: Error) => void
 ): Unsubscribe => {
-    return onSnapshot(
-        doc(db, COLLECTION, mealId),
-        (snapshot) => {
-            if(snapshot.exists()) {
-                onUpdate(fromFirestore(snapshot.id, snapshot.data()));
-            } else {
-                onUpdate(null);
-            }
-        },
-        (error) => {
-            console.error('Firestore meal listener error:', error);
-            onError?.(error);
-        }
-    );
+  return onSnapshot(
+    getMealDoc(mealId),
+    (snapshot) => {
+      if (snapshot.exists()) {
+        onUpdate(fromFirestore(snapshot.id, snapshot.data()));
+      } else {
+        onUpdate(null);
+      }
+    },
+    (error) => {
+      console.error('Firestore meal listener error:', error);
+      onError?.(error);
+    }
+  );
 };
 
-// Create a new meal entry
-export const createMealEntry = async (imagePath: string, imageBucket: string, imageGsUri: string,): Promise<string> => {
-    const docRef = await addDoc(collection(db, COLLECTION), {
-        status: 'pending',
-        image_path: imagePath,
-        image_bucket: imageBucket,
-        image_gs_uri: imageGsUri,
-        estimated_carbs_grams: 0,
-        confidence: 'low',
-        foods_detected: [],
-        notes: '',
-        raw_gemini_response: '',
-        creaed_at: serverTimestamp(),
-    });
-    return docRef.id;
+export const subscribeMealByImagePath = (
+  imagePath: string,
+  onUpdate: (meal: MealCarbEstimate | null) => void,
+  onError?: (error: Error) => void
+): Unsubscribe => {
+  const q = query(
+    getMealCollection(),
+    where('image_path', '==', imagePath),
+    orderBy('created_at', 'desc'),
+    limit(1)
+  );
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      if (!snapshot.empty) {
+        const docSnap = snapshot.docs[0];
+        onUpdate(fromFirestore(docSnap.id, docSnap.data()));
+      } else {
+        onUpdate(null);
+      }
+    },
+    (error) => {
+      console.error('Firestore image path listener error:', error);
+      onError?.(error);
+    }
+  );
 };
 
-// Update carb estimate (user override)
-export const updateCarbEstimate = async( mealId: string, carbs: number): Promise<void> => {
-    await updateDoc(doc(db, COLLECTION, mealId), {
-        estimated_carbs_grams: carbs,
-    });
+export const createMealEntry = async (
+  imagePath: string,
+  imageBucket: string,
+  imageGsUri: string,
+): Promise<string> => {
+  const docRef = await addDoc(getMealCollection(), {
+    status: 'pending',
+    image_path: imagePath,
+    image_bucket: imageBucket,
+    image_gs_uri: imageGsUri,
+    estimated_carbs_grams: 0,
+    confidence: 'low',
+    foods_detected: [],
+    notes: '',
+    raw_gemini_response: '',
+    created_at: serverTimestamp(),
+  });
+  return docRef.id;
 };
 
-// Delete a meal entry
-export const deleteMealentry = async (mealId: string): Promise<void> => {
-    await deleteDoc(doc(db, COLLECTION, mealId));
+export const updateCarbEstimate = async (
+  mealId: string,
+  carbs: number
+): Promise<void> => {
+  await updateDoc(getMealDoc(mealId), {
+    estimated_carbs_grams: carbs,
+  });
+};
+
+export const deleteMealEntry = async (mealId: string): Promise<void> => {
+  await deleteDoc(getMealDoc(mealId));
 };

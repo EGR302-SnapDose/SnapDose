@@ -35,6 +35,7 @@ function LogoutButton() {
         </View>
     );
 }
+
 export default function TabLayout() {
     const colorScheme = useColorScheme();
     const navigation = useNavigation();
@@ -88,7 +89,7 @@ export default function TabLayout() {
                 name="food-gallery"
                 options={{
                     title: "Food Gallery",
-                    href: null, // hides from tab bar, keeps bottom nav when on this screen
+                    href: null,
                 }}
             />
         </Tabs>
