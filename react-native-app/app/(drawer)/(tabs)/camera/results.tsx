@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, View, TouchableOpacity, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ThemedView } from '@/components/themed-view';
@@ -9,7 +9,7 @@ import { FoodsDetectedList } from '@/components/results/FoodsDetectedList';
 import { EditCarbsField } from '@/components/results/EditCarbsField';
 import { useMeal } from '@/hooks/use-meal';
 import { updateCarbEstimate } from '@/services/meal-service';
-import { Ionicons } from '@expo/vector-icons'; 
+import { Ionicons } from '@expo/vector-icons';
 
 export default function ResultsScreen() {
   const { mealId } = useLocalSearchParams<{ mealId: string }>();
@@ -30,7 +30,7 @@ export default function ResultsScreen() {
     setIsSaving(true);
     try {
       await updateCarbEstimate(mealId, finalCarbs);
-      router.push('/(drawer)/(tabs)');
+      router.dismissAll();
     } catch (err) {
       Alert.alert('Error', 'Failed to save carb estimate. Please try again.');
       console.error(err);
@@ -59,7 +59,6 @@ export default function ResultsScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="chevron-back" size={24} color={mutedColor} />
@@ -68,7 +67,6 @@ export default function ResultsScreen() {
           <View style={{ width: 32 }} />
         </View>
 
-        {/* Status banner while processing */}
         {isProcessing && (
           <View style={[styles.processingBanner, { backgroundColor: `${confirmBg}15` }]}>
             <Ionicons name="time-outline" size={16} color={confirmBg} />
@@ -78,21 +76,18 @@ export default function ResultsScreen() {
           </View>
         )}
 
-        {/* Carb estimate */}
         <CarbEstimateDisplay
           estimatedCarbs={meal?.estimated_carbs_grams ?? 0}
           confidence={meal?.confidence ?? 'low'}
           isLoading={isProcessing || isLoading}
         />
 
-        {/* Foods detected */}
         <FoodsDetectedList
           foods={meal?.foods_detected ?? []}
           notes={meal?.notes}
           isLoading={isProcessing || isLoading}
         />
 
-        {/* Edit carbs — only show once AI is done */}
         {!isProcessing && !isLoading && meal && (
           <EditCarbsField
             initialValue={meal.estimated_carbs_grams}
@@ -101,7 +96,6 @@ export default function ResultsScreen() {
         )}
       </ScrollView>
 
-      {/* Confirm button */}
       {!isProcessing && !isLoading && meal && (
         <View style={[styles.bottomBar, { backgroundColor: controlsBg }]}>
           <TouchableOpacity
@@ -120,65 +114,17 @@ export default function ResultsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 16,
-  },
-  content: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 32,
-    gap: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  backButton: {
-    padding: 4,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  processingBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    padding: 12,
-    borderRadius: 10,
-  },
-  processingText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  bottomBar: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  confirmButton: {
-    height: 52,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  confirmText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  errorText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  container: { flex: 1 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 16 },
+  content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 32, gap: 16 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  backButton: { padding: 4 },
+  title: { fontSize: 18, fontWeight: '700' },
+  processingBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 10 },
+  processingText: { fontSize: 14, fontWeight: '500' },
+  bottomBar: { padding: 16, paddingBottom: 32 },
+  confirmButton: { height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  confirmText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  disabled: { opacity: 0.5 },
+  errorText: { fontSize: 16, fontWeight: '600' },
 });

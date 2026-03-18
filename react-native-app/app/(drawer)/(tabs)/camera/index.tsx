@@ -1,17 +1,16 @@
-import { CameraPermissionPrompt } from "@/components/camera/CameraPermissionPrompt";
-import { CameraControls } from "@/components/camera/CaptureButton";
-import { PhotoPreview } from "@/components/camera/PhotoPreview";
-import { ThemedView } from "@/components/themed-view";
-import { Toast } from "@/components/ui/Toast";
-import { useCameraPermission } from "@/hooks/use-camera-permissions";
-import { usePhotoStorage } from "@/hooks/use-photo-storage";
-import { useThemeColor } from "@/hooks/use-theme-color";
-import { uploadImageToGCS } from "@/services/gcs-upload-service";
-import { StoredPhoto } from "@/services/photo-storage";
-import { Camera, CameraType, CameraView } from "expo-camera";
-import { router } from "expo-router";
-import { useEffect, useRef, useState } from "react";
-import { SafeAreaView, StyleSheet } from "react-native";
+import { useEffect, useRef, useState } from 'react';
+import { SafeAreaView, StyleSheet } from 'react-native';
+import { CameraView, CameraType, Camera } from 'expo-camera';
+import { router } from 'expo-router';
+import { useCameraPermission } from '@/hooks/use-camera-permissions';
+import { usePhotoStorage } from '@/hooks/use-photo-storage';
+import { StoredPhoto } from '@/services/photo-storage';
+import { CameraPermissionPrompt } from '@/components/camera/CameraPermissionPrompt';
+import { CameraControls } from '@/components/camera/CaptureButton';
+import { PhotoPreview } from '@/components/camera/PhotoPreview';
+import { Toast } from '@/components/ui/Toast';
+import { ThemedView } from '@/components/themed-view';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
 export type CapturedPhoto = {
   uri: string;
@@ -24,17 +23,14 @@ export default function CameraScreen() {
   const cameraRef = useRef<CameraView>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [facing, setFacing] = useState<CameraType>("back");
+  const [facing, setFacing] = useState<CameraType>('back');
   const [granted, setGranted] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState<StoredPhoto | null>(null);
   const [showToast, setShowToast] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { askForPermission } = useCameraPermission();
   const { savePhoto, removePhoto } = usePhotoStorage();
-  const controlsBg = useThemeColor(
-    { light: "#F2F2F2", dark: "#1e1e1e" },
-    "background",
-  );
+  const controlsBg = useThemeColor({ light: '#F2F2F2', dark: '#1e1e1e' }, 'background');
 
   useEffect(() => {
     Camera.getCameraPermissionsAsync().then((permission) => {
@@ -52,7 +48,7 @@ export default function CameraScreen() {
   };
 
   const toggleFacing = () => {
-    setFacing((prev) => (prev === "back" ? "front" : "back"));
+    setFacing((prev) => (prev === 'back' ? 'front' : 'back'));
   };
 
   const handleCapture = async () => {
@@ -65,16 +61,11 @@ export default function CameraScreen() {
         exif: false,
       });
       if (photo) {
-        const stored = await savePhoto(
-          photo.uri,
-          photo.base64,
-          photo.width,
-          photo.height,
-        );
+        const stored = await savePhoto(photo.uri, photo.base64, photo.width, photo.height);
         if (stored) setPreviewPhoto(stored);
       }
     } catch (error) {
-      console.error("Failed to take photo:", error);
+      console.error('Failed to take photo:', error);
     } finally {
       setIsCapturing(false);
     }
@@ -88,22 +79,15 @@ export default function CameraScreen() {
   const handleUsePhoto = async (photo: StoredPhoto) => {
     setIsProcessing(true);
     try {
-      const result = await uploadImageToGCS(photo.uri, photo.fileName);
-      if (!result.success) {
-        console.error("Upload failed:", result.error);
-      }
+      // TODO: send photo.base64 to AI API here
       setPreviewPhoto(null);
-
-      // Navigate to results screen with a mealId param (replace with
-      // actual Firestore doc ID once AI is wired up)
-      router.push({
-        pathname: "./results",
-        params: { mealId: photo.fileName }, // replace with actual Firestore doc ID once AI is wired up
-      });
       setShowToast(true);
-      toastTimer.current = setTimeout(() => setShowToast(false), 2500);
+      toastTimer.current = setTimeout(() => {
+        setShowToast(false);
+        router.push('/(drawer)/(tabs)/camera/results' as any);
+      }, 1500);
     } catch (error) {
-      console.error("Failed to process photo:", error);
+      console.error('Failed to process photo:', error);
     } finally {
       setIsProcessing(false);
     }
@@ -113,7 +97,7 @@ export default function CameraScreen() {
     return (
       <CameraPermissionPrompt
         onRequestPermission={handleRequestPermission}
-        onCancel={() => router.back()}
+        onCancel={() => router.push('/(drawer)/(tabs)' as any)}
       />
     );
   }
@@ -136,7 +120,7 @@ export default function CameraScreen() {
         <CameraControls
           onCapture={handleCapture}
           onFlip={toggleFacing}
-          onBack={() => router.push("/(drawer)/(tabs)")}
+          onBack={() => router.push('/(drawer)/(tabs)' as any)}
           isCapturing={isCapturing}
         />
       </SafeAreaView>
@@ -153,6 +137,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   controls: {
-    justifyContent: "flex-end",
+    justifyContent: 'flex-end',
   },
 });
