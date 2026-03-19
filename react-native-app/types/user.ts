@@ -49,4 +49,6 @@ export interface OnboardingData {
   age: number;
   insulinToCarbRatio: number;
   correctionFactor: number;
+  targetGlucoseMin: number;
+  targetGlucoseMax: number;
 }

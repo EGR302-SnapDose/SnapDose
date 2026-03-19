@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, View, RefreshControl } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { useGlucose } from "@/hooks/use-glucose";
+import { refreshIOB, useIOB } from "@/hooks/use-iob";
 import { useThemeColor } from "@/hooks/use-theme-color";
-import { useIOB, refreshIOB } from "@/hooks/use-iob";
+import { calculateDose } from "@/utils/dose-calculator";
 
 import { CarbsInput } from "@/components/dosing/carbs-input";
 import { CorrectionInput } from "@/components/dosing/correction-input";
@@ -33,8 +35,11 @@ export default function DoseScreen() {
   const [carbs, setCarbs] = useState(0);
   const [correctionInsulin, setCorrectionInsulin] = useState(0);
   const activeInsulin = useIOB();
+  const currentGlucose = useGlucose();
   const [carbRatio, setCarbRatio] = useState(10);
   const [correctionFactor, setCorrectionFactor] = useState(50);
+  const [targetGlucoseMin, setTargetGlucoseMin] = useState(70);
+  const [targetGlucoseMax, setTargetGlucoseMax] = useState(180);
   const [showConfirmationSheet, setShowConfirmationSheet] = useState(false);
   const [todayDoses, setTodayDoses] = useState<Dose[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -52,6 +57,8 @@ export default function DoseScreen() {
           const data = docSnapshot.data();
           setCarbRatio(data.insulinSettings?.insulinToCarbRatio || 10);
           setCorrectionFactor(data.insulinSettings?.correctionFactor || 50);
+          setTargetGlucoseMin(data.profile?.targetGlucose?.min || 70);
+          setTargetGlucoseMax(data.profile?.targetGlucose?.max || 180);
         }
       },
       (error) => {
@@ -94,13 +101,24 @@ export default function DoseScreen() {
 
   const calculateRecommendedDose = () => {
     if (mode === "meal") {
+      // Use the new dose calculation formula if glucose is available
+      if (currentGlucose !== null) {
+        return calculateDose({
+          carbs,
+          currentGlucose,
+          targetLow: targetGlucoseMin,
+          targetHigh: targetGlucoseMax,
+          correctionFactor,
+          icr: carbRatio,
+          iob: activeInsulin,
+        });
+      }
+      // Fallback if glucose not available: simple carb-based calculation
       const carbBasedDose = carbs / carbRatio;
-      const adjustedDose = Math.max(0, carbBasedDose - activeInsulin);
-      return adjustedDose;
+      return Math.max(0, carbBasedDose - activeInsulin);
     } else {
-      // Correction mode: Correction Insulin - IOB = Net Dose
-      const netDose = Math.max(0, correctionInsulin - activeInsulin);
-      return netDose;
+      // Correction mode: use manual correction insulin input
+      return Math.max(0, correctionInsulin - activeInsulin);
     }
   };
 

@@ -35,7 +35,7 @@ export default function Step2Screen() {
   return (
     <OnboardingLayout
       currentStep={2}
-      totalSteps={6}
+      totalSteps={7}
       icon="color-palette-outline"
       title="Choose Your Accent Color"
       subtitle="Personalize your experience"

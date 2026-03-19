@@ -25,7 +25,7 @@ export default function Step4Screen() {
   return (
     <OnboardingLayout
       currentStep={4}
-      totalSteps={6}
+      totalSteps={7}
       icon="scale-outline"
       title="What's your weight?"
       subtitle="Track your health metrics"
