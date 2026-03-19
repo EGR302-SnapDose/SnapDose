@@ -1,5 +1,6 @@
 package com.snapdose.api.repository;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -16,17 +17,15 @@ import com.snapdose.api.model.enums.BolusStatus;
 @Repository
 public class BolusRepository {
 
-    private static final String COLLECTION = "boluses";
-
     public void save(BolusRecord record) throws Exception {
-        getCollection()
+        getUserBoluses(record.getUserId())
             .document(record.getBolusId())
             .set(record)
             .get();
     }
 
-    public Optional<BolusRecord> findById(String bolusId) throws Exception {
-        DocumentSnapshot snapshot = getCollection()
+    public Optional<BolusRecord> findById(String userId, String bolusId) throws Exception {
+        DocumentSnapshot snapshot = getUserBoluses(userId)
             .document(bolusId)
             .get()
             .get();
@@ -37,8 +36,8 @@ public class BolusRepository {
         return Optional.ofNullable(snapshot.toObject(BolusRecord.class));
     }
 
-    public void updateStatus(String bolusId, BolusStatus newStatus, double unitsDelivered) throws Exception {
-        getCollection()
+    public void updateStatus(String userId, String bolusId, BolusStatus newStatus, double unitsDelivered) throws Exception {
+        getUserBoluses(userId)
             .document(bolusId)
             .update(Map.of(
                 "status", newStatus.name(),
@@ -49,7 +48,7 @@ public class BolusRepository {
     }
 
     public Optional<BolusRecord> findPendingByDeviceId(String deviceId) throws Exception {
-        QuerySnapshot query = getCollection()
+        QuerySnapshot query = getDb().collectionGroup("boluses")
             .whereEqualTo("deviceId", deviceId)
             .whereEqualTo("status", BolusStatus.PENDING.name())
             .limit(1)
@@ -62,8 +61,31 @@ public class BolusRepository {
         return Optional.ofNullable(query.getDocuments().get(0).toObject(BolusRecord.class));
     }
 
-    private CollectionReference getCollection() {
-        Firestore db = FirestoreClient.getFirestore();
-        return db.collection(COLLECTION);
+    public Optional<BolusRecord> findActiveByDeviceId(String deviceId) throws Exception {
+        List<String> activeStatuses = List.of(
+            BolusStatus.PENDING.name(),
+            BolusStatus.ACKNOWLEDGED.name(),
+            BolusStatus.DELIVERING.name()
+        );
+
+        QuerySnapshot query = getDb().collectionGroup("boluses")
+            .whereEqualTo("deviceId", deviceId)
+            .whereIn("status", activeStatuses)
+            .limit(1)
+            .get()
+            .get();
+
+        if (query.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(query.getDocuments().get(0).toObject(BolusRecord.class));
+    }
+
+    private Firestore getDb() {
+        return FirestoreClient.getFirestore();
+    }
+
+    private CollectionReference getUserBoluses(String userId) {
+        return getDb().collection("users").document(userId).collection("boluses");
     }
 }

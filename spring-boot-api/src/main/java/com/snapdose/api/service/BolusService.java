@@ -38,8 +38,8 @@ public class BolusService {
         return BolusResponse.pending(bolusId, request.getUnits(), request.getBolusType());
     }
 
-    public BolusResponse transitionStatus(String bolusId, BolusStatus newStatus, double unitsDelivered) throws Exception {
-        BolusRecord record = repository.findById(bolusId)
+    public BolusResponse transitionStatus(String userId, String bolusId, BolusStatus newStatus, double unitsDelivered) throws Exception {
+        BolusRecord record = repository.findById(userId, bolusId)
             .orElseThrow(() -> new IllegalArgumentException("Bolus not found: " + bolusId));
 
         Set<BolusStatus> allowed = VALID_TRANSITIONS.getOrDefault(record.getStatus(), Set.of());
@@ -49,7 +49,7 @@ public class BolusService {
             );
         }
 
-        repository.updateStatus(bolusId, newStatus, unitsDelivered);
+        repository.updateStatus(userId, bolusId, newStatus, unitsDelivered);
 
         BolusResponse response = new BolusResponse();
         response.setBolusId(bolusId);
@@ -63,8 +63,8 @@ public class BolusService {
         return response;
     }
 
-    public Optional<BolusResponse> getBolusStatus(String bolusId) throws Exception {
-        return repository.findById(bolusId).map(record -> {
+    public Optional<BolusResponse> getBolusStatus(String userId, String bolusId) throws Exception {
+        return repository.findById(userId, bolusId).map(record -> {
             BolusResponse response = new BolusResponse();
             response.setBolusId(record.getBolusId());
             response.setStatus(record.getStatus());

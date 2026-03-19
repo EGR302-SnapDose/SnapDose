@@ -38,9 +38,11 @@ public class BolusController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/bolus/{bolusId}")
-    public ResponseEntity<BolusResponse> getBolusStatus(@PathVariable String bolusId) throws Exception {
-        Optional<BolusResponse> response = bolusService.getBolusStatus(bolusId);
+    @GetMapping("/bolus/{userId}/{bolusId}")
+    public ResponseEntity<BolusResponse> getBolusStatus(
+            @PathVariable String userId,
+            @PathVariable String bolusId) throws Exception {
+        Optional<BolusResponse> response = bolusService.getBolusStatus(userId, bolusId);
         return response
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
@@ -54,9 +56,15 @@ public class BolusController {
             .orElse(ResponseEntity.noContent().build());
     }
 
+    @GetMapping("/pump/{deviceId}/status")
+    public ResponseEntity<PumpStatusResponse> pumpStatusByDevice(@PathVariable String deviceId) throws Exception {
+        PumpStatusResponse status = pumpService.getPumpStatus(deviceId);
+        return ResponseEntity.ok(status);
+    }
+
     @GetMapping("/pump/status")
     public ResponseEntity<PumpStatusResponse> pumpStatus() {
-        PumpStatusResponse status = pumpService.getPumpStatus();
+        PumpStatusResponse status = pumpService.getPumpStatusGeneric();
         return ResponseEntity.ok(status);
     }
 
@@ -64,7 +72,7 @@ public class BolusController {
     public ResponseEntity<Map<String, Object>> health() {
         return ResponseEntity.ok(Map.of(
             "status", "ok",
-            "version", "0.3.0",
+            "version", "0.4.0",
             "timestamp", System.currentTimeMillis()
         ));
     }
