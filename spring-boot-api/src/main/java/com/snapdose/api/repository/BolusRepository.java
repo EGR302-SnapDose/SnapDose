@@ -50,15 +50,22 @@ public class BolusRepository {
     public Optional<BolusRecord> findPendingByDeviceId(String deviceId) throws Exception {
         QuerySnapshot query = getDb().collectionGroup("boluses")
             .whereEqualTo("deviceId", deviceId)
-            .whereEqualTo("status", BolusStatus.PENDING.name())
-            .limit(1)
+            .limit(10)
             .get()
             .get();
 
         if (query.isEmpty()) {
             return Optional.empty();
         }
-        return Optional.ofNullable(query.getDocuments().get(0).toObject(BolusRecord.class));
+
+        // Filter by status in-memory to avoid requiring Firestore composite index
+        for (DocumentSnapshot doc : query.getDocuments()) {
+            BolusRecord record = doc.toObject(BolusRecord.class);
+            if (record != null && record.getStatus() == BolusStatus.PENDING) {
+                return Optional.of(record);
+            }
+        }
+        return Optional.empty();
     }
 
     public Optional<BolusRecord> findActiveByDeviceId(String deviceId) throws Exception {
@@ -70,15 +77,22 @@ public class BolusRepository {
 
         QuerySnapshot query = getDb().collectionGroup("boluses")
             .whereEqualTo("deviceId", deviceId)
-            .whereIn("status", activeStatuses)
-            .limit(1)
+            .limit(10)
             .get()
             .get();
 
         if (query.isEmpty()) {
             return Optional.empty();
         }
-        return Optional.ofNullable(query.getDocuments().get(0).toObject(BolusRecord.class));
+
+        // Filter by status in-memory to avoid requiring Firestore composite index
+        for (DocumentSnapshot doc : query.getDocuments()) {
+            BolusRecord record = doc.toObject(BolusRecord.class);
+            if (record != null && activeStatuses.contains(record.getStatus().name())) {
+                return Optional.of(record);
+            }
+        }
+        return Optional.empty();
     }
 
     private Firestore getDb() {
