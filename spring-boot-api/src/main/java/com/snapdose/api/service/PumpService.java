@@ -1,28 +1,30 @@
 package com.snapdose.api.service;
 
+import org.springframework.stereotype.Service;
+
 import com.snapdose.api.model.BolusRequest;
 import com.snapdose.api.model.BolusResponse;
-import org.springframework.stereotype.Service;
+import com.snapdose.api.model.PumpStatusResponse;
 
 @Service
 public class PumpService {
 
-    // TODO: Replace with actual M5Stack Tab5 HTTP endpoint
-    private static final String PUMP_BASE_URL = "http://localhost:8081";
+    private final BolusService bolusService;
 
-    public BolusResponse sendBolus(BolusRequest request) {
-        // TODO: Send HTTP request to M5Stack Tab5 microcontroller
-        // The microcontroller runs an HTTP server that accepts bolus commands
-        // For now, return a simulated success response
-        return new BolusResponse(
-            "confirmed",
-            "Bolus of " + request.getUnits() + " units delivered",
-            request.getUnits()
-        );
+    public PumpService(BolusService bolusService) {
+        this.bolusService = bolusService;
     }
 
-    public boolean checkPumpConnection() {
-        // TODO: Ping the microcontroller health endpoint
-        return true;
+    public BolusResponse sendBolus(BolusRequest request) throws Exception {
+        return bolusService.createBolus(request);
+    }
+
+    public PumpStatusResponse getPumpStatus() {
+        // TODO (SNAP-132): query Firestore for device state
+        PumpStatusResponse status = new PumpStatusResponse();
+        status.setConnected(true);
+        status.setStatus("idle");
+        status.setLastHeartbeat(System.currentTimeMillis());
+        return status;
     }
 }
