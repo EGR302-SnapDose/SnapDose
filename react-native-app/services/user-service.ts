@@ -37,6 +37,10 @@ export async function saveOnboardingData(data: OnboardingData) {
         lbs: data.weight,
         kg: Math.round(weightInKg * 10) / 10,
       },
+      targetGlucose: {
+        min: 70,
+        max: 180,
+      },
     },
     insulinSettings: {
       correctionFactor: data.correctionFactor,
