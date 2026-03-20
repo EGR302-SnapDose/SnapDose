@@ -4,6 +4,10 @@ export interface UserProfile {
   diagnosisYear: number;
   glucoseUnit: 'mg/dL' | 'mmol/L';
   insulinUnits: 'units';
+  targetGlucose?: {
+    min: number;
+    max: number;
+  };
 }
 
 export interface InsulinSettings {
@@ -45,4 +49,6 @@ export interface OnboardingData {
   age: number;
   insulinToCarbRatio: number;
   correctionFactor: number;
+  targetGlucoseMin: number;
+  targetGlucoseMax: number;
 }

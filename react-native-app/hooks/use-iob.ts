@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
 import { auth, db } from '@/config/firebase';
 import { collection, getDocs, Timestamp } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
 
 let _refreshIOB: (() => void) | null = null;
 
@@ -36,6 +36,7 @@ export function useIOB(): number {
 
           const minutesElapsed = (now - timestamp) / 60000;
 
+          //4 hour decay curve with 90 minute half-life
           if (minutesElapsed >= 0 && minutesElapsed < 240) {
             const remainingInsulin = units * Math.exp(-minutesElapsed / 90);
             totalIOB += remainingInsulin;
