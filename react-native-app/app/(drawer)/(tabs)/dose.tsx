@@ -99,6 +99,17 @@ export default function DoseScreen() {
     return () => unsubscribe();
   }, []);
 
+  const calculateCorrectionDose = () => {
+    if (currentGlucose === null) return 0;
+
+    if (currentGlucose > targetGlucoseMax) {
+      return (currentGlucose - targetGlucoseMax) / correctionFactor;
+    } else if (currentGlucose < targetGlucoseMin) {
+      return (currentGlucose - targetGlucoseMin) / correctionFactor;
+    }
+    return 0;
+  };
+
   const calculateRecommendedDose = () => {
     if (mode === "meal") {
       // Use the new dose calculation formula if glucose is available
@@ -122,6 +133,7 @@ export default function DoseScreen() {
     }
   };
 
+  const correctionDose = calculateCorrectionDose();
   const recommendedDose = calculateRecommendedDose();
 
   const handleDoseConfirm = () => {
@@ -255,6 +267,8 @@ export default function DoseScreen() {
           mode={mode}
           carbs={carbs}
           baseDose={carbRatio}
+          correctionDose={correctionDose}
+          correctionFactor={correctionFactor}
           correctionInsulin={correctionInsulin}
           insulinOnBoard={activeInsulin}
           recommendedDose={recommendedDose}
@@ -270,6 +284,8 @@ export default function DoseScreen() {
         dose={recommendedDose}
         carbs={carbs}
         carbRatio={carbRatio}
+        correctionDose={correctionDose}
+        correctionFactor={correctionFactor}
         correctionInsulin={correctionInsulin}
         insulinOnBoard={activeInsulin}
         onConfirm={handleSliderConfirm}

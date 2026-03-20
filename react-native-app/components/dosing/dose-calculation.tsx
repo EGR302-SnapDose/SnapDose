@@ -9,6 +9,8 @@ interface DoseCalculationProps {
   mode: "meal" | "correction";
   carbs?: number;
   baseDose?: number;
+  correctionDose?: number;
+  correctionFactor?: number;
   correctionInsulin?: number;
   insulinOnBoard: number;
   recommendedDose: number;
@@ -19,6 +21,8 @@ export function DoseCalculation({
   mode,
   carbs,
   baseDose,
+  correctionDose,
+  correctionFactor,
   correctionInsulin,
   insulinOnBoard,
   recommendedDose,
@@ -56,6 +60,17 @@ export function DoseCalculation({
               </ThemedText>
               <ThemedText style={styles.value}>
                 {((carbs || 0) / (baseDose || 1)).toFixed(1)}u
+              </ThemedText>
+            </View>
+
+            <View style={styles.breakdownRow}>
+              <ThemedText style={styles.label}>
+                Correction ({correctionFactor}):
+              </ThemedText>
+              <ThemedText style={styles.value}>
+                {correctionDose !== undefined && correctionDose !== 0
+                  ? `${correctionDose > 0 ? "+" : ""}${correctionDose.toFixed(1)}u`
+                  : "0.0u"}
               </ThemedText>
             </View>
 
