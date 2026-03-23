@@ -1,16 +1,17 @@
 import {
+    ScrollView,
     View,
     Text,
     StyleSheet,
     Pressable,
     ActivityIndicator,
 } from "react-native";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { getAuth } from "firebase/auth";
 import * as WebBrowser from "expo-web-browser";
 import { useFocusEffect } from "@react-navigation/native";
 import PumpPairingSection from '@/components/ui/PumpPairingSection';
-
+import DeviceStatusBadge from '@/components/ui/DeviceStatusBadge';
 const API_BASE =
     "https://us-central1-egr302-snapdose.cloudfunctions.net/dexcom-auth";
 
@@ -18,7 +19,7 @@ export default function SettingsScreen() {
     const [dexcomConnected, setDexcomConnected] = useState(false);
     const [loading, setLoading] = useState(true);
     const [connecting, setConnecting] = useState(false);
-
+    const [cgmLastSeen, setCgmLastSeen] = useState<string | undefined>(undefined);
     const userId = getAuth().currentUser?.uid;
 
     const checkDexcomStatus = async () => {
@@ -26,7 +27,10 @@ export default function SettingsScreen() {
         try {
             const res = await fetch(`${API_BASE}/status?userId=${userId}`);
             const data = await res.json();
-            setDexcomConnected(data.connected);
+setDexcomConnected(data.connected);
+if (data.connected) {
+    setCgmLastSeen('Just now');
+}
         } catch (err) {
             console.error("Failed to check Dexcom status:", err);
         } finally {
@@ -56,47 +60,38 @@ export default function SettingsScreen() {
     };
 
     return (
-        <View style={styles.container}>
+        <ScrollView style={styles.container}>
             <Text style={styles.title}>Settings</Text>
 
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Integrations</Text>
 
-                <View style={styles.row}>
-                    <View style={styles.rowText}>
-                        <Text style={styles.label}>Dexcom CGM</Text>
-                        <Text style={styles.status}>
-                            {loading
-                                ? "Checking..."
-                                : dexcomConnected
-                                    ? "Connected"
-                                    : "Not connected"}
-                        </Text>
-                    </View>
+                {/* Dexcom CGM Row */}
+<View style={styles.row}>
+    <Text style={styles.label}>Dexcom CGM</Text>
 
-                    {loading ? (
-                        <ActivityIndicator />
-                    ) : dexcomConnected ? (
-                        <View style={styles.connectedBadge}>
-                            <Text style={styles.connectedText}>Connected</Text>
-                        </View>
-                    ) : (
-                        <Pressable
-                            style={styles.connectButton}
-                            onPress={connectDexcom}
-                            disabled={connecting}
-                        >
-                            {connecting ? (
-                                <ActivityIndicator color="#fff" />
-                            ) : (
-                                <Text style={styles.connectButtonText}>
-                                    Connect
-                                </Text>
-                            )}
-                        </Pressable>
-                    )}
-                </View>
-            </View>
+    <View style={styles.rowRight}>
+        <DeviceStatusBadge
+            status={loading ? 'checking' : dexcomConnected ? 'online' : 'offline'}
+            lastSeen={cgmLastSeen}
+        />
+        {!loading && !dexcomConnected && (
+            <Pressable
+                style={styles.connectButton}
+                onPress={connectDexcom}
+                disabled={connecting}
+            >
+                {connecting ? (
+                    <ActivityIndicator color="#fff" />
+                ) : (
+                    <Text style={styles.connectButtonText}>Connect</Text>
+                )}
+            </Pressable>
+        )}
+    </View>
+</View>
+
+                    </View>
 {/* Pump Connection Section */}
                 <PumpPairingSection />
 
@@ -162,7 +157,7 @@ export default function SettingsScreen() {
                     </View>
                 </View>
             </View>
-        </View>
+        </ScrollView>
     );
 }
 
@@ -218,15 +213,8 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         fontSize: 14,
     },
-    connectedBadge: {
-        backgroundColor: "#E8F5E9",
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 8,
-    },
-    connectedText: {
-        color: "#4CAF50",
-        fontWeight: "600",
-        fontSize: 14,
+    rowRight: {
+        alignItems: 'flex-end',
+        gap: 6,
     },
 });
