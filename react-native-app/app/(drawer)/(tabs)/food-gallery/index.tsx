@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, } from "react";
 import { View, ScrollView, StyleSheet, Dimensions, TouchableOpacity, ActivityIndicator, Alert, Modal } from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
@@ -259,7 +259,7 @@ const FoodGalleryScreen = () => {
     );
 
     const todayMeals = meals.filter((m) => m.createdAt >= startOfDay());
-    const showEmpty = !loading && !firestoreError && meals.length === 0;
+    const showEmpty = !loading && !firestoreError && todayMeals.length === 0;
 
     return (
         <ThemedView style={styles.root}>
@@ -316,9 +316,9 @@ const FoodGalleryScreen = () => {
 
                 {showEmpty && (
                     <View style={styles.emptyState}>
-                        <ThemedText style={styles.emptyTitle}>No meals logged yet</ThemedText>
+                        <ThemedText style={styles.emptyTitle}>No meals today</ThemedText>
                         <ThemedText style={[styles.emptySubtitle, { color: subtle }]}>
-                            Tap the + button to log your first meal. Your past meals will appear here.
+                            Tap the + button to log your first meal of the day.
                         </ThemedText>
                     </View>
                 )}
