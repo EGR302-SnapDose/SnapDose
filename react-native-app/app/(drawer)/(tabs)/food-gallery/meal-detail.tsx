@@ -1,0 +1,259 @@
+import React, { useState, useEffect } from "react";
+import { View, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Dimensions } from "react-native";
+import { Image } from "expo-image";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { getStorage, ref, getDownloadURL, deleteObject } from "firebase/storage";
+import { ThemedView } from "@/components/themed-view";
+import { ThemedText } from "@/components/themed-text";
+import { useThemeColor } from "@/hooks/use-theme-color";
+import { app } from "@/config/firebase";
+import { subscribeMeal, deleteMealEntry } from "@/services/meal-service";
+import { MealCarbEstimate } from "@/types/meal";
+
+const { width } = Dimensions.get("window");
+
+function useColors() {
+    const background = useThemeColor({}, "background");
+    const cardBg = useThemeColor({ light: "#F2F2F2", dark: "#1C1C1E" }, "background");
+    const imageBg = useThemeColor({ light: "#E0E0E0", dark: "#252525" }, "background");
+    const muted = useThemeColor({ light: "#888888", dark: "#888888" }, "icon");
+    const subtle = useThemeColor({ light: "#AAAAAA", dark: "#555555" }, "icon");
+    const border = useThemeColor({ light: "#CCCCCC", dark: "#333333" }, "icon");
+    const accent = useThemeColor({}, "accent");
+    const danger = useThemeColor({ light: "#FF3B30", dark: "#FF453A" }, "icon");
+    return { background, cardBg, imageBg, muted, subtle, border, accent, danger };
+}
+
+async function resolveGsUri(gsUri: string): Promise<string> {
+    const storage = getStorage(app);
+    const path = gsUri.replace(/^gs:\/\/[^/]+\//, "");
+    return getDownloadURL(ref(storage, path));
+}
+
+async function deleteGcsImage(gsUri: string): Promise<void> {
+    const storage = getStorage(app);
+    const path = gsUri.replace(/^gs:\/\/[^/]+\//, "");
+    await deleteObject(ref(storage, path));
+}
+
+function formatTimestamp(date: Date): string {
+    return date.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }) +
+        " at " +
+        date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function confidenceColor(confidence: string, accent: string, danger: string, muted: string): string {
+    if (confidence === "high") return accent;
+    if (confidence === "low") return danger;
+    return muted;
+}
+
+const MealDetailScreen = () => {
+    const { mealId } = useLocalSearchParams<{ mealId: string }>();
+    const router = useRouter();
+    const colors = useColors();
+
+    const [meal, setMeal] = useState<MealCarbEstimate | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [notFound, setNotFound] = useState(false);
+    const [imageUrl, setImageUrl] = useState<string | null>(null);
+    const [imageError, setImageError] = useState(false);
+    const [imageLoading, setImageLoading] = useState(true);
+    const [deleting, setDeleting] = useState(false);
+
+    useEffect(() => {
+        if (!mealId) { setNotFound(true); setLoading(false); return; }
+
+        const unsub = subscribeMeal(
+            mealId,
+            (m) => {
+                if (!m) { setNotFound(true); } else { setMeal(m); }
+                setLoading(false);
+            },
+            () => { setNotFound(true); setLoading(false); },
+        );
+        return unsub;
+    }, [mealId]);
+
+    useEffect(() => {
+        if (!meal?.image_gs_uri) return;
+        resolveGsUri(meal.image_gs_uri)
+            .then(setImageUrl)
+            .catch(() => setImageError(true))
+            .finally(() => setImageLoading(false));
+    }, [meal?.image_gs_uri]);
+
+    const handleDelete = () => {
+        Alert.alert(
+            "Delete Meal",
+            "This will permanently remove this meal from your log.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                        if (!mealId || !meal) return;
+                        setDeleting(true);
+                        try {
+                            await deleteMealEntry(mealId);
+                            if (meal.image_gs_uri) {
+                                await deleteGcsImage(meal.image_gs_uri).catch(() => {});
+                            }
+                            router.back();
+                        } catch {
+                            Alert.alert("Error", "Could not delete this meal. Please try again.");
+                            setDeleting(false);
+                        }
+                    },
+                },
+            ],
+        );
+    };
+
+    if (loading) {
+        return (
+            <ThemedView style={styles.centered}>
+                <ActivityIndicator size="large" color={colors.accent} />
+            </ThemedView>
+        );
+    }
+
+    if (notFound || !meal) {
+        return (
+            <ThemedView style={styles.centered}>
+                <ThemedText style={styles.notFoundTitle}>Meal not found</ThemedText>
+                <ThemedText style={[styles.notFoundSubtitle, { color: colors.muted }]}>
+                    This meal may have been deleted.
+                </ThemedText>
+                <TouchableOpacity style={[styles.backBtn, { borderColor: colors.border }]} onPress={() => router.back()}>
+                    <ThemedText style={styles.backBtnText}>Go back</ThemedText>
+                </TouchableOpacity>
+            </ThemedView>
+        );
+    }
+
+    const confidenceLabel = meal.confidence.charAt(0).toUpperCase() + meal.confidence.slice(1);
+    const confColor = confidenceColor(meal.confidence, colors.accent, colors.danger, colors.muted);
+
+    return (
+        <ThemedView style={styles.root}>
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                <View style={[styles.imageContainer, { backgroundColor: colors.imageBg }]}>
+                    {imageLoading && !imageError && (
+                        <ActivityIndicator style={StyleSheet.absoluteFill} size="large" color={colors.accent} />
+                    )}
+                    {imageUrl && !imageError ? (
+                        <Image
+                            source={{ uri: imageUrl }}
+                            style={styles.heroImage}
+                            contentFit="cover"
+                            cachePolicy="memory-disk"
+                            onError={() => { setImageError(true); setImageLoading(false); }}
+                            onLoad={() => setImageLoading(false)}
+                        />
+                    ) : imageError ? (
+                        <View style={styles.imageFallback}>
+                            <ThemedText style={[styles.imageFallbackText, { color: colors.muted }]}>Image unavailable</ThemedText>
+                        </View>
+                    ) : null}
+                </View>
+
+                <View style={styles.body}>
+                    <View style={styles.topRow}>
+                        <View style={styles.carbBadge}>
+                            <ThemedText style={styles.carbValue}>{meal.estimated_carbs_grams}g</ThemedText>
+                            <ThemedText style={[styles.carbLabel, { color: colors.muted }]}>total carbs</ThemedText>
+                        </View>
+                        <View style={[styles.confidenceBadge, { borderColor: confColor }]}>
+                            <ThemedText style={[styles.confidenceText, { color: confColor }]}>
+                                {confidenceLabel} confidence
+                            </ThemedText>
+                        </View>
+                    </View>
+
+                    <ThemedText style={[styles.timestamp, { color: colors.muted }]}>
+                        {formatTimestamp(meal.created_at)}
+                    </ThemedText>
+
+                    <View style={[styles.section, { borderTopColor: colors.border }]}>
+                        <ThemedText style={styles.sectionTitle}>Foods Detected</ThemedText>
+                        {meal.foods_detected.length > 0 ? (
+                            meal.foods_detected.map((food, i) => (
+                                <View key={i} style={[styles.foodRow, { borderBottomColor: colors.border }]}>
+                                    <View style={[styles.foodDot, { backgroundColor: colors.accent }]} />
+                                    <ThemedText style={styles.foodName}>{food}</ThemedText>
+                                </View>
+                            ))
+                        ) : (
+                            <ThemedText style={[styles.emptyFoods, { color: colors.muted }]}>No foods detected</ThemedText>
+                        )}
+                    </View>
+
+                    {meal.notes ? (
+                        <View style={[styles.section, { borderTopColor: colors.border }]}>
+                            <ThemedText style={styles.sectionTitle}>Notes</ThemedText>
+                            <ThemedText style={[styles.notesText, { color: colors.muted }]}>{meal.notes}</ThemedText>
+                        </View>
+                    ) : null}
+
+                    <View style={[styles.section, { borderTopColor: colors.border }]}>
+                        <ThemedText style={styles.sectionTitle}>Bolus</ThemedText>
+                        <ThemedText style={[styles.bolusPlaceholder, { color: colors.muted }]}>
+                            No dose recorded for this meal.
+                        </ThemedText>
+                    </View>
+                </View>
+            </ScrollView>
+
+            <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
+                <TouchableOpacity
+                    style={[styles.deleteBtn, { borderColor: colors.danger }]}
+                    onPress={handleDelete}
+                    disabled={deleting}
+                >
+                    {deleting ? (
+                        <ActivityIndicator size="small" color={colors.danger} />
+                    ) : (
+                        <ThemedText style={[styles.deleteBtnText, { color: colors.danger }]}>Delete Meal</ThemedText>
+                    )}
+                </TouchableOpacity>
+            </View>
+        </ThemedView>
+    );
+};
+
+const styles = StyleSheet.create({
+    root: { flex: 1 },
+    centered: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 32 },
+    content: { paddingBottom: 100 },
+    imageContainer: { width, height: width * 0.85, position: "relative" },
+    heroImage: { width: "100%", height: "100%" },
+    imageFallback: { flex: 1, alignItems: "center", justifyContent: "center" },
+    imageFallbackText: { fontSize: 14 },
+    body: { padding: 20 },
+    topRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 8 },
+    carbBadge: { flexDirection: "row", alignItems: "baseline", gap: 4 },
+    carbValue: { fontSize: 42, fontWeight: "800", lineHeight: 48 },
+    carbLabel: { fontSize: 16, fontWeight: "500", marginBottom: 4 },
+    confidenceBadge: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+    confidenceText: { fontSize: 12, fontWeight: "600" },
+    timestamp: { fontSize: 13, marginBottom: 24 },
+    section: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 20, marginTop: 4, marginBottom: 4 },
+    sectionTitle: { fontSize: 13, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 14 },
+    foodRow: { flexDirection: "row", alignItems: "flex-start", paddingVertical: 11, borderBottomWidth: StyleSheet.hairlineWidth, gap: 12 },
+    foodDot: { width: 7, height: 7, borderRadius: 4, marginTop: 6 },
+    foodName: { flex: 1, fontSize: 15, lineHeight: 22 },
+    emptyFoods: { fontSize: 14, fontStyle: "italic" },
+    notesText: { fontSize: 14, lineHeight: 21 },
+    bolusPlaceholder: { fontSize: 14, fontStyle: "italic" },
+    footer: { position: "absolute", bottom: 0, left: 0, right: 0, padding: 20, paddingBottom: 36, borderTopWidth: StyleSheet.hairlineWidth },
+    deleteBtn: { borderWidth: 1.5, borderRadius: 12, paddingVertical: 14, alignItems: "center" },
+    deleteBtnText: { fontSize: 15, fontWeight: "600" },
+    notFoundTitle: { fontSize: 18, fontWeight: "700" },
+    notFoundSubtitle: { fontSize: 14, textAlign: "center" },
+    backBtn: { marginTop: 8, paddingVertical: 10, paddingHorizontal: 24, borderWidth: 1, borderRadius: 10 },
+    backBtnText: { fontSize: 15, fontWeight: "600" },
+});
+
+export default MealDetailScreen;

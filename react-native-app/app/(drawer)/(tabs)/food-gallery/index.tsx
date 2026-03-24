@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { View, ScrollView, StyleSheet, Dimensions, TouchableOpacity, ActivityIndicator, Alert, Modal } from "react-native";
 import { Image } from "expo-image";
+import { useRouter } from "expo-router";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
 import { useThemeColor } from "@/hooks/use-theme-color";
@@ -61,7 +62,7 @@ async function resolveGsUri(gsUri: string): Promise<string> {
 }
 
 const MealCard = ({ meal, onPress }: { meal: Meal; onPress: () => void }) => {
-    const { cardBg, imageBg, border, muted, subtle } = useColors();
+    const { cardBg, imageBg, border, subtle } = useColors();
     const [imageUrl, setImageUrl] = useState<string | null>(meal.imageUrl);
     const [imageError, setImageError] = useState(false);
 
@@ -178,7 +179,8 @@ const CameraModal = ({ visible, onClose, onCapture }: CameraModalProps) => {
 };
 
 const FoodGalleryScreen = () => {
-    const { cardBg, muted, subtle, accent } = useColors();
+    const { cardBg, muted, subtle, accent, background } = useColors();
+    const router = useRouter();
     const [meals, setMeals] = useState<Meal[]>([]);
     const [loading, setLoading] = useState(true);
     const [firestoreError, setFirestoreError] = useState(false);
@@ -192,10 +194,7 @@ const FoodGalleryScreen = () => {
         if (!uid) return;
 
         const mealsRef = collection(db, "users", uid, "meal_carb_estimation");
-        const q = query(
-            mealsRef,
-            orderBy("created_at", "desc"),
-        );
+        const q = query(mealsRef, orderBy("created_at", "desc"));
 
         const unsub = onSnapshot(
             q,
@@ -246,8 +245,6 @@ const FoodGalleryScreen = () => {
                 const storage = getStorage(app);
                 const imageRef = ref(storage, `users/${uid}/meals/${Date.now()}.jpg`);
                 const blob = await (await fetch(localUri)).blob();
-                // Upload only — the Cloud Function handles Gemini analysis and writes the Firestore doc
-                // ignore upload bytes result
                 await (async () => {
                     const { uploadBytes } = await import("firebase/storage");
                     await uploadBytes(imageRef, blob, { contentType: "image/jpeg" });
@@ -304,9 +301,7 @@ const FoodGalleryScreen = () => {
                                 <MealCard
                                     key={meal.id}
                                     meal={meal}
-                                    onPress={() => {
-                                        // wire to meal-detail screen
-                                    }}
+                                    onPress={() => router.push({ pathname: "/(drawer)/(tabs)/food-gallery/meal-detail", params: { mealId: meal.id } })}
                                 />
                             ))}
                     </View>
@@ -330,7 +325,7 @@ const FoodGalleryScreen = () => {
             </ScrollView>
 
             <TouchableOpacity style={[styles.fab, { backgroundColor: accent }]} onPress={() => setCameraOpen(true)} disabled={analyzing}>
-                {analyzing ? <ActivityIndicator color="#fff" /> : <ThemedText style={styles.fabIcon}>＋</ThemedText>}
+                {analyzing ? <ActivityIndicator color={background} /> : <ThemedText style={[styles.fabIcon, { color: background }]}>＋</ThemedText>}
             </TouchableOpacity>
 
             <CameraModal visible={cameraOpen} onClose={() => setCameraOpen(false)} onCapture={handleCapture} />
@@ -371,7 +366,7 @@ const styles = StyleSheet.create({
     analyzingCard: { flexDirection: "row", alignItems: "center", borderRadius: 12, padding: 14, marginBottom: 16, gap: 10 },
     analyzingText: { fontSize: 14 },
     fab: { position: "absolute", bottom: 28, alignSelf: "center", width: 58, height: 58, borderRadius: 29, alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 6 },
-    fabIcon: { fontSize: 28, color: "#fff", lineHeight: 32 },
+    fabIcon: { fontSize: 28, lineHeight: 32 },
     cameraContainer: { flex: 1 },
     camera: { flex: 1 },
     cameraPermissionBox: { flex: 1, alignItems: "center", justifyContent: "center" },
