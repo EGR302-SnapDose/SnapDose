@@ -7,8 +7,8 @@ import { useThemeColor } from "@/hooks/use-theme-color";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { launchImageLibraryAsync, MediaType, requestMediaLibraryPermissionsAsync } from "expo-image-picker";
 import { getAuth } from "firebase/auth";
-import { collection, addDoc, query, where, orderBy, onSnapshot, Timestamp, getDocs } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { collection, query, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
+import { getStorage, ref, getDownloadURL } from "firebase/storage";
 import { app, db } from "@/config/firebase";
 
 const { width } = Dimensions.get("window");
@@ -16,18 +16,18 @@ const CARD_SIZE = (width - 48) / 2;
 
 interface Meal {
     id: string;
-    imageUrl: string;
-    name: string;
-    carbs: number;
-    calories: number;
-    loggedAt: Date;
-    userId: string;
+    imageUrl: string | null;
+    imagePath: string;
+    foodsDetected: string[];
+    estimatedCarbs: number;
+    confidence: string;
+    createdAt: Date;
+    status: string;
 }
 
 interface WeeklySummary {
     meals: number;
     carbs: number;
-    calories: number;
 }
 
 function useColors() {
@@ -39,10 +39,6 @@ function useColors() {
     const border = useThemeColor({ light: "#CCCCCC", dark: "#444444" }, "icon");
     const accent = useThemeColor({}, "accent");
     return { cardBg, imageBg, background, muted, subtle, border, accent };
-}
-
-function getMealsRef(uid: string) {
-    return collection(db, "users", uid, "meals");
 }
 
 function startOfWeek(): Date {
@@ -58,54 +54,48 @@ function startOfDay(): Date {
     return d;
 }
 
-async function analyzeImageWithGemini(base64Image: string): Promise<{
-    name: string;
-    carbs: number;
-    calories: number;
-}> {
-    const GCP_PROXY_URL = process.env.EXPO_PUBLIC_GEMINI_PROXY_URL ?? "";
-    const prompt = `You are a nutrition expert. Analyze this food image and respond ONLY with a valid JSON object (no markdown, no explanation) in exactly this shape:
-{"name":"<meal name>","carbs":<grams as integer>,"calories":<kcal as integer>}`;
-
-    const response = await fetch(GCP_PROXY_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ base64Image, prompt }),
-    });
-
-    if (!response.ok) throw new Error(`Gemini proxy error: ${response.status}`);
-    const raw: string = await response.json();
-    return JSON.parse(raw.replace(/```json|```/g, "").trim());
+async function resolveGsUri(gsUri: string): Promise<string> {
+    const storage = getStorage(app);
+    const path = gsUri.replace(/^gs:\/\/[^/]+\//, "");
+    return getDownloadURL(ref(storage, path));
 }
 
 const MealCard = ({ meal, onPress }: { meal: Meal; onPress: () => void }) => {
-    const { cardBg, muted, subtle } = useColors();
-    const timeStr = meal.loggedAt.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-    });
+    const { cardBg, imageBg, border, muted, subtle } = useColors();
+    const [imageUrl, setImageUrl] = useState<string | null>(meal.imageUrl);
+    const [imageError, setImageError] = useState(false);
+
+    useEffect(() => {
+        if (!imageUrl && meal.imagePath) {
+            resolveGsUri(meal.imagePath).then(setImageUrl).catch(() => setImageError(true));
+        }
+    }, [meal.imagePath]);
+
+    const timeStr = meal.createdAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const label = meal.foodsDetected[0] ?? "Meal";
 
     return (
-        <TouchableOpacity
-            style={[styles.card, { backgroundColor: cardBg }]}
-            onPress={onPress}
-            activeOpacity={0.85}
-        >
-            <Image
-                source={{ uri: meal.imageUrl }}
-                style={styles.cardImageFilled}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-            />
+        <TouchableOpacity style={[styles.card, { backgroundColor: cardBg }]} onPress={onPress} activeOpacity={0.85}>
+            {imageUrl && !imageError ? (
+                <Image
+                    source={{ uri: imageUrl }}
+                    style={styles.cardImageFilled}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    onError={() => setImageError(true)}
+                />
+            ) : (
+                <View style={[styles.cardImage, { backgroundColor: imageBg }]}>
+                    <View style={[styles.imagePlaceholderIcon, { borderColor: border }]}>
+                        <View style={[styles.imagePlaceholderInner, { borderColor: border }]} />
+                        <View style={[styles.imagePlaceholderCorner, { backgroundColor: border }]} />
+                    </View>
+                </View>
+            )}
             <View style={styles.cardFooter}>
-                <ThemedText style={styles.cardTitle} numberOfLines={1}>
-                    {meal.name}
-                </ThemedText>
+                <ThemedText style={styles.cardTitle} numberOfLines={1}>{label}</ThemedText>
                 <View style={styles.cardMeta}>
-                    <ThemedText style={styles.cardCarbs}>{meal.carbs}g carbs</ThemedText>
-                    <ThemedText style={[styles.cardCal, { color: muted }]}>
-                        {meal.calories} cal
-                    </ThemedText>
+                    <ThemedText style={styles.cardCarbs}>{meal.estimatedCarbs}g carbs</ThemedText>
                 </View>
                 <ThemedText style={[styles.cardTime, { color: subtle }]}>{timeStr}</ThemedText>
             </View>
@@ -113,23 +103,14 @@ const MealCard = ({ meal, onPress }: { meal: Meal; onPress: () => void }) => {
     );
 };
 
-const PlaceholderCard = () => {
-    const { cardBg, imageBg, border, muted, subtle } = useColors();
+const SkeletonCard = () => {
+    const { cardBg, imageBg } = useColors();
     return (
         <View style={[styles.card, { backgroundColor: cardBg }]}>
-            <View style={[styles.cardImage, { backgroundColor: imageBg }]}>
-                <View style={[styles.imagePlaceholderIcon, { borderColor: border }]}>
-                    <View style={[styles.imagePlaceholderInner, { borderColor: border }]} />
-                    <View style={[styles.imagePlaceholderCorner, { backgroundColor: border }]} />
-                </View>
-            </View>
+            <View style={[styles.cardImage, { backgroundColor: imageBg }]} />
             <View style={styles.cardFooter}>
-                <ThemedText style={styles.cardTitle}>Meal photo</ThemedText>
-                <View style={styles.cardMeta}>
-                    <ThemedText style={styles.cardCarbs}>0g carbs</ThemedText>
-                    <ThemedText style={[styles.cardCal, { color: muted }]}>— cal</ThemedText>
-                </View>
-                <ThemedText style={[styles.cardTime, { color: subtle }]}>--:-- --</ThemedText>
+                <View style={[styles.skeletonLine, { backgroundColor: imageBg, width: "60%" }]} />
+                <View style={[styles.skeletonLine, { backgroundColor: imageBg, width: "40%", marginTop: 6 }]} />
             </View>
         </View>
     );
@@ -181,24 +162,13 @@ const CameraModal = ({ visible, onClose, onCapture }: CameraModalProps) => {
                     </View>
                 )}
                 <View style={styles.cameraControls}>
-                    <TouchableOpacity
-                        style={[styles.cameraBtn, { borderColor: border }]}
-                        onPress={onClose}
-                    >
+                    <TouchableOpacity style={[styles.cameraBtn, { borderColor: border }]} onPress={onClose}>
                         <ThemedText style={styles.cameraBtnText}>Cancel</ThemedText>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.cameraBtn, styles.captureBtn, { backgroundColor: accent, borderColor: accent }]}
-                        onPress={takePicture}
-                    >
-                        <ThemedText style={[styles.cameraBtnText, { color: "#fff" }]}>
-                            Capture
-                        </ThemedText>
+                    <TouchableOpacity style={[styles.cameraBtn, styles.captureBtn, { backgroundColor: accent, borderColor: accent }]} onPress={takePicture}>
+                        <ThemedText style={[styles.cameraBtnText, { color: "#fff" }]}>Capture</ThemedText>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.cameraBtn, { borderColor: border }]}
-                        onPress={pickFromGallery}
-                    >
+                    <TouchableOpacity style={[styles.cameraBtn, { borderColor: border }]} onPress={pickFromGallery}>
                         <ThemedText style={styles.cameraBtnText}>Gallery</ThemedText>
                     </TouchableOpacity>
                 </View>
@@ -211,57 +181,61 @@ const FoodGalleryScreen = () => {
     const { cardBg, muted, subtle, accent } = useColors();
     const [meals, setMeals] = useState<Meal[]>([]);
     const [loading, setLoading] = useState(true);
+    const [firestoreError, setFirestoreError] = useState(false);
     const [analyzing, setAnalyzing] = useState(false);
     const [cameraOpen, setCameraOpen] = useState(false);
-    const [weekly, setWeekly] = useState<WeeklySummary>({ meals: 0, carbs: 0, calories: 0 });
-    const [firestoreError, setFirestoreError] = useState(false);
+    const [weekly, setWeekly] = useState<WeeklySummary>({ meals: 0, carbs: 0 });
 
     const uid = getAuth(app).currentUser?.uid;
 
     useEffect(() => {
         if (!uid) return;
+
+        const mealsRef = collection(db, "users", uid, "meal_carb_estimation");
         const q = query(
-            getMealsRef(uid),
-            where("loggedAt", ">=", Timestamp.fromDate(startOfDay())),
-            orderBy("loggedAt", "desc"),
+            mealsRef,
+            orderBy("created_at", "desc"),
         );
+
         const unsub = onSnapshot(
             q,
             (snap) => {
-                setMeals(
-                    snap.docs.map((doc) => ({
-                        id: doc.id,
-                        ...(doc.data() as Omit<Meal, "id" | "loggedAt">),
-                        loggedAt: (doc.data().loggedAt as Timestamp).toDate(),
-                    })),
-                );
+                const data: Meal[] = snap.docs
+                    .filter((doc) => doc.data().status === "completed")
+                    .map((doc) => {
+                        const d = doc.data();
+                        return {
+                            id: doc.id,
+                            imageUrl: null,
+                            imagePath: d.image_gs_uri ?? "",
+                            foodsDetected: d.foods_detected ?? [],
+                            estimatedCarbs: d.estimated_carbs_grams ?? 0,
+                            confidence: d.confidence ?? "",
+                            createdAt: (d.created_at as Timestamp).toDate(),
+                            status: d.status ?? "",
+                        };
+                    });
+                setMeals(data);
+
+                const weekStart = startOfWeek();
+                const weeklyMeals = data.filter((m) => m.createdAt >= weekStart);
+                setWeekly({
+                    meals: weeklyMeals.length,
+                    carbs: weeklyMeals.reduce((sum, m) => sum + m.estimatedCarbs, 0),
+                });
+
                 setLoading(false);
                 setFirestoreError(false);
             },
-            () => {
+            (err) => {
+                console.error("Firestore onSnapshot error:", err);
                 setLoading(false);
                 setFirestoreError(true);
             },
         );
+
         return unsub;
     }, [uid]);
-
-    useEffect(() => {
-        if (!uid) return;
-        const q = query(
-            getMealsRef(uid),
-            where("loggedAt", ">=", Timestamp.fromDate(startOfWeek())),
-        );
-        getDocs(q).then((snap) => {
-            let carbs = 0;
-            let calories = 0;
-            snap.docs.forEach((d) => {
-                carbs += d.data().carbs ?? 0;
-                calories += d.data().calories ?? 0;
-            });
-            setWeekly({ meals: snap.size, carbs, calories });
-        });
-    }, [uid, meals.length]);
 
     const handleCapture = useCallback(
         async (base64: string, localUri: string) => {
@@ -269,22 +243,17 @@ const FoodGalleryScreen = () => {
             setCameraOpen(false);
             setAnalyzing(true);
             try {
-                const nutrition = await analyzeImageWithGemini(base64);
                 const storage = getStorage(app);
                 const imageRef = ref(storage, `users/${uid}/meals/${Date.now()}.jpg`);
                 const blob = await (await fetch(localUri)).blob();
-                await uploadBytes(imageRef, blob, { contentType: "image/jpeg" });
-                const imageUrl = await getDownloadURL(imageRef);
-                await addDoc(getMealsRef(uid), {
-                    imageUrl,
-                    name: nutrition.name,
-                    carbs: nutrition.carbs,
-                    calories: nutrition.calories,
-                    loggedAt: Timestamp.now(),
-                    userId: uid,
-                });
+                // Upload only — the Cloud Function handles Gemini analysis and writes the Firestore doc
+                // ignore upload bytes result
+                await (async () => {
+                    const { uploadBytes } = await import("firebase/storage");
+                    await uploadBytes(imageRef, blob, { contentType: "image/jpeg" });
+                })();
             } catch {
-                Alert.alert("Failed to log meal", "Something went wrong. Please try again.");
+                Alert.alert("Upload failed", "Could not upload your photo. Please try again.");
             } finally {
                 setAnalyzing(false);
             }
@@ -292,15 +261,12 @@ const FoodGalleryScreen = () => {
         [uid],
     );
 
-    const showPlaceholders = loading;
+    const todayMeals = meals.filter((m) => m.createdAt >= startOfDay());
     const showEmpty = !loading && !firestoreError && meals.length === 0;
 
     return (
         <ThemedView style={styles.root}>
-            <ScrollView
-                contentContainerStyle={styles.content}
-                showsVerticalScrollIndicator={false}
-            >
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 <View style={[styles.summaryCard, { backgroundColor: cardBg }]}>
                     <View style={styles.summaryRow}>
                         <ThemedText style={styles.summaryTrend}>↗</ThemedText>
@@ -317,10 +283,6 @@ const FoodGalleryScreen = () => {
                             <ThemedText style={[styles.summaryLabel, { color: muted }]}>Carbs</ThemedText>
                         </View>
                         <View style={styles.summarySpacer} />
-                        <View style={{ alignItems: "flex-end" }}>
-                            <ThemedText style={styles.summaryNumber}>{weekly.calories}</ThemedText>
-                            <ThemedText style={[styles.summaryLabel, { color: muted }]}>Calories</ThemedText>
-                        </View>
                     </View>
                 </View>
 
@@ -332,30 +294,28 @@ const FoodGalleryScreen = () => {
                 {firestoreError ? (
                     <View style={styles.emptyState}>
                         <ThemedText style={styles.emptyTitle}>Couldn't load meals</ThemedText>
-                        <ThemedText style={[styles.emptySubtitle, { color: subtle }]}>
-                            Check your connection and try again.
-                        </ThemedText>
+                        <ThemedText style={[styles.emptySubtitle, { color: subtle }]}>Check your connection and try again.</ThemedText>
                     </View>
                 ) : (
                     <View style={styles.grid}>
-                        {showPlaceholders
-                            ? [1, 2, 3, 4].map((i) => <PlaceholderCard key={i} />)
-                            : meals.map((meal) => (
-                                  <MealCard
-                                      key={meal.id}
-                                      meal={meal}
-                                      onPress={() => {
-                                          // navigate to detail screen — wired up when meal-detail.tsx is built
-                                      }}
-                                  />
-                              ))}
+                        {loading
+                            ? [1, 2, 3, 4].map((i) => <SkeletonCard key={i} />)
+                            : todayMeals.map((meal) => (
+                                <MealCard
+                                    key={meal.id}
+                                    meal={meal}
+                                    onPress={() => {
+                                        // wire to meal-detail screen
+                                    }}
+                                />
+                            ))}
                     </View>
                 )}
 
                 {analyzing && (
                     <View style={[styles.analyzingCard, { backgroundColor: cardBg }]}>
                         <ActivityIndicator size="small" color={accent} />
-                        <ThemedText style={styles.analyzingText}>Analyzing meal…</ThemedText>
+                        <ThemedText style={styles.analyzingText}>Uploading meal…</ThemedText>
                     </View>
                 )}
 
@@ -369,23 +329,11 @@ const FoodGalleryScreen = () => {
                 )}
             </ScrollView>
 
-            <TouchableOpacity
-                style={[styles.fab, { backgroundColor: accent }]}
-                onPress={() => setCameraOpen(true)}
-                disabled={analyzing}
-            >
-                {analyzing ? (
-                    <ActivityIndicator color="#fff" />
-                ) : (
-                    <ThemedText style={styles.fabIcon}>＋</ThemedText>
-                )}
+            <TouchableOpacity style={[styles.fab, { backgroundColor: accent }]} onPress={() => setCameraOpen(true)} disabled={analyzing}>
+                {analyzing ? <ActivityIndicator color="#fff" /> : <ThemedText style={styles.fabIcon}>＋</ThemedText>}
             </TouchableOpacity>
 
-            <CameraModal
-                visible={cameraOpen}
-                onClose={() => setCameraOpen(false)}
-                onCapture={handleCapture}
-            />
+            <CameraModal visible={cameraOpen} onClose={() => setCameraOpen(false)} onCapture={handleCapture} />
         </ThemedView>
     );
 };
@@ -415,8 +363,8 @@ const styles = StyleSheet.create({
     cardTitle: { fontSize: 14, fontWeight: "700", marginBottom: 4 },
     cardMeta: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
     cardCarbs: { fontSize: 13, fontWeight: "600" },
-    cardCal: { fontSize: 13 },
     cardTime: { fontSize: 12, marginTop: 3 },
+    skeletonLine: { height: 12, borderRadius: 6 },
     emptyState: { alignItems: "center", paddingVertical: 32, paddingHorizontal: 24 },
     emptyTitle: { fontSize: 17, fontWeight: "700", marginBottom: 8 },
     emptySubtitle: { fontSize: 14, textAlign: "center", lineHeight: 21 },
