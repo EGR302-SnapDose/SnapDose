@@ -1,7 +1,6 @@
 import NumberInput from '@/components/onboarding/number-input';
 import OnboardingLayout from '@/components/onboarding/onboarding-layout';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { saveOnboardingData } from '@/services/user-service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -20,53 +19,22 @@ export default function Step6Screen() {
     });
   }, []);
 
-  const handleComplete = async () => {
-    try {
-      await AsyncStorage.setItem('onboarding_carbRatio', carbRatio.toString());
-      await AsyncStorage.setItem('onboarding_correctionFactor', correctionFactor.toString());
-      
-      // Collect all onboarding data from AsyncStorage
-      const displayName = await AsyncStorage.getItem('onboarding_displayName') || '';
-      const accentColor = await AsyncStorage.getItem('onboarding_accentColor') || '#EF4444';
-      const heightFeet = parseInt(await AsyncStorage.getItem('onboarding_heightFeet') || '5');
-      const heightInches = parseInt(await AsyncStorage.getItem('onboarding_heightInches') || '8');
-      const weight = parseInt(await AsyncStorage.getItem('onboarding_weight') || '150');
-      const age = parseInt(await AsyncStorage.getItem('onboarding_age') || '25');
-      
-      // Save to Firebase
-      const onboardingData = {
-        displayName,
-        accentColor,
-        heightFeet,
-        heightInches,
-        weight,
-        age,
-        insulinToCarbRatio: carbRatio,
-        correctionFactor,
-      };
-      
-      await saveOnboardingData(onboardingData);
-      
-      // Mark as complete in AsyncStorage too
-      await AsyncStorage.setItem('onboardingComplete', 'true');
-
-      router.replace('/(drawer)/(tabs)');
-    } catch (error) {
-      console.error('Error completing onboarding:', error);
-    }
+  const handleNext = async () => {
+    await AsyncStorage.setItem('onboarding_carbRatio', carbRatio.toString());
+    await AsyncStorage.setItem('onboarding_correctionFactor', correctionFactor.toString());
+    router.push('/onboarding/step7');
   };
 
   return (
     <OnboardingLayout
       currentStep={6}
-      totalSteps={6}
+      totalSteps={7}
       icon="medical-outline"
       title="Insulin Settings"
       subtitle="Configure your insulin ratios"
-      onNext={handleComplete}
+      onNext={handleNext}
       canProceed={true}
       accentColor={accentColor}
-      nextButtonText="Get Started"
     >
       <View style={styles.container}>
         <View style={styles.settingsCard}>
