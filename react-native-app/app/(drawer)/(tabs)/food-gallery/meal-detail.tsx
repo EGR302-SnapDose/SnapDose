@@ -3,7 +3,7 @@ import { View, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Aler
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getStorage, ref, getDownloadURL, deleteObject } from "firebase/storage";
-import { doc, onSnapshot, setDoc } from "firebase/firestore";
+import { doc, onSnapshot, setDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
 import { DoseConfirmationSheet } from "@/components/dosing/dose-confirmation-sheet";
@@ -14,6 +14,13 @@ import { subscribeMeal, deleteMealEntry } from "@/services/meal-service";
 import { MealCarbEstimate } from "@/types/meal";
 
 const { width } = Dimensions.get("window");
+
+interface LinkedDose {
+    id: string;
+    amount: number;
+    time: string;
+    type: string;
+}
 
 function useColors() {
     const background = useThemeColor({}, "background");
@@ -68,6 +75,8 @@ const MealDetailScreen = () => {
     const [deleting, setDeleting] = useState(false);
     const [carbRatio, setCarbRatio] = useState(10);
     const [showDoseSheet, setShowDoseSheet] = useState(false);
+    const [linkedDose, setLinkedDose] = useState<LinkedDose | null>(null);
+    const [doseLoading, setDoseLoading] = useState(true);
 
     useEffect(() => {
         const user = auth.currentUser;
@@ -99,6 +108,19 @@ const MealDetailScreen = () => {
             .finally(() => setImageLoading(false));
     }, [meal?.image_gs_uri]);
 
+    useEffect(() => {
+        const user = auth.currentUser;
+        if (!user || !mealId) { setDoseLoading(false); return; }
+        const q = query(collection(db, "users", user.uid, "doses"), where("mealId", "==", mealId));
+        getDocs(q).then((snap) => {
+            if (!snap.empty) {
+                const d = snap.docs[0].data();
+                setLinkedDose({ id: snap.docs[0].id, amount: d.amount, time: d.time, type: d.type });
+            }
+            setDoseLoading(false);
+        }).catch(() => setDoseLoading(false));
+    }, [mealId]);
+
     const recommendedDose = Math.max(0, (meal?.estimated_carbs_grams ?? 0) / carbRatio - insulinOnBoard);
 
     const handleDoseConfirm = async () => {
@@ -106,9 +128,10 @@ const MealDetailScreen = () => {
         if (!user || !meal) return;
         try {
             const doseId = Date.now().toString();
+            const time = new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
             await setDoc(doc(db, "users", user.uid, "doses", doseId), {
                 id: doseId,
-                time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }),
+                time,
                 amount: recommendedDose,
                 type: "Meal",
                 timestamp: new Date(),
@@ -116,6 +139,7 @@ const MealDetailScreen = () => {
                 correctionInsulin: null,
                 mealId,
             });
+            setLinkedDose({ id: doseId, amount: recommendedDose, time, type: "Meal" });
         } catch {
             Alert.alert("Error", "Could not save dose. Please try again.");
         }
@@ -233,9 +257,30 @@ const MealDetailScreen = () => {
 
                     <View style={[styles.section, { borderTopColor: colors.border }]}>
                         <ThemedText style={styles.sectionTitle}>Bolus</ThemedText>
-                        <ThemedText style={[styles.bolusPlaceholder, { color: colors.muted }]}>
-                            No dose recorded for this meal.
-                        </ThemedText>
+                        {doseLoading ? (
+                            <ActivityIndicator size="small" color={colors.accent} />
+                        ) : linkedDose ? (
+                            <View style={[styles.doseCard, { backgroundColor: colors.cardBg }]}>
+                                <View style={styles.doseCardRow}>
+                                    <ThemedText style={[styles.doseCardLabel, { color: colors.muted }]}>Dose</ThemedText>
+                                    <ThemedText style={[styles.doseCardValue, { color: colors.accent }]}>{linkedDose.amount.toFixed(1)}u</ThemedText>
+                                </View>
+                                <View style={[styles.doseCardDivider, { backgroundColor: colors.border }]} />
+                                <View style={styles.doseCardRow}>
+                                    <ThemedText style={[styles.doseCardLabel, { color: colors.muted }]}>Type</ThemedText>
+                                    <ThemedText style={styles.doseCardValue}>{linkedDose.type}</ThemedText>
+                                </View>
+                                <View style={[styles.doseCardDivider, { backgroundColor: colors.border }]} />
+                                <View style={styles.doseCardRow}>
+                                    <ThemedText style={[styles.doseCardLabel, { color: colors.muted }]}>Time</ThemedText>
+                                    <ThemedText style={styles.doseCardValue}>{linkedDose.time}</ThemedText>
+                                </View>
+                            </View>
+                        ) : (
+                            <ThemedText style={[styles.bolusPlaceholder, { color: colors.muted }]}>
+                                No dose recorded for this meal.
+                            </ThemedText>
+                        )}
                     </View>
                 </View>
             </ScrollView>
@@ -251,12 +296,14 @@ const MealDetailScreen = () => {
                         : <ThemedText style={[styles.footerBtnText, { color: colors.danger }]}>Delete</ThemedText>}
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                    style={[styles.footerBtn, styles.footerBtnFill, { backgroundColor: colors.accent }]}
-                    onPress={() => setShowDoseSheet(true)}
-                >
-                    <ThemedText style={[styles.footerBtnText, { color: colors.background }]}>Dose Insulin</ThemedText>
-                </TouchableOpacity>
+                {!linkedDose && !doseLoading && (
+                    <TouchableOpacity
+                        style={[styles.footerBtn, styles.footerBtnFill, { backgroundColor: colors.accent }]}
+                        onPress={() => setShowDoseSheet(true)}
+                    >
+                        <ThemedText style={[styles.footerBtnText, { color: colors.background }]}>Dose Insulin</ThemedText>
+                    </TouchableOpacity>
+                )}
             </View>
 
             <DoseConfirmationSheet
@@ -297,6 +344,11 @@ const styles = StyleSheet.create({
     emptyFoods: { fontSize: 14, fontStyle: "italic" },
     notesText: { fontSize: 14, lineHeight: 21 },
     bolusPlaceholder: { fontSize: 14, fontStyle: "italic" },
+    doseCard: { borderRadius: 12, padding: 16 },
+    doseCardRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 6 },
+    doseCardLabel: { fontSize: 14 },
+    doseCardValue: { fontSize: 14, fontWeight: "600" },
+    doseCardDivider: { height: StyleSheet.hairlineWidth, marginVertical: 2 },
     footer: { position: "absolute", bottom: 0, left: 0, right: 0, padding: 20, paddingBottom: 36, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: "row", gap: 12 },
     footerBtn: { flex: 1, borderWidth: 1.5, borderRadius: 12, paddingVertical: 14, alignItems: "center" },
     footerBtnFill: { borderWidth: 0 },
