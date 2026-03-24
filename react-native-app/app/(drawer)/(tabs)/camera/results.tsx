@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, View, TouchableOpacity, Alert, Dimensions, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -39,6 +39,21 @@ export default function ResultsScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [carbRatio, setCarbRatio] = useState(10);
   const [showDoseSheet, setShowDoseSheet] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const isProcessing = !meal || meal?.status === 'pending' || meal?.status === 'processing';
+  const finalCarbs = adjustedCarbs ?? meal?.estimated_carbs_grams ?? 0;
+  const recommendedDose = Math.max(0, finalCarbs / carbRatio - insulinOnBoard);
+  
+  useEffect(() => {
+    if (!isProcessing) {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      return;
+    }
+    timeoutRef.current = setTimeout(() => setTimedOut(true), 60000);
+    return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
+  }, [isProcessing]);
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -48,10 +63,6 @@ export default function ResultsScreen() {
     });
     return unsub;
   }, []);
-
-  const isProcessing = !meal || meal?.status === 'pending' || meal?.status === 'processing';
-  const finalCarbs = adjustedCarbs ?? meal?.estimated_carbs_grams ?? 0;
-  const recommendedDose = Math.max(0, finalCarbs / carbRatio - insulinOnBoard);
 
   const handleConfirm = async () => {
     if (!meal?.id) return;
@@ -87,11 +98,16 @@ export default function ResultsScreen() {
     }
   };
 
-  if (error) {
+  if (error || timedOut) {
     return (
       <ThemedView style={styles.centered}>
         <Ionicons name="alert-circle-outline" size={48} color={colors.danger} />
-        <ThemedText style={[styles.errorText, { color: colors.danger }]}>Failed to load results</ThemedText>
+        <ThemedText style={[styles.errorText, { color: colors.danger }]}>
+          {timedOut ? "Analysis is taking too long" : "Failed to load results"}
+        </ThemedText>
+        <ThemedText style={[styles.errorSubtext, { color: colors.muted }]}>
+          {timedOut ? "The server may be busy. Please try again." : "Something went wrong loading your results."}
+        </ThemedText>
         <TouchableOpacity onPress={() => router.back()}>
           <ThemedText style={{ color: colors.accent }}>Go Back</ThemedText>
         </TouchableOpacity>
@@ -207,4 +223,5 @@ const styles = StyleSheet.create({
   confirmText: { fontSize: 16, fontWeight: '700' },
   disabled: { opacity: 0.5 },
   errorText: { fontSize: 16, fontWeight: '600' },
+  errorSubtext: { fontSize: 14, textAlign: 'center', marginTop: 4, marginBottom: 8 },
 });

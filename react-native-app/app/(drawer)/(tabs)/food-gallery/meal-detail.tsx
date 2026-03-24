@@ -69,6 +69,7 @@ const MealDetailScreen = () => {
     const [meal, setMeal] = useState<MealCarbEstimate | null>(null);
     const [loading, setLoading] = useState(true);
     const [notFound, setNotFound] = useState(false);
+    const [loadError, setLoadError] = useState(false);
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [imageError, setImageError] = useState(false);
     const [imageLoading, setImageLoading] = useState(true);
@@ -95,7 +96,7 @@ const MealDetailScreen = () => {
                 if (!m) { setNotFound(true); } else { setMeal(m); }
                 setLoading(false);
             },
-            () => { setNotFound(true); setLoading(false); },
+            () => { setLoadError(true); setLoading(false); },
         );
         return unsub;
     }, [mealId]);
@@ -175,6 +176,18 @@ const MealDetailScreen = () => {
         return (
             <ThemedView style={styles.centered}>
                 <ActivityIndicator size="large" color={colors.accent} />
+            </ThemedView>
+        );
+    }
+
+    if (loadError) {
+        return (
+            <ThemedView style={styles.centered}>
+                <ThemedText style={styles.notFoundTitle}>Couldn't load meal</ThemedText>
+                <ThemedText style={[styles.notFoundSubtitle, { color: colors.muted }]}>Check your connection and try again.</ThemedText>
+                <TouchableOpacity style={[styles.backBtn, { borderColor: colors.border }]} onPress={() => router.back()}>
+                    <ThemedText style={styles.backBtnText}>Go back</ThemedText>
+                </TouchableOpacity>
             </ThemedView>
         );
     }
