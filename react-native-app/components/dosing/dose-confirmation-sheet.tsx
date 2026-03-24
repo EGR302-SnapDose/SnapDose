@@ -18,6 +18,8 @@ interface DoseConfirmationSheetProps {
   dose: number;
   carbs?: number;
   carbRatio?: number;
+  correctionDose?: number;
+  correctionFactor?: number;
   correctionInsulin?: number;
   insulinOnBoard: number;
   onConfirm: () => void;
@@ -30,6 +32,8 @@ export function DoseConfirmationSheet({
   dose,
   carbs,
   carbRatio,
+  correctionDose,
+  correctionFactor,
   correctionInsulin,
   insulinOnBoard,
   onConfirm,
@@ -231,6 +235,16 @@ export function DoseConfirmationSheet({
                         1:{carbRatio}
                       </ThemedText>
                     </View>
+                    <View style={styles.detailRow}>
+                      <ThemedText style={styles.detailLabel}>
+                        Correction ({correctionFactor}):
+                      </ThemedText>
+                      <ThemedText style={styles.detailValue}>
+                        {correctionDose !== undefined && correctionDose !== 0
+                          ? `${correctionDose > 0 ? "+" : ""}${correctionDose.toFixed(1)}u`
+                          : "0.0u"}
+                      </ThemedText>
+                    </View>
                   </>
                 ) : (
                   <View style={styles.detailRow}>
@@ -257,7 +271,9 @@ export function DoseConfirmationSheet({
                 <View style={styles.mathRow}>
                   <ThemedText style={styles.mathText}>
                     {mode === "meal"
-                      ? `${(carbs! / carbRatio!).toFixed(1)}u - ${insulinOnBoard.toFixed(1)}u = ${dose.toFixed(1)}u`
+                      ? correctionDose !== undefined && correctionDose !== 0
+                        ? `${(carbs! / carbRatio!).toFixed(1)}u ${correctionDose > 0 ? "+" : ""}${correctionDose.toFixed(1)}u - ${insulinOnBoard.toFixed(1)}u = ${dose.toFixed(1)}u`
+                        : `${(carbs! / carbRatio!).toFixed(1)}u - ${insulinOnBoard.toFixed(1)}u = ${dose.toFixed(1)}u`
                       : `${correctionInsulin?.toFixed(1)}u - ${insulinOnBoard.toFixed(1)}u = ${dose.toFixed(1)}u`}
                   </ThemedText>
                 </View>

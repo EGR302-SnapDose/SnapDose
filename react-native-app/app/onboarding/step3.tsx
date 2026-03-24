@@ -30,7 +30,7 @@ export default function Step3Screen() {
     <ThemedView style={[styles.screen, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <OnboardingLayout
         currentStep={3}
-        totalSteps={6}
+        totalSteps={7}
         icon="resize-outline"
         title="What's your height?"
         subtitle="This helps personalize your health data"
