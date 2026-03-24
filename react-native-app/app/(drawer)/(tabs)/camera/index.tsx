@@ -88,8 +88,6 @@ export default function CameraScreen() {
         throw new Error(uploadResult.error ?? 'Upload failed');
       }
 
-      // Don't create a Firestore doc — Cloud Function creates it
-      // Pass imagePath so results screen can find the CF document
       setPreviewPhoto(null);
       setToastMessage('Photo uploaded!');
       setShowToast(true);
@@ -98,7 +96,7 @@ export default function CameraScreen() {
         setShowToast(false);
         router.push({
           pathname: '/(drawer)/(tabs)/camera/results' as any,
-          params: { imagePath: uploadResult.fileName },
+          params: { imagePath: uploadResult.fileName, localUri: photo.uri },
         });
       }, 1500);
 
