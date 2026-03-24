@@ -3,10 +3,13 @@ import { View, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Aler
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getStorage, ref, getDownloadURL, deleteObject } from "firebase/storage";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
+import { DoseConfirmationSheet } from "@/components/dosing/dose-confirmation-sheet";
 import { useThemeColor } from "@/hooks/use-theme-color";
-import { app } from "@/config/firebase";
+import { useIOB } from "@/hooks/use-iob";
+import { app, auth, db } from "@/config/firebase";
 import { subscribeMeal, deleteMealEntry } from "@/services/meal-service";
 import { MealCarbEstimate } from "@/types/meal";
 
@@ -37,9 +40,11 @@ async function deleteGcsImage(gsUri: string): Promise<void> {
 }
 
 function formatTimestamp(date: Date): string {
-    return date.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }) +
+    return (
+        date.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }) +
         " at " +
-        date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    );
 }
 
 function confidenceColor(confidence: string, accent: string, danger: string, muted: string): string {
@@ -52,6 +57,7 @@ const MealDetailScreen = () => {
     const { mealId } = useLocalSearchParams<{ mealId: string }>();
     const router = useRouter();
     const colors = useColors();
+    const insulinOnBoard = useIOB();
 
     const [meal, setMeal] = useState<MealCarbEstimate | null>(null);
     const [loading, setLoading] = useState(true);
@@ -60,10 +66,20 @@ const MealDetailScreen = () => {
     const [imageError, setImageError] = useState(false);
     const [imageLoading, setImageLoading] = useState(true);
     const [deleting, setDeleting] = useState(false);
+    const [carbRatio, setCarbRatio] = useState(10);
+    const [showDoseSheet, setShowDoseSheet] = useState(false);
+
+    useEffect(() => {
+        const user = auth.currentUser;
+        if (!user) return;
+        const unsub = onSnapshot(doc(db, "users", user.uid), (snap) => {
+            if (snap.exists()) setCarbRatio(snap.data().insulinSettings?.insulinToCarbRatio || 10);
+        });
+        return unsub;
+    }, []);
 
     useEffect(() => {
         if (!mealId) { setNotFound(true); setLoading(false); return; }
-
         const unsub = subscribeMeal(
             mealId,
             (m) => {
@@ -83,6 +99,28 @@ const MealDetailScreen = () => {
             .finally(() => setImageLoading(false));
     }, [meal?.image_gs_uri]);
 
+    const recommendedDose = Math.max(0, (meal?.estimated_carbs_grams ?? 0) / carbRatio - insulinOnBoard);
+
+    const handleDoseConfirm = async () => {
+        const user = auth.currentUser;
+        if (!user || !meal) return;
+        try {
+            const doseId = Date.now().toString();
+            await setDoc(doc(db, "users", user.uid, "doses", doseId), {
+                id: doseId,
+                time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }),
+                amount: recommendedDose,
+                type: "Meal",
+                timestamp: new Date(),
+                mode: "meal",
+                correctionInsulin: null,
+                mealId,
+            });
+        } catch {
+            Alert.alert("Error", "Could not save dose. Please try again.");
+        }
+    };
+
     const handleDelete = () => {
         Alert.alert(
             "Delete Meal",
@@ -97,9 +135,7 @@ const MealDetailScreen = () => {
                         setDeleting(true);
                         try {
                             await deleteMealEntry(mealId);
-                            if (meal.image_gs_uri) {
-                                await deleteGcsImage(meal.image_gs_uri).catch(() => {});
-                            }
+                            if (meal.image_gs_uri) await deleteGcsImage(meal.image_gs_uri).catch(() => {});
                             router.back();
                         } catch {
                             Alert.alert("Error", "Could not delete this meal. Please try again.");
@@ -123,9 +159,7 @@ const MealDetailScreen = () => {
         return (
             <ThemedView style={styles.centered}>
                 <ThemedText style={styles.notFoundTitle}>Meal not found</ThemedText>
-                <ThemedText style={[styles.notFoundSubtitle, { color: colors.muted }]}>
-                    This meal may have been deleted.
-                </ThemedText>
+                <ThemedText style={[styles.notFoundSubtitle, { color: colors.muted }]}>This meal may have been deleted.</ThemedText>
                 <TouchableOpacity style={[styles.backBtn, { borderColor: colors.border }]} onPress={() => router.back()}>
                     <ThemedText style={styles.backBtnText}>Go back</ThemedText>
                 </TouchableOpacity>
@@ -208,17 +242,33 @@ const MealDetailScreen = () => {
 
             <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
                 <TouchableOpacity
-                    style={[styles.deleteBtn, { borderColor: colors.danger }]}
+                    style={[styles.footerBtn, { borderColor: colors.danger }]}
                     onPress={handleDelete}
                     disabled={deleting}
                 >
-                    {deleting ? (
-                        <ActivityIndicator size="small" color={colors.danger} />
-                    ) : (
-                        <ThemedText style={[styles.deleteBtnText, { color: colors.danger }]}>Delete Meal</ThemedText>
-                    )}
+                    {deleting
+                        ? <ActivityIndicator size="small" color={colors.danger} />
+                        : <ThemedText style={[styles.footerBtnText, { color: colors.danger }]}>Delete</ThemedText>}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.footerBtn, styles.footerBtnFill, { backgroundColor: colors.accent }]}
+                    onPress={() => setShowDoseSheet(true)}
+                >
+                    <ThemedText style={[styles.footerBtnText, { color: colors.background }]}>Dose Insulin</ThemedText>
                 </TouchableOpacity>
             </View>
+
+            <DoseConfirmationSheet
+                visible={showDoseSheet}
+                mode="meal"
+                dose={recommendedDose}
+                carbs={meal.estimated_carbs_grams}
+                carbRatio={carbRatio}
+                insulinOnBoard={insulinOnBoard}
+                onConfirm={handleDoseConfirm}
+                onCancel={() => setShowDoseSheet(false)}
+            />
         </ThemedView>
     );
 };
@@ -226,7 +276,7 @@ const MealDetailScreen = () => {
 const styles = StyleSheet.create({
     root: { flex: 1 },
     centered: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 32 },
-    content: { paddingBottom: 100 },
+    content: { paddingBottom: 120 },
     imageContainer: { width, height: width * 0.85, position: "relative" },
     heroImage: { width: "100%", height: "100%" },
     imageFallback: { flex: 1, alignItems: "center", justifyContent: "center" },
@@ -247,9 +297,10 @@ const styles = StyleSheet.create({
     emptyFoods: { fontSize: 14, fontStyle: "italic" },
     notesText: { fontSize: 14, lineHeight: 21 },
     bolusPlaceholder: { fontSize: 14, fontStyle: "italic" },
-    footer: { position: "absolute", bottom: 0, left: 0, right: 0, padding: 20, paddingBottom: 36, borderTopWidth: StyleSheet.hairlineWidth },
-    deleteBtn: { borderWidth: 1.5, borderRadius: 12, paddingVertical: 14, alignItems: "center" },
-    deleteBtnText: { fontSize: 15, fontWeight: "600" },
+    footer: { position: "absolute", bottom: 0, left: 0, right: 0, padding: 20, paddingBottom: 36, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: "row", gap: 12 },
+    footerBtn: { flex: 1, borderWidth: 1.5, borderRadius: 12, paddingVertical: 14, alignItems: "center" },
+    footerBtnFill: { borderWidth: 0 },
+    footerBtnText: { fontSize: 15, fontWeight: "600" },
     notFoundTitle: { fontSize: 18, fontWeight: "700" },
     notFoundSubtitle: { fontSize: 14, textAlign: "center" },
     backBtn: { marginTop: 8, paddingVertical: 10, paddingHorizontal: 24, borderWidth: 1, borderRadius: 10 },
