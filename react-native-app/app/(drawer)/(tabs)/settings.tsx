@@ -1,17 +1,16 @@
-import {
-    ScrollView,
-    View,
-    Text,
-    StyleSheet,
-    Pressable,
-    ActivityIndicator,
-} from "react-native";
-import { useState, useCallback } from "react";
-import { getAuth } from "firebase/auth";
-import * as WebBrowser from "expo-web-browser";
-import { useFocusEffect } from "@react-navigation/native";
 import PumpPairingSection from '@/components/ui/PumpPairingSection';
-import DeviceStatusBadge from '@/components/ui/DeviceStatusBadge';
+import { useFocusEffect } from "@react-navigation/native";
+import * as WebBrowser from "expo-web-browser";
+import { getAuth } from "firebase/auth";
+import { useCallback, useState } from "react";
+import {
+    ActivityIndicator,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
 const API_BASE =
     "https://us-central1-egr302-snapdose.cloudfunctions.net/dexcom-auth";
 
@@ -71,10 +70,17 @@ if (data.connected) {
     <Text style={styles.label}>Dexcom CGM</Text>
 
     <View style={styles.rowRight}>
-        <DeviceStatusBadge
-            status={loading ? 'checking' : dexcomConnected ? 'online' : 'offline'}
-            lastSeen={cgmLastSeen}
-        />
+        <View style={styles.statusBadge}>
+            <View style={[styles.statusDot, {
+                backgroundColor: loading ? '#888' : dexcomConnected ? '#4CAF50' : '#F44336'
+            }]} />
+            <Text style={[styles.statusText, {
+                color: loading ? '#888' : dexcomConnected ? '#4CAF50' : '#F44336'
+            }]}>
+                {loading ? 'Checking...' : dexcomConnected ? 'Online' : 'Offline'}
+            </Text>
+        </View>
+        {cgmLastSeen && <Text style={styles.lastSeen}>Last seen: {cgmLastSeen}</Text>}
         {!loading && !dexcomConnected && (
             <Pressable
                 style={styles.connectButton}
@@ -92,7 +98,8 @@ if (data.connected) {
 </View>
 
                     </View>
-{/* Pump Connection Section */}
+
+                {/* Pump Connection Section */}
                 <PumpPairingSection />
 
             {/* Units Section */}
@@ -157,71 +164,7 @@ if (data.connected) {
                     </View>
                 </View>
             </View>
-           
-
-        {/* Units Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Units</Text>
-                    <View style={styles.row}>
-                        <View style={styles.rowText}>
-                            <Text style={styles.label}>Blood Glucose</Text>
-                            <Text style={styles.status}>mg/dL</Text>
-                        </View>
-                    </View>
-                    <View style={styles.row}>
-                        <View style={styles.rowText}>
-                            <Text style={styles.label}>Carbohydrates</Text>
-                            <Text style={styles.status}>grams</Text>
-                        </View>
-                    </View>
-                </View>
-
-                {/* Notifications Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Notifications</Text>
-                    <View style={styles.row}>
-                        <View style={styles.rowText}>
-                            <Text style={styles.label}>High Glucose Alerts</Text>
-                            <Text style={styles.status}>Enabled</Text>
-                        </View>
-                    </View>
-                    <View style={styles.row}>
-                        <View style={styles.rowText}>
-                            <Text style={styles.label}>Low Glucose Alerts</Text>
-                            <Text style={styles.status}>Enabled</Text>
-                        </View>
-                    </View>
-                    <View style={styles.row}>
-                        <View style={styles.rowText}>
-                            <Text style={styles.label}>Meal Reminders</Text>
-                            <Text style={styles.status}>Disabled</Text>
-                        </View>
-                    </View>
-                </View>
-
-                {/* App Preferences Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>App Preferences</Text>
-                    <View style={styles.row}>
-                        <View style={styles.rowText}>
-                            <Text style={styles.label}>Theme</Text>
-                            <Text style={styles.status}>Light</Text>
-                        </View>
-                    </View>
-                    <View style={styles.row}>
-                        <View style={styles.rowText}>
-                            <Text style={styles.label}>Language</Text>
-                            <Text style={styles.status}>English</Text>
-                        </View>
-                    </View>
-                    <View style={styles.row}>
-                        <View style={styles.rowText}>
-                            <Text style={styles.label}>App Version</Text>
-                            <Text style={styles.status}>1.0.0</Text>
-                        </View>
-                    </View>
-                </View>
-            </View>
+        </ScrollView>
     );
 }
 
@@ -280,5 +223,23 @@ const styles = StyleSheet.create({
     rowRight: {
         alignItems: 'flex-end',
         gap: 6,
+    },
+    statusBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    statusDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+    },
+    statusText: {
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    lastSeen: {
+        fontSize: 11,
+        color: '#888',
     },
 });
