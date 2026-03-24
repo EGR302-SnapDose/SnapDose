@@ -53,3 +53,6 @@ expo-env.d.ts
 /react-native-app/package.json
 
 firmware/.pio/
+
+
+gcp/node_modules/

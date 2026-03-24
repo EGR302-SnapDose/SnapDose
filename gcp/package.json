@@ -1,0 +1,10 @@
+{
+  "name": "delete-expired-doses",
+  "version": "1.0.0",
+  "engines": { "node": "22" },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "firebase-functions": "^5.0.0"
+  }
+}
