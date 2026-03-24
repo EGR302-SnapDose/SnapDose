@@ -1,28 +1,56 @@
 package com.snapdose.api.service;
 
+import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+
+import com.snapdose.api.model.BolusRecord;
 import com.snapdose.api.model.BolusRequest;
 import com.snapdose.api.model.BolusResponse;
-import org.springframework.stereotype.Service;
+import com.snapdose.api.model.PumpStatusResponse;
+import com.snapdose.api.repository.BolusRepository;
 
 @Service
 public class PumpService {
 
-    // TODO: Replace with actual M5Stack Tab5 HTTP endpoint
-    private static final String PUMP_BASE_URL = "http://localhost:8081";
+    private final BolusService bolusService;
+    private final BolusRepository bolusRepository;
 
-    public BolusResponse sendBolus(BolusRequest request) {
-        // TODO: Send HTTP request to M5Stack Tab5 microcontroller
-        // The microcontroller runs an HTTP server that accepts bolus commands
-        // For now, return a simulated success response
-        return new BolusResponse(
-            "confirmed",
-            "Bolus of " + request.getUnits() + " units delivered",
-            request.getUnits()
-        );
+    public PumpService(BolusService bolusService, BolusRepository bolusRepository) {
+        this.bolusService = bolusService;
+        this.bolusRepository = bolusRepository;
     }
 
-    public boolean checkPumpConnection() {
-        // TODO: Ping the microcontroller health endpoint
-        return true;
+    public BolusResponse sendBolus(BolusRequest request) throws Exception {
+        return bolusService.createBolus(request);
+    }
+
+    public PumpStatusResponse getPumpStatus(String deviceId) throws Exception {
+        PumpStatusResponse response = new PumpStatusResponse();
+        response.setDeviceId(deviceId);
+
+        Optional<BolusRecord> activeBolus = bolusRepository.findActiveByDeviceId(deviceId);
+        if (activeBolus.isPresent()) {
+            BolusRecord record = activeBolus.get();
+            response.setConnected(true);
+            response.setStatus("busy");
+            response.setActiveBolusId(record.getBolusId());
+            response.setActiveBolusStatus(record.getStatus());
+            response.setLastHeartbeat(record.getUpdatedAt());
+        } else {
+            response.setConnected(true);
+            response.setStatus("idle");
+            response.setLastHeartbeat(System.currentTimeMillis());
+        }
+
+        return response;
+    }
+
+    public PumpStatusResponse getPumpStatusGeneric() {
+        PumpStatusResponse response = new PumpStatusResponse();
+        response.setConnected(true);
+        response.setStatus("idle");
+        response.setLastHeartbeat(System.currentTimeMillis());
+        return response;
     }
 }

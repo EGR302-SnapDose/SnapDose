@@ -6,24 +6,24 @@ import { router } from "expo-router";
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import {
-  doc,
-  getDoc,
-  getFirestore,
-  serverTimestamp,
-  Timestamp,
-  updateDoc,
+    doc,
+    getDoc,
+    getFirestore,
+    serverTimestamp,
+    Timestamp,
+    updateDoc,
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -58,6 +58,8 @@ interface EditableProfile {
   weightLbs: string;
   insulinToCarbRatio: string;
   correctionFactor: string;
+  targetGlucoseMin: string;
+  targetGlucoseMax: string;
 }
 
 const EMPTY_FORM: EditableProfile = {
@@ -72,6 +74,8 @@ const EMPTY_FORM: EditableProfile = {
   weightLbs: "",
   insulinToCarbRatio: "",
   correctionFactor: "",
+  targetGlucoseMin: "70",
+  targetGlucoseMax: "180",
 };
 
 // Safely converts a Firestore Timestamp (or anything date-like) to "YYYY-MM-DD"
@@ -236,6 +240,8 @@ export default function EditProfileScreen() {
           weightLbs:          p.weight?.lbs    != null ? String(p.weight.lbs)    : "",
           insulinToCarbRatio: ins.insulinToCarbRatio != null ? String(ins.insulinToCarbRatio) : "",
           correctionFactor:   ins.correctionFactor   != null ? String(ins.correctionFactor)   : "",
+          targetGlucoseMin:   p.targetGlucose?.min   != null ? String(p.targetGlucose.min)   : "70",
+          targetGlucoseMax:   p.targetGlucose?.max   != null ? String(p.targetGlucose.max)   : "180",
         });
       })
       .catch((err) => {
@@ -293,6 +299,8 @@ export default function EditProfileScreen() {
         "profile.height.cm":                  cmNum,
         "profile.weight.lbs":                 lbsNum,
         "profile.weight.kg":                  kgNum,
+        "profile.targetGlucose.min":          form.targetGlucoseMin ? parseFloat(form.targetGlucoseMin) : 70,
+        "profile.targetGlucose.max":          form.targetGlucoseMax ? parseFloat(form.targetGlucoseMax) : 180,
         "insulinSettings.insulinToCarbRatio": form.insulinToCarbRatio ? parseFloat(form.insulinToCarbRatio) : 0,
         "insulinSettings.correctionFactor":   form.correctionFactor   ? parseFloat(form.correctionFactor)   : 0,
         updatedAt:                            serverTimestamp(),
@@ -490,6 +498,31 @@ export default function EditProfileScreen() {
               pillBg={inputBg}
               textColor={theme.text}
             />
+
+            <FieldLabel label={`Target Glucose Range (${form.glucoseUnit})`} />
+            <View style={styles.row}>
+              <View style={{ flex: 1 }}>
+                <StyledInput
+                  value={form.targetGlucoseMin}
+                  onChangeText={(v) => setField("targetGlucoseMin", v)}
+                  placeholder="Min (70)"
+                  keyboardType="numeric"
+                  inputBg={inputBg}
+                  textColor={theme.text}
+                />
+              </View>
+              <View style={{ width: 10 }} />
+              <View style={{ flex: 1 }}>
+                <StyledInput
+                  value={form.targetGlucoseMax}
+                  onChangeText={(v) => setField("targetGlucoseMax", v)}
+                  placeholder="Max (180)"
+                  keyboardType="numeric"
+                  inputBg={inputBg}
+                  textColor={theme.text}
+                />
+              </View>
+            </View>
           </SectionCard>
 
           {/* ── Insulin Settings ── */}
