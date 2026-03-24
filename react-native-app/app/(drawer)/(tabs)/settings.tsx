@@ -5,6 +5,7 @@ import {
     StyleSheet,
     Pressable,
     ActivityIndicator,
+    Switch,
 } from "react-native";
 import { useState, useCallback } from "react";
 import { getAuth } from "firebase/auth";
@@ -12,6 +13,7 @@ import * as WebBrowser from "expo-web-browser";
 import { useFocusEffect } from "@react-navigation/native";
 import PumpPairingSection from '@/components/ui/PumpPairingSection';
 import DeviceStatusBadge from '@/components/ui/DeviceStatusBadge';
+import { useNotificationSettings } from '@/components/hooks/useNotificationSettings';
 const API_BASE =
     "https://us-central1-egr302-snapdose.cloudfunctions.net/dexcom-auth";
 
@@ -21,6 +23,7 @@ export default function SettingsScreen() {
     const [connecting, setConnecting] = useState(false);
     const [cgmLastSeen, setCgmLastSeen] = useState<string | undefined>(undefined);
     const userId = getAuth().currentUser?.uid;
+    const { settings, toggleSetting } = useNotificationSettings(userId);
 
     const checkDexcomStatus = async () => {
         if (!userId) return;
@@ -157,6 +160,41 @@ if (data.connected) {
                     </View>
                 </View>
             </View>
+            {/* Notification Settings Section */}
+<View style={styles.section}>
+  <Text style={styles.sectionTitle}>Notifications</Text>
+
+  <View style={styles.row}>
+    <View style={styles.rowText}>
+      <Text style={styles.label}>High Glucose Alerts</Text>
+    </View>
+    <Switch
+      value={settings.highGlucoseAlert}
+      onValueChange={() => toggleSetting('highGlucoseAlert')}
+    />
+  </View>
+
+  <View style={styles.row}>
+    <View style={styles.rowText}>
+      <Text style={styles.label}>Low Glucose Alerts</Text>
+    </View>
+    <Switch
+      value={settings.lowGlucoseAlert}
+      onValueChange={() => toggleSetting('lowGlucoseAlert')}
+    />
+  </View>
+
+  <View style={styles.row}>
+    <View style={styles.rowText}>
+      <Text style={styles.label}>Meal Reminders</Text>
+    </View>
+    <Switch
+      value={settings.mealReminders}
+      onValueChange={() => toggleSetting('mealReminders')}
+    />
+  </View>
+
+</View>
         </ScrollView>
     );
 }
