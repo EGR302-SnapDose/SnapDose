@@ -49,6 +49,7 @@
   "devDependencies": {
     "@babel/eslint-parser": "^7.28.6",
     "@types/react": "~19.1.10",
+    "@react-native-community/cli": "latest",
     "eslint": "^8.57.1",
     "eslint-config-expo": "^10.0.0",
     "expo-module-scripts": "^5.0.8",
