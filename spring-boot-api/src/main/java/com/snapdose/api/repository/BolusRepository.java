@@ -47,38 +47,65 @@ public class BolusRepository {
             .get();
     }
 
-    public Optional<BolusRecord> findPendingByDeviceId(String deviceId) throws Exception {
-        QuerySnapshot query = getDb().collectionGroup("boluses")
-            .whereEqualTo("deviceId", deviceId)
-            .whereEqualTo("status", BolusStatus.PENDING.name())
-            .limit(1)
-            .get()
-            .get();
+    public Optional<BolusRecord> findPendingByDeviceId(String 
+        deviceId) throws Exception {
+        try {
+            QuerySnapshot query = getDb().collectionGroup("boluses")
+                .whereEqualTo("deviceId", deviceId)
+                .limit(10)
+                .get()
+                .get();
 
-        if (query.isEmpty()) {
+            if (query.isEmpty()) {
+                return Optional.empty();
+            }
+
+            // Filter by status in-memory to avoid requiring Firestore composite index
+            for (DocumentSnapshot doc : query.getDocuments()) {
+                BolusRecord record = doc.toObject(BolusRecord.class);
+                if (record != null && record.getStatus() == BolusStatus.PENDING) {
+                    return Optional.of(record);
+                }
+            }
             return Optional.empty();
+        } catch (Exception e) {
+            System.err.println("ERROR in findPendingByDeviceId: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
-        return Optional.ofNullable(query.getDocuments().get(0).toObject(BolusRecord.class));
     }
 
     public Optional<BolusRecord> findActiveByDeviceId(String deviceId) throws Exception {
-        List<String> activeStatuses = List.of(
-            BolusStatus.PENDING.name(),
-            BolusStatus.ACKNOWLEDGED.name(),
-            BolusStatus.DELIVERING.name()
-        );
+        try {
+            List<String> activeStatuses = List.of(
+                BolusStatus.PENDING.name(),
+                BolusStatus.ACKNOWLEDGED.name(),
+                BolusStatus.DELIVERING.name()
+            );
 
-        QuerySnapshot query = getDb().collectionGroup("boluses")
-            .whereEqualTo("deviceId", deviceId)
-            .whereIn("status", activeStatuses)
-            .limit(1)
-            .get()
-            .get();
+            QuerySnapshot query = getDb().collectionGroup("boluses")
+                .whereEqualTo("deviceId", deviceId)
+                .limit(10)
+                .get()
+                .get();
 
-        if (query.isEmpty()) {
+            if (query.isEmpty()) {
+                return Optional.empty();
+            }
+
+            // Filter by status in-memory to avoid requiring Firestore composite index
+            for (DocumentSnapshot doc : query.getDocuments()) {
+                BolusRecord record = doc.toObject(BolusRecord.class);
+                if (record != null && activeStatuses.contains(record.getStatus().name())) {
+                    return Optional.of(record);
+                }
+            }
             return Optional.empty();
+        } catch (Exception e) {
+            System.err.println("ERROR in findActiveByDeviceId: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
-        return Optional.ofNullable(query.getDocuments().get(0).toObject(BolusRecord.class));
     }
 
     private Firestore getDb() {

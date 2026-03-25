@@ -53,6 +53,5 @@ expo-env.d.ts
 /react-native-app/package.json
 
 firmware/.pio/
-
-
-gcp/node_modules/
+egr302-snapdose-firebase-adminsdk-fbsvc-0ef0df9d2d.json
+firmware/src/config.h

@@ -15,6 +15,7 @@ import com.snapdose.api.model.BolusRecord;
 import com.snapdose.api.model.BolusRequest;
 import com.snapdose.api.model.BolusResponse;
 import com.snapdose.api.model.PumpStatusResponse;
+import com.snapdose.api.model.enums.BolusStatus;
 import com.snapdose.api.service.BolusService;
 import com.snapdose.api.service.PumpService;
 
@@ -48,6 +49,24 @@ public class BolusController {
             .orElse(ResponseEntity.notFound().build());
     }
 
+    @PostMapping("/bolus/{userId}/{bolusId}/acknowledge")
+    public ResponseEntity<BolusResponse> acknowledgeBolus(
+            @PathVariable String userId,
+            @PathVariable String bolusId) throws Exception {
+        BolusResponse response = bolusService.transitionStatus(userId, bolusId, BolusStatus.ACKNOWLEDGED, 0);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/bolus/{userId}/{bolusId}/confirm")
+    public ResponseEntity<BolusResponse> confirmDelivery(
+            @PathVariable String userId,
+            @PathVariable String bolusId,
+            @RequestBody Map<String, Object> body) throws Exception {
+        double unitsDelivered = ((Number) body.getOrDefault("unitsDelivered", 0.0)).doubleValue();
+        BolusResponse response = bolusService.transitionStatus(userId, bolusId, BolusStatus.COMPLETED, unitsDelivered);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/pump/{deviceId}/pending")
     public ResponseEntity<BolusRecord> getPendingBolus(@PathVariable String deviceId) throws Exception {
         Optional<BolusRecord> record = bolusService.getPendingBolus(deviceId);
@@ -72,7 +91,7 @@ public class BolusController {
     public ResponseEntity<Map<String, Object>> health() {
         return ResponseEntity.ok(Map.of(
             "status", "ok",
-            "version", "0.4.0",
+            "version", "0.5.0",
             "timestamp", System.currentTimeMillis()
         ));
     }
