@@ -26,11 +26,35 @@ void addDeviceAuthHeaders(HTTPClient &http) {
 
 bool wifiConnected = false;
 unsigned long lastPollTime = 0;
+bool deviceRegistered = false;
 
 String activeBolusId = "";
 String activeUserId = "";
 double activeUnits = 0;
 
+void registerDevice() {
+    String url = String(API_BASE_URL) + "/api/devices/register";
+    
+    HTTPClient http;
+    http.begin(url);
+    http.addHeader("Content-Type", "application/json");
+    addDeviceAuthHeaders(http);
+    
+    String body = "{\"deviceId\":\"" + String(DEVICE_ID) + "\","
+                  "\"firmwareVersion\":\"" + String(FIRMWARE_VERSION) + "\","
+                  "\"wifiSignalStrength\":" + String(WiFi.RSSI()) + ","
+                  "\"batteryLevel\":\"100%\"}";
+    
+    int httpCode = http.POST(body);
+    http.end();
+    
+    if (httpCode >= 200 && httpCode < 300) {
+        Serial.println("Device registered successfully");
+        deviceRegistered = true;
+    } else {
+        Serial.printf("Device registration failed, HTTP %d\n", httpCode);
+    }
+}
 
 void drawHeader() {
     M5.Display.fillScreen(TFT_BLACK);
@@ -258,6 +282,7 @@ void setup() {
     if (WiFi.status() == WL_CONNECTED) {
         wifiConnected = true;
         Serial.printf("\nConnected! IP: %s\n", WiFi.localIP().toString().c_str());
+        registerDevice();
         drawIdle();
     } else {
         wifiConnected = false;
