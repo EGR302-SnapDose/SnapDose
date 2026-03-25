@@ -1,6 +1,7 @@
 import { GlucoseCard } from "@/components/dashboard/glucose-card";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { RecentMealsCard } from "@/components/dashboard/recent-meals-card";
+import { TreatmentLogCard } from "@/components/dashboard/treatment-log";
 import { ThemedView } from "@/components/themed-view";
 import { ScrollView, StyleSheet } from "react-native";
 
@@ -12,6 +13,7 @@ export default function HomeScreen() {
                 showsVerticalScrollIndicator={false}
             >
                 <GlucoseCard />
+                <TreatmentLogCard />
                 <RecentMealsCard />
                 <QuickActions />
             </ScrollView>
