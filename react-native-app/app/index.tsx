@@ -217,8 +217,9 @@ export default function SplashScreen() {
             </View>
         </Animated.View>
     );
+
 }
- 
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
