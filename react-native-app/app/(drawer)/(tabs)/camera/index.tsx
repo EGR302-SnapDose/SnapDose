@@ -1,18 +1,18 @@
-import { useEffect, useRef, useState } from 'react';
-import { StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { CameraView, CameraType, Camera } from 'expo-camera';
-import { router } from 'expo-router';
-import { useCameraPermission } from '@/hooks/use-camera-permissions';
-import { usePhotoStorage } from '@/hooks/use-photo-storage';
-import { StoredPhoto } from '@/services/photo-storage';
-import { uploadImageToGCS } from '@/services/gcs-upload-service';
 import { CameraPermissionPrompt } from '@/components/camera/CameraPermissionPrompt';
 import { CameraControls } from '@/components/camera/CaptureButton';
 import { PhotoPreview } from '@/components/camera/PhotoPreview';
-import { Toast } from '@/components/ui/Toast';
 import { ThemedView } from '@/components/themed-view';
+import { Toast } from '@/components/ui/Toast';
+import { useCameraPermission } from '@/hooks/use-camera-permissions';
+import { usePhotoStorage } from '@/hooks/use-photo-storage';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { uploadImageToGCS } from '@/services/gcs-upload-service';
+import { StoredPhoto } from '@/services/photo-storage';
+import { Camera, CameraType, CameraView } from 'expo-camera';
+import { router } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export type CapturedPhoto = {
   uri: string;
@@ -79,10 +79,10 @@ export default function CameraScreen() {
     setPreviewPhoto(null);
   };
 
-  const handleUsePhoto = async (photo: StoredPhoto) => {
+  const handleUsePhoto = async (photo: StoredPhoto, notes?: string) => {
     setIsProcessing(true);
     try {
-      const uploadResult = await uploadImageToGCS(photo.uri, photo.fileName);
+      const uploadResult = await uploadImageToGCS(photo.uri, photo.fileName, undefined, notes);
 
       if (!uploadResult.success || !uploadResult.fileName) {
         throw new Error(uploadResult.error ?? 'Upload failed');

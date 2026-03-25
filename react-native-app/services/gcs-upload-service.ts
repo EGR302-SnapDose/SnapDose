@@ -26,6 +26,7 @@ export const uploadImageToGCS = async (
   localUri: string,
   fileName: string,
   onProgress?: (progress: UploadProgress) => void,
+  notes?: string,
 ): Promise<UploadResult> => {
   try {
     const auth = getAuth();
@@ -41,8 +42,11 @@ export const uploadImageToGCS = async (
     const storage = getStorage();
     const storageRef = ref(storage, uploadFileName);
 
+    // Include notes as custom metadata if provided
+    const metadata = notes ? { customMetadata: { notes } } : undefined;
+
     return new Promise((resolve) => {
-      const uploadTask = uploadBytesResumable(storageRef, blob);
+      const uploadTask = uploadBytesResumable(storageRef, blob, metadata);
 
       uploadTask.on(
         "state_changed",
