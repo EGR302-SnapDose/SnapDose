@@ -25,23 +25,42 @@ public class DeviceController {
     private DeviceService deviceService;
 
     @PostMapping("/register")
-    public ResponseEntity<Device> registerDevice(@RequestBody DeviceRegisterRequest request) 
-            throws ExecutionException, InterruptedException {
-        Device device = deviceService.registerDevice(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(device);
+    public ResponseEntity<Device> registerDevice(@RequestBody DeviceRegisterRequest request) {
+        try {
+            Device device = deviceService.registerDevice(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(device);
+        } catch (Exception e) {
+            System.err.println("Device registration error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @GetMapping("/{deviceId}/status")
-    public ResponseEntity<DeviceStatusResponse> getDeviceStatus(@PathVariable String deviceId) 
-            throws ExecutionException, InterruptedException {
-        DeviceStatusResponse status = deviceService.getDeviceStatus(deviceId);
-        return ResponseEntity.ok(status);
+    public ResponseEntity<DeviceStatusResponse> getDeviceStatus(@PathVariable String deviceId) {
+        try {
+            DeviceStatusResponse status = deviceService.getDeviceStatus(deviceId);
+            return ResponseEntity.ok(status);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (Exception e) {
+            System.err.println("Device status error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @PostMapping("/{deviceId}/heartbeat")
-    public ResponseEntity<Void> sendHeartbeat(@PathVariable String deviceId) 
-            throws ExecutionException, InterruptedException {
-        deviceService.updateHeartbeat(deviceId);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<Void> sendHeartbeat(@PathVariable String deviceId) {
+        try {
+            deviceService.updateHeartbeat(deviceId);
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (Exception e) {
+            System.err.println("Heartbeat error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }
