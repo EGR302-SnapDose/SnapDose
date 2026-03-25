@@ -4,10 +4,12 @@ import {
     StyleSheet,
     Pressable,
     ActivityIndicator,
+    Switch,
 } from "react-native";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { getAuth } from "firebase/auth";
 import * as WebBrowser from "expo-web-browser";
+import { useUnitPreference } from '@/components/hooks/useUnitPreference';
 import { useFocusEffect } from "@react-navigation/native";
 
 const API_BASE =
@@ -19,6 +21,7 @@ export default function SettingsScreen() {
     const [connecting, setConnecting] = useState(false);
 
     const userId = getAuth().currentUser?.uid;
+    const { unit, toggleUnit } = useUnitPreference(userId);
 
     const checkDexcomStatus = async () => {
         if (!userId) return;
@@ -60,7 +63,6 @@ export default function SettingsScreen() {
 
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Integrations</Text>
-
                 <View style={styles.row}>
                     <View style={styles.rowText}>
                         <Text style={styles.label}>Dexcom CGM</Text>
@@ -72,7 +74,6 @@ export default function SettingsScreen() {
                                   : "Not connected"}
                         </Text>
                     </View>
-
                     {loading ? (
                         <ActivityIndicator />
                     ) : dexcomConnected ? (
@@ -96,6 +97,21 @@ export default function SettingsScreen() {
                     )}
                 </View>
             </View>
+
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Units</Text>
+                <View style={styles.row}>
+                    <View style={styles.rowText}>
+                        <Text style={styles.label}>Glucose Unit</Text>
+                        <Text style={styles.status}>{unit}</Text>
+                    </View>
+                    <Switch
+                        value={unit === "mmol/L"}
+                        onValueChange={toggleUnit}
+                    />
+                </View>
+            </View>
+
         </View>
     );
 }
