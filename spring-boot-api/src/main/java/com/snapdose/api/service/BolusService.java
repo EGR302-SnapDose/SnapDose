@@ -49,15 +49,23 @@ public class BolusService {
             );
         }
 
-        repository.updateStatus(userId, bolusId, newStatus, unitsDelivered);
+        // Handle multi-step transitions: ACKNOWLEDGED → COMPLETED should go through DELIVERING
+        BolusStatus statusToSet = newStatus;
+        if (newStatus == BolusStatus.COMPLETED && record.getStatus() == BolusStatus.ACKNOWLEDGED) {
+            // First transition to DELIVERING, then COMPLETED
+            repository.updateStatus(userId, bolusId, BolusStatus.DELIVERING, 0);
+            statusToSet = BolusStatus.COMPLETED;
+        }
+
+        repository.updateStatus(userId, bolusId, statusToSet, unitsDelivered);
 
         BolusResponse response = new BolusResponse();
         response.setBolusId(bolusId);
-        response.setStatus(newStatus);
+        response.setStatus(statusToSet);
         response.setUnitsRequested(record.getUnitsRequested());
         response.setUnitsDelivered(unitsDelivered);
         response.setBolusType(record.getBolusType());
-        response.setMessage("Status updated to " + newStatus);
+        response.setMessage("Status updated to " + statusToSet);
         response.setCreatedAt(record.getCreatedAt());
         response.setUpdatedAt(System.currentTimeMillis());
         return response;

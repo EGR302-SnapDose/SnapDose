@@ -47,7 +47,8 @@ public class BolusRepository {
             .get();
     }
 
-    public Optional<BolusRecord> findPendingByDeviceId(String deviceId) throws Exception {
+    public Optional<BolusRecord> findPendingByDeviceId(String 
+        deviceId) throws Exception {
         try {
             QuerySnapshot query = getDb().collectionGroup("boluses")
                 .whereEqualTo("deviceId", deviceId)
