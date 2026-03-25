@@ -16,6 +16,14 @@
 
 static const unsigned long POLL_INTERVAL_MS = 5000;
 
+/**
+ * Helper function to add device authentication headers to HTTP requests
+ */
+void addDeviceAuthHeaders(HTTPClient &http) {
+    http.addHeader("X-Device-Id", DEVICE_ID);
+    http.addHeader("X-Device-Token", DEVICE_TOKEN);
+}
+
 bool wifiConnected = false;
 unsigned long lastPollTime = 0;
 
@@ -108,6 +116,7 @@ int acknowledgeBolus(const String &userId, const String &bolusId) {
     HTTPClient http;
     http.begin(url);
     http.addHeader("Content-Type", "application/json");
+    addDeviceAuthHeaders(http);
     int httpCode = http.POST("{}");  // Send empty JSON object
     http.end();
 
@@ -127,6 +136,7 @@ int confirmDelivery(const String &userId, const String &bolusId, double units) {
     HTTPClient http;
     http.begin(url);
     http.addHeader("Content-Type", "application/json");
+    addDeviceAuthHeaders(http);
     int httpCode = http.POST(body);
     http.end();
 
@@ -185,6 +195,7 @@ void pollForBolus() {
     String url = String(API_BASE_URL) + "/api/pump/" + DEVICE_ID + "/pending";
     HTTPClient http;
     http.begin(url);
+    addDeviceAuthHeaders(http);
     int httpCode = http.GET();
 
     if (httpCode == 204) {
