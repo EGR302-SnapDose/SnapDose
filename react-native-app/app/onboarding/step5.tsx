@@ -25,7 +25,7 @@ export default function Step5Screen() {
   return (
     <OnboardingLayout
       currentStep={5}
-      totalSteps={6}
+      totalSteps={7}
       icon="calendar-outline"
       title="What's your age?"
       subtitle="Help us understand your health needs"

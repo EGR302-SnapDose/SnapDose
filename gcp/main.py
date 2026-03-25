@@ -40,6 +40,12 @@ def on_image_upload(cloud_event):
     image_bytes = blob.download_as_bytes()
     mime_type   = blob.content_type or _guess_mime(file_name)
 
+    # Get user notes from custom metadata (if provided)
+    blob.reload()  # Ensure we have latest metadata
+    user_notes = blob.metadata.get("notes", "") if blob.metadata else ""
+    if user_notes:
+        print(f"User provided notes: {user_notes}")
+
     # 2. Snap-56 Call Gemini with API
     client = genai.Client(api_key=GEMINI_API_KEY)
 
@@ -49,6 +55,13 @@ def on_image_upload(cloud_event):
         "- If HOMEMADE or WHOLE food: identify each ingredient, estimate portion sizes from visual cues, and calculate carbs using standard USDA values.\n"
         "- If MIXED: apply both methods and sum the totals.\n\n"
         "Account for cooking methods where relevant. If portion size is unclear, state your assumption in notes.\n"
+    )
+
+    # Include user notes if provided
+    if user_notes:
+        prompt += f"\nUSER NOTES: {user_notes}\n\n"
+
+    prompt += (
         "Respond ONLY with valid JSON in this exact format:\n"
         '{"estimated_carbs_grams": <number>, "confidence": "<low|medium|high>", '
         '"foods_detected": [<list of food items with estimated portions>], '
@@ -80,6 +93,7 @@ def on_image_upload(cloud_event):
         "confidence":            carb_data.get("confidence"),
         "foods_detected":        carb_data.get("foods_detected", []),
         "notes":                 carb_data.get("notes", ""),
+        "added_user_notes":      user_notes,
         "raw_gemini_response":   raw_text,
         "created_at":            datetime.now(timezone.utc),
         "status":                "completed",

@@ -8,11 +8,11 @@ import { router } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -27,6 +27,7 @@ interface UserProfile {
     height: { feet: number; inches: number; cm: number };
     weight: { lbs: number; kg: number };
     insulinUnits: string;
+    targetGlucose?: { min: number; max: number };
   };
   insulinSettings: {
     correctionFactor: number;
@@ -169,6 +170,10 @@ export default function ProfileScreen() {
     ? `${insulinSettings.correctionFactor} ${glucoseUnit}`
     : "—";
 
+  // Target glucose with defaults for users created before this feature
+  const targetGlucoseMax = profile.targetGlucose?.max ?? 180;
+  const targetGlucoseMin = profile.targetGlucose?.min ?? 70;
+
   const initials = displayName
     ? displayName
         .split(" ")
@@ -231,6 +236,8 @@ export default function ProfileScreen() {
                   correctionFactor: insulinSettings?.correctionFactor
                     ? String(insulinSettings.correctionFactor)
                     : "",
+                  targetGlucoseMin: String(targetGlucoseMin),
+                  targetGlucoseMax: String(targetGlucoseMax),
                 },
               })
             }
@@ -267,13 +274,13 @@ export default function ProfileScreen() {
           <InfoRow
             icon={<MaterialCommunityIcons name="trending-up" size={18} color={iconColor} />}
             label="Maximum"
-            value={`180 ${glucoseUnit}`}
+            value={`${targetGlucoseMax} ${glucoseUnit}`}
             rowBg={rowBg}
           />
           <InfoRow
             icon={<MaterialCommunityIcons name="target" size={18} color={iconColor} />}
             label="Minimum"
-            value={`70 ${glucoseUnit}`}
+            value={`${targetGlucoseMin} ${glucoseUnit}`}
             rowBg={rowBg}
             isLast
           />
