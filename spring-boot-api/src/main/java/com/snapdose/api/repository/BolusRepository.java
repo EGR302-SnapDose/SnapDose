@@ -1,7 +1,7 @@
 package com.snapdose.api.repository;
 
 import java.util.List;
-import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.springframework.stereotype.Repository;
@@ -19,14 +19,14 @@ public class BolusRepository {
 
     public void save(BolusRecord record) throws Exception {
         getUserBoluses(record.getUserId())
-            .document(record.getBolusId())
+            .document(Objects.requireNonNull(record.getBolusId()))
             .set(record)
             .get();
     }
 
     public Optional<BolusRecord> findById(String userId, String bolusId) throws Exception {
         DocumentSnapshot snapshot = getUserBoluses(userId)
-            .document(bolusId)
+            .document(Objects.requireNonNull(bolusId))
             .get()
             .get();
 
@@ -38,20 +38,19 @@ public class BolusRepository {
 
     public void updateStatus(String userId, String bolusId, BolusStatus newStatus, double unitsDelivered) throws Exception {
         getUserBoluses(userId)
-            .document(bolusId)
-            .update(Map.of(
+            .document(Objects.requireNonNull(bolusId))
+            .update(
                 "status", newStatus.name(),
                 "unitsDelivered", unitsDelivered,
                 "updatedAt", System.currentTimeMillis()
-            ))
+            )
             .get();
     }
 
-    public Optional<BolusRecord> findPendingByDeviceId(String 
-        deviceId) throws Exception {
+    public Optional<BolusRecord> findPendingByDeviceId(String deviceId) throws Exception {
         try {
             QuerySnapshot query = getDb().collectionGroup("boluses")
-                .whereEqualTo("deviceId", deviceId)
+                .whereEqualTo("deviceId", Objects.requireNonNull(deviceId))
                 .limit(10)
                 .get()
                 .get();
@@ -60,7 +59,6 @@ public class BolusRepository {
                 return Optional.empty();
             }
 
-            // Filter by status in-memory to avoid requiring Firestore composite index
             for (DocumentSnapshot doc : query.getDocuments()) {
                 BolusRecord record = doc.toObject(BolusRecord.class);
                 if (record != null && record.getStatus() == BolusStatus.PENDING) {
@@ -84,7 +82,7 @@ public class BolusRepository {
             );
 
             QuerySnapshot query = getDb().collectionGroup("boluses")
-                .whereEqualTo("deviceId", deviceId)
+                .whereEqualTo("deviceId", Objects.requireNonNull(deviceId))
                 .limit(10)
                 .get()
                 .get();
@@ -93,7 +91,6 @@ public class BolusRepository {
                 return Optional.empty();
             }
 
-            // Filter by status in-memory to avoid requiring Firestore composite index
             for (DocumentSnapshot doc : query.getDocuments()) {
                 BolusRecord record = doc.toObject(BolusRecord.class);
                 if (record != null && activeStatuses.contains(record.getStatus().name())) {
@@ -113,6 +110,6 @@ public class BolusRepository {
     }
 
     private CollectionReference getUserBoluses(String userId) {
-        return getDb().collection("users").document(userId).collection("boluses");
+        return getDb().collection("users").document(Objects.requireNonNull(userId)).collection("boluses");
     }
 }

@@ -11,9 +11,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 import com.snapdose.api.security.AuthenticationFilter;
 
-/**
- * Spring Security configuration for Firebase and Device token authentication
- */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -24,21 +21,13 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            // Disable CSRF since we're using tokens
-            .csrf().disable()
-            // Use stateless session management (no cookies)
-            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            .and()
-            // Configure authorization
-            .authorizeHttpRequests()
-                // Allow health check without authentication
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/health").permitAll()
-                // Require authentication for all other /api endpoints
                 .requestMatchers("/api/**").authenticated()
-                // Deny everything else
                 .anyRequest().denyAll()
-            .and()
-            // Add our custom authentication filter
+            )
             .addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
