@@ -1,92 +1,139 @@
-import { useThemeColor } from "@/hooks/use-theme-color";
+import { colors, layout, radius, spacing, textStyles } from "@/constants/theme";
 import { router } from "expo-router";
 import { useRef } from "react";
-import { Animated, Pressable, StyleSheet, View } from "react-native";
-import { ThemedText } from "../themed-text";
+import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 
-function AnimatedButton({ onPress, accent, buttonBg, children }: {
-    onPress: () => void;
-    accent: string;
-    buttonBg: string;
-    children: React.ReactNode;
-}) {
-    const scale = useRef(new Animated.Value(1)).current;
-    const colorProgress = useRef(new Animated.Value(0)).current;
+function PrimaryButton({ label, onPress }: { label: string; onPress: () => void }) {
+  const scale = useRef(new Animated.Value(1)).current;
 
-    const handlePressIn = () => {
-        Animated.parallel([
-            Animated.spring(scale, { toValue: 0.95, useNativeDriver: true, speed: 50, bounciness: 4 }),
-            Animated.timing(colorProgress, { toValue: 1, duration: 100, useNativeDriver: false }),
-        ]).start();
-    };
+  const handlePressIn = () =>
+    Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 50, bounciness: 4 }).start();
 
-    const handlePressOut = () => {
-        Animated.parallel([
-            Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 50, bounciness: 4 }),
-            Animated.timing(colorProgress, { toValue: 0, duration: 150, useNativeDriver: false }),
-        ]).start();
-    };
+  const handlePressOut = () =>
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 50, bounciness: 4 }).start();
 
-    const backgroundColor = colorProgress.interpolate({
-        inputRange: [0, 1],
-        outputRange: [buttonBg, accent],
-    });
+  return (
+    <Animated.View style={[styles.primaryWrap, { transform: [{ scale }] }]}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={styles.primaryButton}
+      >
+        <View style={styles.primaryInner}>
+          <Text style={styles.primaryText}>{label}</Text>
+          <View style={styles.primaryArrow}>
+            <Text style={styles.primaryArrowText}>→</Text>
+          </View>
+        </View>
+      </Pressable>
+    </Animated.View>
+  );
+}
 
-    return (
-        <Animated.View style={{ transform: [{ scale }], flex: 1 }}>
-            <Pressable onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
-                <Animated.View style={[styles.button, { backgroundColor, borderColor: accent, borderWidth: 1 }]}>
-                    {children}
-                </Animated.View>
-            </Pressable>
-        </Animated.View>
-    );
+function SecondaryButton({ label, onPress }: { label: string; onPress: () => void }) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () =>
+    Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 50, bounciness: 4 }).start();
+
+  const handlePressOut = () =>
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 50, bounciness: 4 }).start();
+
+  return (
+    <Animated.View style={[styles.secondaryWrap, { transform: [{ scale }] }]}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={styles.secondaryButton}
+      >
+        <Text style={styles.secondaryText}>{label}</Text>
+      </Pressable>
+    </Animated.View>
+  );
 }
 
 export function QuickActions() {
-    const pageBg = useThemeColor({ light: "#FFFFFF", dark: "#121212" }, "background");
-    const accent = useThemeColor({}, "accent");
-
-    return (
-        <View style={styles.container}>
-            <AnimatedButton
-                onPress={() => router.push("/(drawer)/(tabs)/camera" as any)}
-                accent={accent}
-                buttonBg={pageBg}
-            >
-                <ThemedText style={[styles.buttonText, { color: accent }]}>
-                    Snap a Meal
-                </ThemedText>
-            </AnimatedButton>
-
-            <AnimatedButton
-                onPress={() => router.push("/(drawer)/(tabs)/dose" as any)}
-                accent={accent}
-                buttonBg={pageBg}
-            >
-                <ThemedText style={[styles.buttonText, { color: accent }]}>
-                    Dose Insulin
-                </ThemedText>
-            </AnimatedButton>
-        </View>
-    );
+  return (
+    <View style={styles.container}>
+      <PrimaryButton
+        label="Snap a Meal"
+        onPress={() => router.push("/(drawer)/(tabs)/camera" as any)}
+      />
+      <SecondaryButton
+        label="Dose Insulin"
+        onPress={() => router.push("/(drawer)/(tabs)/dose" as any)}
+      />
+    </View>
+  );
 }
 
+const BUTTON_HEIGHT = 54;
+
 const styles = StyleSheet.create({
-    container: {
-        flexDirection: "row",
-        gap: 12,
-        marginBottom: 16,
-    },
-    button: {
-        flex: 1,
-        paddingVertical: 14,
-        borderRadius: 12,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    buttonText: {
-        fontSize: 16,
-        fontWeight: "600",
-    },
+  container: {
+    flexDirection: "row",
+    gap: spacing[3],
+    marginHorizontal: layout.screenHorizontalPadding,
+  },
+
+  // Primary — filled blue, arrow badge
+  primaryWrap: {
+    flex: 1.1,
+  },
+  primaryButton: {
+    height: BUTTON_HEIGHT,
+    borderRadius: radius.xl,
+    backgroundColor: colors.buttonPrimary,
+    justifyContent: "center",
+    paddingHorizontal: spacing[4],
+    shadowColor: colors.buttonPrimary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  primaryInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  primaryText: {
+    ...textStyles.calloutSemibold,
+    color: colors.textInverse,
+  },
+  primaryArrow: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.25)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  primaryArrowText: {
+    color: colors.textInverse,
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 16,
+  },
+
+  // Secondary — surface with border
+  secondaryWrap: {
+    flex: 1,
+  },
+  secondaryButton: {
+    height: BUTTON_HEIGHT,
+    borderRadius: radius.xl,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.borderStrong,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing[3],
+  },
+  secondaryText: {
+    ...textStyles.calloutSemibold,
+    color: colors.textPrimary,
+  },
 });

@@ -14,16 +14,16 @@ import { getDownloadURL, getStorage, ref } from "firebase/storage";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Pressable,
   StyleSheet,
+  Text,
   TouchableOpacity,
   View,
 } from "react-native";
- 
+
 import { app, db } from "@/config/firebase";
-import { useThemeColor } from "@/hooks/use-theme-color";
-import { ThemedText } from "../themed-text";
-import { ThemedView } from "../themed-view";
- 
+import { colors, layout, radius, shadows, spacing, textStyles } from "@/constants/theme";
+
 interface RecentMeal {
   id: string;
   imagePath: string;
@@ -32,47 +32,32 @@ interface RecentMeal {
   createdAt: Date;
   foodsDetected: string[];
 }
- 
+
 async function resolveGsUri(gsUri: string): Promise<string> {
   const storage = getStorage(app);
   const path = gsUri.replace(/^gs:\/\/[^/]+\//, "");
   return getDownloadURL(ref(storage, path));
 }
- 
+
 function formatTimeAgo(date: Date): string {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMin = Math.round(diffMs / 60000);
- 
-  if (diffMin < 1) return "just now";
+  if (diffMin < 1) return "Just now";
   if (diffMin < 60) return `${diffMin}m ago`;
   const diffHr = Math.floor(diffMin / 60);
   if (diffHr < 24) return `${diffHr}h ago`;
   return date.toLocaleDateString([], { month: "short", day: "numeric" });
 }
- 
-function MealRow({ meal, isLast, dividerColor }: {
-  meal: RecentMeal;
-  isLast: boolean;
-  dividerColor: string;
-}) {
-  const imageBg = useThemeColor(
-    { light: "#E8E8E8", dark: "#2A2A2A" },
-    "background"
-  );
-  const subtleColor = useThemeColor(
-    { light: "#888888", dark: "#888888" },
-    "icon"
-  );
-  const accent = useThemeColor({}, "accent");
- 
+
+function MealRow({ meal, isLast }: { meal: RecentMeal; isLast: boolean }) {
   const label = meal.foodsDetected[0] ?? "Meal";
-  const timeStr = formatTimeAgo(meal.createdAt);
- 
+  const secondaryLabel = meal.foodsDetected.slice(1, 3).join(", ");
+
   return (
     <>
       <TouchableOpacity
-        style={styles.mealRow}
+        style={styles.row}
         onPress={() =>
           router.push({
             pathname: "/(drawer)/(tabs)/food-gallery/meal-detail" as any,
@@ -82,7 +67,7 @@ function MealRow({ meal, isLast, dividerColor }: {
         activeOpacity={0.7}
       >
         {/* Thumbnail */}
-        <View style={[styles.thumbnail, { backgroundColor: imageBg }]}>
+        <View style={styles.thumbnail}>
           {meal.imageUrl ? (
             <Image
               source={{ uri: meal.imageUrl }}
@@ -92,69 +77,50 @@ function MealRow({ meal, isLast, dividerColor }: {
             />
           ) : (
             <View style={styles.thumbnailPlaceholder}>
-              <ThemedText style={[styles.thumbnailIcon, { color: subtleColor }]}>
-                🍽
-              </ThemedText>
+              <Text style={styles.thumbnailPlaceholderText}>?</Text>
             </View>
           )}
         </View>
- 
+
         {/* Info */}
-        <View style={styles.mealInfo}>
-          <ThemedText style={styles.mealName} numberOfLines={1}>
-            {label}
-          </ThemedText>
-          <ThemedText style={[styles.mealTime, { color: subtleColor }]}>
-            {timeStr}
-          </ThemedText>
+        <View style={styles.rowInfo}>
+          <Text style={styles.mealName} numberOfLines={1}>{label}</Text>
+          {secondaryLabel ? (
+            <Text style={styles.mealSub} numberOfLines={1}>{secondaryLabel}</Text>
+          ) : (
+            <Text style={styles.mealSub}>{formatTimeAgo(meal.createdAt)}</Text>
+          )}
         </View>
- 
-        {/* Carbs */}
-        <View style={styles.carbsBadge}>
-          <ThemedText style={[styles.carbsValue, { color: accent }]}>
-            {meal.estimatedCarbs}g
-          </ThemedText>
-          <ThemedText style={[styles.carbsLabel, { color: subtleColor }]}>
-            carbs
-          </ThemedText>
+
+        {/* Carb badge */}
+        <View style={styles.carbBadge}>
+          <Text style={styles.carbValue}>{meal.estimatedCarbs}</Text>
+          <Text style={styles.carbUnit}>g carbs</Text>
         </View>
       </TouchableOpacity>
- 
+
       {!isLast && (
-        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+        <View style={styles.separator} />
       )}
     </>
   );
 }
- 
+
 export function RecentMealsCard() {
-  const borderColor = useThemeColor({}, "icon");
-  const dividerColor = useThemeColor(
-    { light: "#E0E0E0", dark: "#333333" },
-    "icon"
-  );
-  const subtleColor = useThemeColor(
-    { light: "#888888", dark: "#888888" },
-    "icon"
-  );
- 
   const [meals, setMeals] = useState<RecentMeal[]>([]);
   const [loading, setLoading] = useState(true);
- 
+
   useEffect(() => {
     const uid = getAuth(app).currentUser?.uid;
-    if (!uid) {
-      setLoading(false);
-      return;
-    }
- 
+    if (!uid) { setLoading(false); return; }
+
     const q = query(
       collection(db, "users", uid, "meal_carb_estimation"),
       where("status", "==", "completed"),
       orderBy("created_at", "desc"),
       limit(3)
     );
- 
+
     const unsub = onSnapshot(
       q,
       (snap) => {
@@ -174,8 +140,6 @@ export function RecentMealsCard() {
         });
         setMeals(data);
         setLoading(false);
- 
-        // Resolve image URLs in the background
         data.forEach((meal, idx) => {
           if (!meal.imagePath) return;
           resolveGsUri(meal.imagePath)
@@ -187,83 +151,102 @@ export function RecentMealsCard() {
             .catch(() => {});
         });
       },
-      (err) => {
-        console.error("RecentMealsCard snapshot error:", err);
-        setLoading(false);
-      }
+      () => setLoading(false)
     );
- 
+
     return unsub;
   }, []);
- 
+
   return (
-    <ThemedView style={[styles.card, { borderColor }]}>
+    <View style={styles.card}>
       {/* Header */}
       <View style={styles.header}>
-        <ThemedText type="subtitle">Recent Meals</ThemedText>
-        <TouchableOpacity
+        <View>
+          <Text style={styles.headerTitle}>Recent Meals</Text>
+          {meals.length > 0 && (
+            <Text style={styles.headerSub}>{meals.length} logged today</Text>
+          )}
+        </View>
+        <Pressable
           onPress={() => router.push("/(drawer)/(tabs)/food-gallery" as any)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <ThemedText style={[styles.seeAll, { color: subtleColor }]}>
-            See all →
-          </ThemedText>
-        </TouchableOpacity>
+          <Text style={styles.seeAll}>See All</Text>
+        </Pressable>
       </View>
- 
-      {/* Content */}
+
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="small" />
+          <ActivityIndicator size="small" color={colors.primary} />
         </View>
       ) : meals.length === 0 ? (
-        <View style={styles.centered}>
-          <ThemedText style={[styles.emptyText, { color: subtleColor }]}>
-            No meals logged yet.{"\n"}Snap a meal to get started!
-          </ThemedText>
+        <View style={styles.emptyState}>
+          <View style={styles.emptyIconWrap}>
+            <Text style={styles.emptyIcon}>?</Text>
+          </View>
+          <Text style={styles.emptyTitle}>No meals logged yet</Text>
+          <Text style={styles.emptyBody}>Snap a meal to start tracking carbs.</Text>
         </View>
       ) : (
-        meals.map((meal, idx) => (
-          <MealRow
-            key={meal.id}
-            meal={meal}
-            isLast={idx === meals.length - 1}
-            dividerColor={dividerColor}
-          />
-        ))
+        <View style={styles.list}>
+          {meals.map((meal, idx) => (
+            <MealRow key={meal.id} meal={meal} isLast={idx === meals.length - 1} />
+          ))}
+        </View>
       )}
-    </ThemedView>
+    </View>
   );
 }
- 
+
+const THUMB = 52;
+
 const styles = StyleSheet.create({
   card: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    marginHorizontal: layout.screenHorizontalPadding,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    overflow: "hidden",
+    ...shadows.card,
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    justifyContent: "space-between",
+    paddingHorizontal: spacing[4],
+    paddingTop: spacing[4],
+    paddingBottom: spacing[3],
+  },
+  headerTitle: {
+    ...textStyles.headline,
+    color: colors.textPrimary,
+  },
+  headerSub: {
+    ...textStyles.caption1,
+    color: colors.textTertiary,
+    marginTop: 1,
   },
   seeAll: {
-    fontSize: 13,
-    fontWeight: "500",
+    ...textStyles.callout,
+    color: colors.primary,
   },
-  mealRow: {
+  list: {
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[3],
+  },
+  row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
-    gap: 12,
+    paddingVertical: spacing[3],
+    gap: spacing[3],
+    minHeight: layout.minTouchTarget,
   },
   thumbnail: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
+    width: THUMB,
+    height: THUMB,
+    borderRadius: radius.md,
     overflow: "hidden",
+    backgroundColor: colors.surfaceSubtle,
+    flexShrink: 0,
   },
   thumbnailImage: {
     width: "100%",
@@ -273,43 +256,77 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: colors.primarySurface,
   },
-  thumbnailIcon: {
-    fontSize: 22,
+  thumbnailPlaceholderText: {
+    ...textStyles.title3,
+    color: colors.primary,
   },
-  mealInfo: {
+  rowInfo: {
     flex: 1,
+    gap: 3,
   },
   mealName: {
-    fontSize: 15,
-    fontWeight: "500",
+    ...textStyles.calloutSemibold,
+    color: colors.textPrimary,
   },
-  mealTime: {
-    fontSize: 12,
-    marginTop: 2,
+  mealSub: {
+    ...textStyles.caption1,
+    color: colors.textTertiary,
   },
-  carbsBadge: {
-    alignItems: "flex-end",
+  carbBadge: {
+    alignItems: "center",
+    backgroundColor: colors.primarySurface,
+    paddingHorizontal: spacing[2],
+    paddingVertical: spacing[1],
+    borderRadius: radius.md,
+    minWidth: 52,
   },
-  carbsValue: {
-    fontSize: 16,
-    fontWeight: "700",
+  carbValue: {
+    ...textStyles.title3Semibold,
+    color: colors.primary,
+    lineHeight: 22,
   },
-  carbsLabel: {
-    fontSize: 11,
-    marginTop: 1,
+  carbUnit: {
+    ...textStyles.caption2,
+    color: colors.primary,
+    opacity: 0.7,
   },
-  divider: {
-    height: 1,
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+    marginLeft: THUMB + spacing[3],
   },
   centered: {
-    paddingVertical: 20,
+    paddingVertical: spacing[8],
+    alignItems: "center",
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: spacing[8],
+    paddingHorizontal: spacing[6],
+    gap: spacing[2],
+  },
+  emptyIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.lg,
+    backgroundColor: colors.primarySurface,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: spacing[1],
   },
-  emptyText: {
-    fontSize: 14,
+  emptyIcon: {
+    ...textStyles.title2,
+    color: colors.primary,
+  },
+  emptyTitle: {
+    ...textStyles.calloutSemibold,
+    color: colors.textPrimary,
+  },
+  emptyBody: {
+    ...textStyles.footnote,
+    color: colors.textTertiary,
     textAlign: "center",
-    lineHeight: 20,
   },
 });

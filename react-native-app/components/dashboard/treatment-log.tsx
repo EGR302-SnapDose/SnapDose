@@ -1,346 +1,233 @@
-import { Ionicons } from '@expo/vector-icons';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { getAuth } from 'firebase/auth';
+import { Ionicons } from "@expo/vector-icons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { getAuth } from "firebase/auth";
 import {
-    collection,
-    onSnapshot,
-    orderBy,
-    query,
-    Timestamp,
-    where,
-} from 'firebase/firestore';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+  collection,
+  onSnapshot,
+  orderBy,
+  query,
+  Timestamp,
+  where,
+} from "firebase/firestore";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Animated,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
- 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { db } from '@/config/firebase';
-import { useThemeColor } from '@/hooks/use-theme-color';
- 
-// ─── Constants ────────────────────────────────────────────────────────────────
- 
+  ActivityIndicator,
+  Animated,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { db } from "@/config/firebase";
+import { colors, layout, radius, shadows, spacing, textStyles } from "@/constants/theme";
+
 const API_BASE =
-  'https://us-central1-egr302-snapdose.cloudfunctions.net/dexcom-auth';
- 
+  "https://us-central1-egr302-snapdose.cloudfunctions.net/dexcom-auth";
+
 const COMPACT_MAX_ROWS = 3;
-const GLUCOSE_MATCH_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
- 
-// ─── Types ────────────────────────────────────────────────────────────────────
- 
-type EventKind = 'dose' | 'meal';
- 
+const GLUCOSE_MATCH_WINDOW_MS = 15 * 60 * 1000;
+
+type EventKind = "dose" | "meal";
+
 interface TreatmentEvent {
   id: string;
   kind: EventKind;
   timestamp: Date;
-  // dose-specific
   doseAmount?: number;
-  doseType?: 'Meal' | 'Correction';
-  // meal-specific
+  doseType?: "Meal" | "Correction";
   carbsGrams?: number;
   foodsDetected?: string[];
-  // enriched
   glucoseAtTime?: number | null;
 }
- 
+
 interface GlucoseRecord {
   value: number;
   systemTime: string;
 }
- 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
- 
+
 function todayStart(): Date {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
   return d;
 }
- 
+
 function formatTime(date: Date): string {
-  return date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
+  return date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
     hour12: true,
   });
 }
- 
-function findClosestGlucose(
-  timestamp: Date,
-  records: GlucoseRecord[],
-): number | null {
+
+function findClosestGlucose(timestamp: Date, records: GlucoseRecord[]): number | null {
   if (!records.length) return null;
   const t = timestamp.getTime();
   let best = records[0];
   let bestDiff = Math.abs(new Date(records[0].systemTime).getTime() - t);
- 
   for (const r of records) {
     const diff = Math.abs(new Date(r.systemTime).getTime() - t);
-    if (diff < bestDiff) {
-      bestDiff = diff;
-      best = r;
-    }
+    if (diff < bestDiff) { bestDiff = diff; best = r; }
   }
   return bestDiff <= GLUCOSE_MATCH_WINDOW_MS ? best.value : null;
 }
- 
+
 function toDate(value: unknown): Date | null {
   if (!value) return null;
   if (value instanceof Timestamp) return value.toDate();
   if (value instanceof Date) return value;
-  if (typeof value === 'number') return new Date(value);
+  if (typeof value === "number") return new Date(value);
   return null;
 }
- 
+
 function glucoseColor(value: number): string {
-  if (value < 70 || value > 180) return '#E53935';
-  if (value > 140) return '#FB8C00';
-  return '#43A047';
+  if (value < 70 || value > 180) return colors.glucoseLow;
+  if (value > 140) return colors.glucoseHigh;
+  return colors.glucoseInRange;
 }
- 
-// ─── Sub-components ───────────────────────────────────────────────────────────
- 
-interface EventRowProps {
-  event: TreatmentEvent;
-  accent: string;
-  mutedColor: string;
-  dividerColor: string;
-  isLast: boolean;
-  compact?: boolean;
-}
- 
+
+const DOSE_COLOR = colors.primary;
+const MEAL_COLOR = colors.accent;
+
 function EventRow({
   event,
-  accent,
-  mutedColor,
-  dividerColor,
   isLast,
   compact = false,
-}: EventRowProps) {
-  const isDose = event.kind === 'dose';
- 
-  const iconNode = isDose ? (
-    <MaterialCommunityIcons name="pill" size={compact ? 16 : 18} color={accent} />
-  ) : (
-    <Ionicons
-      name="restaurant-outline"
-      size={compact ? 16 : 18}
-      color={accent}
-    />
-  );
- 
+}: {
+  event: TreatmentEvent;
+  isLast: boolean;
+  compact?: boolean;
+}) {
+  const isDose = event.kind === "dose";
+  const iconBg = isDose ? colors.primarySurface : colors.accent + "15";
+  const iconColor = isDose ? DOSE_COLOR : MEAL_COLOR;
+
   const primaryLabel = isDose
-    ? `${(event.doseAmount ?? 0).toFixed(1)}u ${event.doseType ?? ''}`
+    ? `${(event.doseAmount ?? 0).toFixed(1)}u ${event.doseType ?? ""}`
     : `${event.carbsGrams ?? 0}g carbs`;
- 
+
   const secondaryLabel = isDose
-    ? event.doseType === 'Meal' ? 'Meal bolus' : 'Correction'
+    ? event.doseType === "Meal" ? "Meal bolus" : "Correction bolus"
     : event.foodsDetected?.length
-    ? event.foodsDetected.slice(0, 2).join(', ')
-    : 'Meal';
- 
+    ? event.foodsDetected.slice(0, 2).join(", ")
+    : "Meal";
+
   return (
-    <View>
-      <View style={[styles.eventRow, compact && styles.eventRowCompact]}>
-        {/* Icon column */}
-        <View
-          style={[
-            styles.iconBadge,
-            { backgroundColor: accent + '18' },
-            compact && styles.iconBadgeCompact,
-          ]}
-        >
-          {iconNode}
+    <>
+      <View style={[rowStyles.row, compact && rowStyles.rowCompact]}>
+        <View style={[rowStyles.iconWrap, { backgroundColor: iconBg }]}>
+          {isDose
+            ? <MaterialCommunityIcons name="pill" size={compact ? 15 : 17} color={iconColor} />
+            : <Ionicons name="restaurant-outline" size={compact ? 15 : 17} color={iconColor} />
+          }
         </View>
- 
-        {/* Labels */}
-        <View style={styles.eventLabels}>
-          <ThemedText
-            style={[styles.primaryLabel, compact && styles.primaryLabelCompact]}
-            numberOfLines={1}
-          >
+
+        <View style={rowStyles.labels}>
+          <Text style={[rowStyles.primary, compact && rowStyles.primaryCompact]} numberOfLines={1}>
             {primaryLabel}
-          </ThemedText>
-          <ThemedText
-            style={[styles.secondaryLabel, { color: mutedColor }, compact && styles.secondaryLabelCompact]}
-            numberOfLines={1}
-          >
+          </Text>
+          <Text style={[rowStyles.secondary, compact && rowStyles.secondaryCompact]} numberOfLines={1}>
             {secondaryLabel}
-          </ThemedText>
+          </Text>
         </View>
- 
-        {/* Right column: time + glucose */}
-        <View style={styles.eventRight}>
-          <ThemedText
-            style={[styles.timeLabel, { color: mutedColor }, compact && styles.timeLabelCompact]}
-          >
-            {formatTime(event.timestamp)}
-          </ThemedText>
+
+        <View style={rowStyles.right}>
+          <Text style={rowStyles.time}>{formatTime(event.timestamp)}</Text>
           {event.glucoseAtTime != null && (
-            <View style={styles.glucosePill}>
-              <View
-                style={[
-                  styles.glucoseDot,
-                  { backgroundColor: glucoseColor(event.glucoseAtTime) },
-                ]}
-              />
-              <ThemedText
-                style={[
-                  styles.glucoseValue,
-                  { color: glucoseColor(event.glucoseAtTime) },
-                  compact && styles.glucoseValueCompact,
-                ]}
-              >
+            <View style={rowStyles.glucosePill}>
+              <View style={[rowStyles.dot, { backgroundColor: glucoseColor(event.glucoseAtTime) }]} />
+              <Text style={[rowStyles.glucoseVal, { color: glucoseColor(event.glucoseAtTime) }]}>
                 {event.glucoseAtTime}
-              </ThemedText>
+              </Text>
             </View>
           )}
         </View>
       </View>
- 
-      {!isLast && (
-        <View style={[styles.separator, { backgroundColor: dividerColor }]} />
-      )}
-    </View>
+      {!isLast && <View style={rowStyles.separator} />}
+    </>
   );
 }
- 
-interface SummaryBarProps {
-  events: TreatmentEvent[];
-  accent: string;
-  mutedColor: string;
-  cardBg: string;
-}
- 
-function SummaryBar({ events, accent, mutedColor, cardBg }: SummaryBarProps) {
-  const totalUnits = events
-    .filter((e) => e.kind === 'dose')
-    .reduce((s, e) => s + (e.doseAmount ?? 0), 0);
-  const totalCarbs = events
-    .filter((e) => e.kind === 'meal')
-    .reduce((s, e) => s + (e.carbsGrams ?? 0), 0);
-  const mealCount = events.filter((e) => e.kind === 'meal').length;
-  const doseCount = events.filter((e) => e.kind === 'dose').length;
- 
+
+function SummaryStrip({ events }: { events: TreatmentEvent[] }) {
+  const totalUnits = events.filter((e) => e.kind === "dose").reduce((s, e) => s + (e.doseAmount ?? 0), 0);
+  const totalCarbs = events.filter((e) => e.kind === "meal").reduce((s, e) => s + (e.carbsGrams ?? 0), 0);
+  const doseCount = events.filter((e) => e.kind === "dose").length;
+  const mealCount = events.filter((e) => e.kind === "meal").length;
+
   const stats = [
-    { label: 'Doses', value: doseCount.toString(), icon: 'pill' as const, isMCI: true },
-    { label: 'Units', value: totalUnits.toFixed(1) + 'u', icon: 'pulse' as const, isMCI: true },
-    { label: 'Meals', value: mealCount.toString(), icon: 'restaurant-outline' as const, isMCI: false },
-    { label: 'Carbs', value: totalCarbs + 'g', icon: 'nutrition-outline' as const, isMCI: false },
+    { label: "Doses", value: String(doseCount), color: DOSE_COLOR },
+    { label: "Units", value: `${totalUnits.toFixed(1)}u`, color: DOSE_COLOR },
+    { label: "Meals", value: String(mealCount), color: MEAL_COLOR },
+    { label: "Carbs", value: `${totalCarbs}g`, color: MEAL_COLOR },
   ];
- 
+
   return (
-    <View style={[styles.summaryBar, { backgroundColor: accent + '0D' }]}>
+    <View style={summaryStyles.strip}>
       {stats.map((s, i) => (
         <View
           key={s.label}
-          style={[
-            styles.statCell,
-            i < stats.length - 1 && {
-              borderRightWidth: StyleSheet.hairlineWidth,
-              borderRightColor: accent + '30',
-            },
-          ]}
+          style={[summaryStyles.cell, i < stats.length - 1 && summaryStyles.cellBorder]}
         >
-          <ThemedText style={[styles.statValue, { color: accent }]}>
-            {s.value}
-          </ThemedText>
-          <ThemedText style={[styles.statLabel, { color: mutedColor }]}>
-            {s.label}
-          </ThemedText>
+          <Text style={[summaryStyles.value, { color: s.color }]}>{s.value}</Text>
+          <Text style={summaryStyles.label}>{s.label}</Text>
         </View>
       ))}
     </View>
   );
 }
- 
-// ─── Main hook ────────────────────────────────────────────────────────────────
- 
+
 function useTreatmentLog() {
   const [events, setEvents] = useState<TreatmentEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const glucoseRecordsRef = useRef<GlucoseRecord[]>([]);
- 
+  const glucoseRef = useRef<GlucoseRecord[]>([]);
   const uid = getAuth().currentUser?.uid;
- 
-  // Fetch glucose history once
+
   useEffect(() => {
     if (!uid) return;
     fetch(`${API_BASE}/latest?userId=${uid}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.records) glucoseRecordsRef.current = data.records;
-      })
+      .then((data) => { if (data?.records) glucoseRef.current = data.records; })
       .catch(() => {});
   }, [uid]);
- 
-  // Merge helper — called after both collections update
-  const mergeAndSet = useCallback(
-    (
-      doses: TreatmentEvent[],
-      meals: TreatmentEvent[],
-    ) => {
-      const merged = [...doses, ...meals]
-        .map((e) => ({
-          ...e,
-          glucoseAtTime: findClosestGlucose(
-            e.timestamp,
-            glucoseRecordsRef.current,
-          ),
-        }))
-        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-      setEvents(merged);
-      setLoading(false);
-    },
-    [],
-  );
- 
+
+  const mergeAndSet = useCallback((doses: TreatmentEvent[], meals: TreatmentEvent[]) => {
+    const merged = [...doses, ...meals]
+      .map((e) => ({ ...e, glucoseAtTime: findClosestGlucose(e.timestamp, glucoseRef.current) }))
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    setEvents(merged);
+    setLoading(false);
+  }, []);
+
   useEffect(() => {
-    if (!uid) {
-      setLoading(false);
-      return;
-    }
- 
+    if (!uid) { setLoading(false); return; }
     let latestDoses: TreatmentEvent[] = [];
     let latestMeals: TreatmentEvent[] = [];
     const today = todayStart();
- 
-    // ── Doses ──
+
     const dosesUnsub = onSnapshot(
-      collection(db, 'users', uid, 'doses'),
+      collection(db, "users", uid, "doses"),
       (snap) => {
         latestDoses = [];
         snap.forEach((doc) => {
           const d = doc.data();
           const ts = toDate(d.timestamp);
           if (!ts || ts < today) return;
-          latestDoses.push({
-            id: doc.id,
-            kind: 'dose',
-            timestamp: ts,
-            doseAmount: d.amount as number,
-            doseType: d.type as 'Meal' | 'Correction',
-          });
+          latestDoses.push({ id: doc.id, kind: "dose", timestamp: ts, doseAmount: d.amount, doseType: d.type });
         });
         mergeAndSet(latestDoses, latestMeals);
       },
-      () => setLoading(false),
+      () => setLoading(false)
     );
- 
-    // ── Meals ──
+
     const mealsUnsub = onSnapshot(
       query(
-        collection(db, 'users', uid, 'meal_carb_estimation'),
-        where('status', '==', 'completed'),
-        orderBy('created_at', 'desc'),
+        collection(db, "users", uid, "meal_carb_estimation"),
+        where("status", "==", "completed"),
+        orderBy("created_at", "desc")
       ),
       (snap) => {
         latestMeals = [];
@@ -348,91 +235,36 @@ function useTreatmentLog() {
           const d = doc.data();
           const ts = toDate(d.created_at);
           if (!ts || ts < today) return;
-          latestMeals.push({
-            id: doc.id,
-            kind: 'meal',
-            timestamp: ts,
-            carbsGrams: d.estimated_carbs_grams as number,
-            foodsDetected: (d.foods_detected as string[]) ?? [],
-          });
+          latestMeals.push({ id: doc.id, kind: "meal", timestamp: ts, carbsGrams: d.estimated_carbs_grams, foodsDetected: d.foods_detected ?? [] });
         });
         mergeAndSet(latestDoses, latestMeals);
       },
-      () => setLoading(false),
+      () => setLoading(false)
     );
- 
-    return () => {
-      dosesUnsub();
-      mealsUnsub();
-    };
+
+    return () => { dosesUnsub(); mealsUnsub(); };
   }, [uid, mergeAndSet]);
- 
+
   return { events, loading };
 }
- 
-// ─── Full-screen Modal list ───────────────────────────────────────────────────
- 
-interface FullLogModalProps {
-  visible: boolean;
-  onClose: () => void;
-  events: TreatmentEvent[];
-  loading: boolean;
-}
- 
+
 function FullLogModal({
   visible,
   onClose,
   events,
   loading,
-}: FullLogModalProps) {
+}: {
+  visible: boolean;
+  onClose: () => void;
+  events: TreatmentEvent[];
+  loading: boolean;
+}) {
   const insets = useSafeAreaInsets();
-  const accent = useThemeColor({}, 'accent');
-  const background = useThemeColor({}, 'background');
-  const cardBg = useThemeColor({ light: '#F5F5F5', dark: '#1C1C1E' }, 'background');
-  const mutedColor = useThemeColor(
-    { light: '#888888', dark: '#888888' },
-    'icon',
-  );
-  const dividerColor = useThemeColor(
-    { light: '#E8E8E8', dark: '#2A2A2A' },
-    'icon',
-  );
-  const headerBorderColor = useThemeColor(
-    { light: '#EBEBEB', dark: '#222222' },
-    'icon',
-  );
- 
-  const slideAnim = useRef(new Animated.Value(60)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
- 
-  useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.spring(slideAnim, {
-          toValue: 0,
-          useNativeDriver: true,
-          tension: 70,
-          friction: 12,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 220,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      slideAnim.setValue(60);
-      fadeAnim.setValue(0);
-    }
-  }, [visible]);
- 
   const today = new Date();
-  const dateLabel = today.toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
+  const dateLabel = today.toLocaleDateString("en-US", {
+    weekday: "long", month: "long", day: "numeric",
   });
- 
+
   return (
     <Modal
       visible={visible}
@@ -440,147 +272,64 @@ function FullLogModal({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <ThemedView
-        style={[styles.modalRoot, { paddingTop: insets.top }]}
-      >
-        {/* Header */}
-        <View
-          style={[
-            styles.modalHeader,
-            { borderBottomColor: headerBorderColor },
-          ]}
-        >
-          <View style={styles.modalTitleBlock}>
-            <ThemedText style={styles.modalTitle}>Today's Log</ThemedText>
-            <ThemedText style={[styles.modalDate, { color: mutedColor }]}>
-              {dateLabel}
-            </ThemedText>
+      <View style={[modalStyles.root, { backgroundColor: colors.background }]}>
+        <View style={[modalStyles.header, { paddingTop: insets.top + spacing[4] }]}>
+          <View>
+            <Text style={modalStyles.title}>Today's Log</Text>
+            <Text style={modalStyles.date}>{dateLabel}</Text>
           </View>
-          <TouchableOpacity
-            style={[styles.closeButton, { backgroundColor: cardBg }]}
-            onPress={onClose}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="close" size={18} color={mutedColor} />
-          </TouchableOpacity>
+          <Pressable style={modalStyles.closeButton} onPress={onClose}>
+            <Ionicons name="close" size={16} color={colors.textSecondary} />
+          </Pressable>
         </View>
- 
+
         {loading ? (
-          <View style={styles.loadingCenter}>
-            <ActivityIndicator size="large" color={accent} />
+          <View style={modalStyles.centered}>
+            <ActivityIndicator size="large" color={colors.primary} />
           </View>
         ) : events.length === 0 ? (
-          <View style={styles.emptyState}>
-            <View
-              style={[styles.emptyIcon, { backgroundColor: accent + '15' }]}
-            >
-              <Ionicons
-                name="document-text-outline"
-                size={32}
-                color={accent}
-              />
+          <View style={modalStyles.centered}>
+            <View style={[modalStyles.emptyIcon, { backgroundColor: colors.primarySurface }]}>
+              <Ionicons name="document-text-outline" size={28} color={colors.primary} />
             </View>
-            <ThemedText style={styles.emptyTitle}>No entries yet</ThemedText>
-            <ThemedText style={[styles.emptySubtitle, { color: mutedColor }]}>
-              Doses and meals logged today will appear here.
-            </ThemedText>
+            <Text style={modalStyles.emptyTitle}>No entries yet</Text>
+            <Text style={modalStyles.emptyBody}>Doses and meals logged today will appear here.</Text>
           </View>
         ) : (
           <ScrollView
-            contentContainerStyle={[
-              styles.modalScroll,
-              { paddingBottom: insets.bottom + 24 },
-            ]}
             showsVerticalScrollIndicator={false}
+            contentContainerStyle={[modalStyles.scroll, { paddingBottom: insets.bottom + spacing[6] }]}
           >
-            {/* Summary bar */}
-            <SummaryBar
-              events={events}
-              accent={accent}
-              mutedColor={mutedColor}
-              cardBg={cardBg}
-            />
- 
-            {/* Timeline */}
-            <View style={styles.timelineLabel}>
-              <View
-                style={[styles.timelineDot, { backgroundColor: accent }]}
-              />
-              <ThemedText
-                style={[styles.timelineLabelText, { color: mutedColor }]}
-              >
-                CHRONOLOGICAL — NEWEST FIRST
-              </ThemedText>
-            </View>
- 
-            <View
-              style={[
-                styles.fullListCard,
-                { backgroundColor: cardBg },
-              ]}
-            >
+            <SummaryStrip events={events} />
+            <Text style={modalStyles.sectionLabel}>ENTRIES — NEWEST FIRST</Text>
+            <View style={modalStyles.listCard}>
               {events.map((event, idx) => (
                 <EventRow
                   key={event.id}
                   event={event}
-                  accent={accent}
-                  mutedColor={mutedColor}
-                  dividerColor={dividerColor}
                   isLast={idx === events.length - 1}
-                  compact={false}
                 />
               ))}
             </View>
           </ScrollView>
         )}
-      </ThemedView>
+      </View>
     </Modal>
   );
 }
- 
-// ─── Compact widget ───────────────────────────────────────────────────────────
- 
+
 export function TreatmentLogCard() {
   const [modalOpen, setModalOpen] = useState(false);
   const { events, loading } = useTreatmentLog();
- 
-  const accent = useThemeColor({}, 'accent');
-  const borderColor = useThemeColor(
-    { light: '#E8E8E8', dark: '#222222' },
-    'icon',
-  );
-  const mutedColor = useThemeColor(
-    { light: '#888888', dark: '#888888' },
-    'icon',
-  );
-  const dividerColor = useThemeColor(
-    { light: '#EFEFEF', dark: '#252525' },
-    'icon',
-  );
-  const arrowBg = useThemeColor(
-    { light: '#F0F0F0', dark: '#1E1E1E' },
-    'background',
-  );
- 
-  const compactEvents = events.slice(0, COMPACT_MAX_ROWS);
-  const overflow = events.length - COMPACT_MAX_ROWS;
- 
   const pulseAnim = useRef(new Animated.Value(1)).current;
+
   useEffect(() => {
     if (loading) {
       const loop = Animated.loop(
         Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 0.4,
-            duration: 700,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 700,
-            useNativeDriver: true,
-          }),
-        ]),
+          Animated.timing(pulseAnim, { toValue: 0.3, duration: 700, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+        ])
       );
       loop.start();
       return () => loop.stop();
@@ -588,80 +337,70 @@ export function TreatmentLogCard() {
       pulseAnim.setValue(1);
     }
   }, [loading]);
- 
+
+  const compactEvents = events.slice(0, COMPACT_MAX_ROWS);
+  const overflow = events.length - COMPACT_MAX_ROWS;
+
   return (
     <>
-      <View style={[styles.card, { borderColor }]}>
-        {/* Card header */}
+      <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <View style={styles.cardTitleRow}>
-            <MaterialCommunityIcons
-              name="clipboard-pulse-outline"
-              size={17}
-              color={accent}
-            />
-            <ThemedText style={styles.cardTitle}>Today's Log</ThemedText>
+          <View style={styles.titleRow}>
+            <View style={styles.titleIconWrap}>
+              <MaterialCommunityIcons name="clipboard-pulse-outline" size={15} color={colors.primary} />
+            </View>
+            <Text style={styles.cardTitle}>Today's Log</Text>
           </View>
- 
-          <TouchableOpacity
-            style={[styles.expandButton, { backgroundColor: arrowBg }]}
+          <Pressable
+            style={styles.expandButton}
             onPress={() => setModalOpen(true)}
-            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            accessibilityLabel="Expand treatment log"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Ionicons name="expand-outline" size={15} color={accent} />
-          </TouchableOpacity>
+            <Ionicons name="expand-outline" size={14} color={colors.primary} />
+          </Pressable>
         </View>
- 
-        {/* Body */}
+
         {loading ? (
-          <View style={styles.skeletonContainer}>
-            {[0.7, 0.55, 0.65].map((w, i) => (
+          <View style={styles.skeletons}>
+            {[0.7, 0.5, 0.6].map((w, i) => (
               <Animated.View
                 key={i}
-                style={[
-                  styles.skeletonRow,
-                  { backgroundColor: borderColor, opacity: pulseAnim },
-                  { width: `${w * 100}%` },
-                ]}
+                style={[styles.skeleton, { width: `${w * 100}%`, opacity: pulseAnim }]}
               />
             ))}
           </View>
         ) : events.length === 0 ? (
-          <View style={styles.emptyCompact}>
-            <ThemedText style={[styles.emptyCompactText, { color: mutedColor }]}>
-              No entries today
-            </ThemedText>
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIconWrap}>
+              <Ionicons name="document-text-outline" size={22} color={colors.primary} />
+            </View>
+            <View>
+              <Text style={styles.emptyTitle}>No entries today</Text>
+              <Text style={styles.emptyBody}>Log a meal or dose to see it here.</Text>
+            </View>
           </View>
         ) : (
-          <View style={styles.listContainer}>
+          <View style={styles.list}>
             {compactEvents.map((event, idx) => (
               <EventRow
                 key={event.id}
                 event={event}
-                accent={accent}
-                mutedColor={mutedColor}
-                dividerColor={dividerColor}
                 isLast={idx === compactEvents.length - 1 && overflow <= 0}
                 compact
               />
             ))}
- 
             {overflow > 0 && (
-              <TouchableOpacity
-                style={[styles.viewAllRow, { borderTopColor: dividerColor }]}
-                onPress={() => setModalOpen(true)}
-              >
-                <ThemedText style={[styles.viewAllText, { color: accent }]}>
-                  +{overflow} more entr{overflow === 1 ? 'y' : 'ies'}
-                </ThemedText>
-                <Ionicons name="chevron-forward" size={14} color={accent} />
+              <TouchableOpacity style={styles.viewMore} onPress={() => setModalOpen(true)}>
+                <Text style={styles.viewMoreText}>
+                  +{overflow} more {overflow === 1 ? "entry" : "entries"}
+                </Text>
+                <Ionicons name="chevron-forward" size={13} color={colors.primary} />
               </TouchableOpacity>
             )}
           </View>
         )}
       </View>
- 
+
       <FullLogModal
         visible={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -671,258 +410,273 @@ export function TreatmentLogCard() {
     </>
   );
 }
- 
-// ─── Styles ───────────────────────────────────────────────────────────────────
- 
+
 const styles = StyleSheet.create({
-  // ── Compact card ──────────────────────────────────────────────────
   card: {
-    borderWidth: 1,
-    borderRadius: 14,
-    overflow: 'hidden',
-    marginBottom: 16,
+    marginHorizontal: layout.screenHorizontalPadding,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    overflow: "hidden",
+    ...shadows.card,
   },
   cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingTop: 13,
-    paddingBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing[4],
+    paddingTop: spacing[4],
+    paddingBottom: spacing[3],
   },
-  cardTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
+  },
+  titleIconWrap: {
+    width: 26,
+    height: 26,
+    borderRadius: radius.xs + 2,
+    backgroundColor: colors.primarySurface,
+    alignItems: "center",
+    justifyContent: "center",
   },
   cardTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: 0.1,
+    ...textStyles.headline,
+    color: colors.textPrimary,
   },
   expandButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 30,
+    height: 30,
+    borderRadius: radius.sm,
+    backgroundColor: colors.primarySurface,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  listContainer: {
-    paddingBottom: 4,
+  list: {
+    paddingBottom: spacing[2],
   },
-  skeletonContainer: {
-    paddingHorizontal: 14,
-    paddingBottom: 14,
-    gap: 10,
+  skeletons: {
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[4],
+    gap: spacing[2],
   },
-  skeletonRow: {
-    height: 12,
-    borderRadius: 6,
+  skeleton: {
+    height: 11,
+    borderRadius: radius.xs,
+    backgroundColor: colors.surfaceSubtle,
   },
-  emptyCompact: {
-    paddingHorizontal: 14,
-    paddingBottom: 16,
-    alignItems: 'center',
+  emptyState: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[4],
   },
-  emptyCompactText: {
-    fontSize: 13,
-    fontStyle: 'italic',
+  emptyIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: colors.primarySurface,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
-  viewAllRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 10,
+  emptyTitle: {
+    ...textStyles.calloutSemibold,
+    color: colors.textPrimary,
+  },
+  emptyBody: {
+    ...textStyles.caption1,
+    color: colors.textTertiary,
+    marginTop: 2,
+  },
+  viewMore: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing[1],
+    paddingVertical: spacing[3],
     borderTopWidth: StyleSheet.hairlineWidth,
-    marginHorizontal: 14,
+    borderTopColor: colors.border,
+    marginHorizontal: spacing[4],
   },
-  viewAllText: {
-    fontSize: 13,
-    fontWeight: '600',
+  viewMoreText: {
+    ...textStyles.footnoteSemibold,
+    color: colors.primary,
   },
- 
-  // ── Event row (shared) ────────────────────────────────────────────
-  eventRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    gap: 10,
+});
+
+const rowStyles = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    gap: spacing[3],
+    minHeight: layout.minTouchTarget,
   },
-  eventRowCompact: {
-    paddingVertical: 9,
+  rowCompact: {
+    paddingVertical: 10,
   },
-  iconBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  iconBadgeCompact: {
-    width: 28,
-    height: 28,
-    borderRadius: 7,
-  },
-  eventLabels: {
-    flex: 1,
-    gap: 1,
-  },
-  primaryLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  primaryLabelCompact: {
-    fontSize: 13,
-  },
-  secondaryLabel: {
-    fontSize: 12,
-  },
-  secondaryLabelCompact: {
-    fontSize: 11,
-  },
-  eventRight: {
-    alignItems: 'flex-end',
-    gap: 4,
-    flexShrink: 0,
-  },
-  timeLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  timeLabelCompact: {
-    fontSize: 11,
-  },
-  glucosePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  glucoseDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  glucoseValue: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  glucoseValueCompact: {
-    fontSize: 11,
-  },
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    marginHorizontal: 14,
-  },
- 
-  // ── Summary bar ───────────────────────────────────────────────────
-  summaryBar: {
-    flexDirection: 'row',
-    borderRadius: 12,
-    marginHorizontal: 16,
-    marginBottom: 20,
-    overflow: 'hidden',
-  },
-  statCell: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 14,
-    gap: 2,
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  statLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-    letterSpacing: 0.3,
-  },
- 
-  // ── Modal ─────────────────────────────────────────────────────────
-  modalRoot: {
-    flex: 1,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  modalTitleBlock: {
-    gap: 2,
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-  },
-  modalDate: {
-    fontSize: 13,
-  },
-  closeButton: {
+  iconWrap: {
     width: 32,
     height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: radius.sm,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
-  modalScroll: {
-    paddingTop: 20,
+  labels: {
+    flex: 1,
+    gap: 2,
   },
-  fullListCard: {
-    marginHorizontal: 16,
-    borderRadius: 14,
-    overflow: 'hidden',
+  primary: {
+    ...textStyles.calloutSemibold,
+    color: colors.textPrimary,
   },
-  timelineLabel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginHorizontal: 16,
-    marginBottom: 10,
+  primaryCompact: {
+    ...textStyles.subheadlineSemibold,
+    color: colors.textPrimary,
   },
-  timelineDot: {
+  secondary: {
+    ...textStyles.footnote,
+    color: colors.textSecondary,
+  },
+  secondaryCompact: {
+    ...textStyles.caption1,
+    color: colors.textSecondary,
+  },
+  right: {
+    alignItems: "flex-end",
+    gap: 3,
+    flexShrink: 0,
+  },
+  time: {
+    ...textStyles.caption1,
+    color: colors.textTertiary,
+  },
+  glucosePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  dot: {
     width: 5,
     height: 5,
     borderRadius: 2.5,
   },
-  timelineLabelText: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1.1,
+  glucoseVal: {
+    ...textStyles.caption1Medium,
+    fontWeight: "700",
   },
-  loadingCenter: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+    marginLeft: spacing[4] + 32 + spacing[3],
   },
-  emptyState: {
+});
+
+const summaryStyles = StyleSheet.create({
+  strip: {
+    flexDirection: "row",
+    marginHorizontal: spacing[4],
+    marginBottom: spacing[5],
+    backgroundColor: colors.surfaceSubtle,
+    borderRadius: radius.lg,
+    overflow: "hidden",
+  },
+  cell: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    paddingHorizontal: 40,
+    alignItems: "center",
+    paddingVertical: spacing[3],
+    gap: 2,
+  },
+  cellBorder: {
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: colors.border,
+  },
+  value: {
+    ...textStyles.title3Semibold,
+  },
+  label: {
+    ...textStyles.caption2Semibold,
+    color: colors.textTertiary,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+});
+
+const modalStyles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing[5],
+    paddingBottom: spacing[4],
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  title: {
+    ...textStyles.title2Bold,
+    color: colors.textPrimary,
+  },
+  date: {
+    ...textStyles.footnote,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  closeButton: {
+    width: 30,
+    height: 30,
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceSubtle,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scroll: {
+    paddingTop: spacing[5],
+  },
+  sectionLabel: {
+    ...textStyles.caption2Semibold,
+    color: colors.textTertiary,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    paddingHorizontal: spacing[5],
+    paddingBottom: spacing[2],
+    marginTop: spacing[2],
+  },
+  listCard: {
+    marginHorizontal: spacing[4],
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    overflow: "hidden",
+    ...shadows.sm,
+  },
+  centered: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing[3],
+    paddingHorizontal: spacing[10],
   },
   emptyIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 56,
+    height: 56,
+    borderRadius: radius.xl,
+    alignItems: "center",
+    justifyContent: "center",
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...textStyles.title3Semibold,
+    color: colors.textPrimary,
   },
-  emptySubtitle: {
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 21,
+  emptyBody: {
+    ...textStyles.footnote,
+    color: colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 20,
   },
 });

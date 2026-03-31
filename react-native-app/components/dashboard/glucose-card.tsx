@@ -1,6 +1,6 @@
 import { auth, db } from "@/config/firebase";
 import { useIOB } from "@/hooks/use-iob";
-import { useThemeColor } from "@/hooks/use-theme-color";
+import { colors, layout, radius, shadows, spacing, textStyles } from "@/constants/theme";
 import { useFocusEffect } from "@react-navigation/native";
 import { getAuth } from "firebase/auth";
 import { collection, getDocs, limit, orderBy, query } from "firebase/firestore";
@@ -10,11 +10,19 @@ import {
   Dimensions,
   Pressable,
   StyleSheet,
+  Text,
   View,
 } from "react-native";
-import Svg, { Circle, Line, Polyline, Rect, Text as SvgText } from "react-native-svg";
-import { ThemedText } from "../themed-text";
-import { ThemedView } from "../themed-view";
+import Svg, {
+  Circle,
+  Defs,
+  Line,
+  LinearGradient,
+  Polyline,
+  Rect,
+  Stop,
+  Text as SvgText,
+} from "react-native-svg";
 
 const API_BASE =
   "https://us-central1-egr302-snapdose.cloudfunctions.net/dexcom-auth";
@@ -31,14 +39,14 @@ const HIGH_THRESHOLD = 180;
 
 function getTrendArrow(trend: string) {
   switch (trend) {
-    case "doubleUp": return "^^";
-    case "singleUp": return "^";
-    case "fortyFiveUp": return "/";
-    case "flat": return "-";
-    case "fortyFiveDown": return "\\";
-    case "singleDown": return "v";
-    case "doubleDown": return "vv";
-    default: return "-";
+    case "doubleUp": return "↑↑";
+    case "singleUp": return "↑";
+    case "fortyFiveUp": return "↗";
+    case "flat": return "→";
+    case "fortyFiveDown": return "↘";
+    case "singleDown": return "↓";
+    case "doubleDown": return "↓↓";
+    default: return "→";
   }
 }
 
@@ -56,10 +64,15 @@ function getTrendLabel(trend: string) {
 }
 
 function getGlucoseColor(value: number) {
-  if (value < LOW_THRESHOLD) return "#E53935";
-  if (value > HIGH_THRESHOLD) return "#E53935";
-  if (value > 140) return "#FB8C00";
-  return "#43A047";
+  if (value < LOW_THRESHOLD) return colors.glucoseLow;
+  if (value > HIGH_THRESHOLD) return colors.glucoseHigh;
+  return colors.glucoseInRange;
+}
+
+function getRangeLabel(value: number): string {
+  if (value < LOW_THRESHOLD) return "Low";
+  if (value > HIGH_THRESHOLD) return "High";
+  return "In Range";
 }
 
 function getTimeAgo(dateString: string) {
@@ -67,7 +80,7 @@ function getTimeAgo(dateString: string) {
   const then = new Date(dateString);
   const diffMs = now.getTime() - then.getTime();
   const diffMin = Math.round(diffMs / 60000);
-  if (diffMin < 1) return "just now";
+  if (diffMin < 1) return "Just now";
   if (diffMin === 1) return "1 min ago";
   if (diffMin < 60) return `${diffMin} min ago`;
   const diffHr = Math.floor(diffMin / 60);
@@ -97,30 +110,29 @@ type LastBolus = {
   type: string;
 } | null;
 
-/** Compute time-in-range for today's records (70–180 mg/dL) */
 function computeTimeInRange(records: EgvRecord[]): number | null {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
-
   const todayRecords = records.filter((r) => {
     if (r.value === null) return false;
-    const t = new Date(r.systemTime);
-    return t >= todayStart;
+    return new Date(r.systemTime) >= todayStart;
   });
-
   if (todayRecords.length === 0) return null;
-
   const inRange = todayRecords.filter(
     (r) => r.value! >= LOW_THRESHOLD && r.value! <= HIGH_THRESHOLD
   );
-
   return Math.round((inRange.length / todayRecords.length) * 100);
 }
 
-function GlucoseGraph({ records }: { records: EgvRecord[] }) {
+function GlucoseGraph({
+  records,
+  accentColor,
+}: {
+  records: EgvRecord[];
+  accentColor: string;
+}) {
   const screenWidth = Dimensions.get("window").width;
-  const cardPadding = 32;
-  const svgWidth = screenWidth - cardPadding - 2;
+  const svgWidth = screenWidth - layout.screenHorizontalPadding * 2 - spacing[4];
   const plotWidth = svgWidth - GRAPH_PADDING_LEFT - GRAPH_PADDING_RIGHT;
   const plotHeight = GRAPH_HEIGHT - GRAPH_PADDING_TOP - GRAPH_PADDING_BOTTOM;
 
@@ -130,10 +142,8 @@ function GlucoseGraph({ records }: { records: EgvRecord[] }) {
 
   if (validRecords.length < 2) {
     return (
-      <View style={styles.graphEmpty}>
-        <ThemedText style={styles.graphEmptyText}>
-          Not enough data for graph
-        </ThemedText>
+      <View style={graphStyles.empty}>
+        <Text style={graphStyles.emptyText}>Not enough data</Text>
       </View>
     );
   }
@@ -156,9 +166,7 @@ function GlucoseGraph({ records }: { records: EgvRecord[] }) {
   };
 
   const points = validRecords
-    .map(
-      (r) => `${scaleX(new Date(r.systemTime).getTime())},${scaleY(r.value!)}`
-    )
+    .map((r) => `${scaleX(new Date(r.systemTime).getTime())},${scaleY(r.value!)}`)
     .join(" ");
 
   const lowY = scaleY(LOW_THRESHOLD);
@@ -180,71 +188,67 @@ function GlucoseGraph({ records }: { records: EgvRecord[] }) {
 
   return (
     <Svg width={svgWidth} height={GRAPH_HEIGHT}>
+      <Defs>
+        <LinearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0%" stopColor={accentColor} stopOpacity="0.15" />
+          <Stop offset="100%" stopColor={accentColor} stopOpacity="0" />
+        </LinearGradient>
+      </Defs>
+
+      {/* Range bands */}
       <Rect
-        x={GRAPH_PADDING_LEFT}
-        y={highY}
-        width={plotWidth}
-        height={lowY - highY}
-        fill="#E8F5E9"
-        opacity={0.4}
+        x={GRAPH_PADDING_LEFT} y={highY}
+        width={plotWidth} height={lowY - highY}
+        fill={colors.glucoseInRange} opacity={0.07}
       />
       <Rect
-        x={GRAPH_PADDING_LEFT}
-        y={GRAPH_PADDING_TOP}
-        width={plotWidth}
-        height={highY - GRAPH_PADDING_TOP}
-        fill="#FFEBEE"
-        opacity={0.3}
+        x={GRAPH_PADDING_LEFT} y={GRAPH_PADDING_TOP}
+        width={plotWidth} height={highY - GRAPH_PADDING_TOP}
+        fill={colors.glucoseHigh} opacity={0.05}
       />
       <Rect
-        x={GRAPH_PADDING_LEFT}
-        y={lowY}
-        width={plotWidth}
-        height={GRAPH_PADDING_TOP + plotHeight - lowY}
-        fill="#FFEBEE"
-        opacity={0.3}
+        x={GRAPH_PADDING_LEFT} y={lowY}
+        width={plotWidth} height={GRAPH_PADDING_TOP + plotHeight - lowY}
+        fill={colors.glucoseLow} opacity={0.05}
       />
+
+      {/* Grid lines */}
       {yLabels.map((val) => (
         <Line
           key={val}
-          x1={GRAPH_PADDING_LEFT}
-          y1={scaleY(val)}
-          x2={svgWidth - GRAPH_PADDING_RIGHT}
-          y2={scaleY(val)}
-          stroke="#ddd"
-          strokeWidth={0.5}
-          strokeDasharray="4,4"
+          x1={GRAPH_PADDING_LEFT} y1={scaleY(val)}
+          x2={svgWidth - GRAPH_PADDING_RIGHT} y2={scaleY(val)}
+          stroke={colors.border} strokeWidth={0.5} strokeDasharray="3,4"
         />
       ))}
+
+      {/* Y labels */}
       {yLabels.map((val) => (
         <SvgText
-          key={`label-${val}`}
-          x={GRAPH_PADDING_LEFT - 6}
-          y={scaleY(val) + 4}
-          fontSize={10}
-          fill="#999"
-          textAnchor="end"
+          key={`l-${val}`}
+          x={GRAPH_PADDING_LEFT - 6} y={scaleY(val) + 4}
+          fontSize={10} fill={colors.textTertiary} textAnchor="end"
         >
           {val}
         </SvgText>
       ))}
+
+      {/* X labels */}
       {hourLabels.map((h, i) => (
         <SvgText
-          key={i}
-          x={h.x}
-          y={GRAPH_HEIGHT - 4}
-          fontSize={10}
-          fill="#999"
-          textAnchor="middle"
+          key={i} x={h.x} y={GRAPH_HEIGHT - 4}
+          fontSize={10} fill={colors.textTertiary} textAnchor="middle"
         >
           {h.label}
         </SvgText>
       ))}
+
+      {/* Line */}
       <Polyline
         points={points}
         fill="none"
-        stroke="#1976D2"
-        strokeWidth={2}
+        stroke={accentColor}
+        strokeWidth={2.5}
         strokeLinejoin="round"
         strokeLinecap="round"
       />
@@ -252,105 +256,74 @@ function GlucoseGraph({ records }: { records: EgvRecord[] }) {
   );
 }
 
-// ─── Info Cards ───────────────────────────────────────────────────────────────
-
-function InfoCard({
+function StatCell({
   label,
   value,
-  subValue,
-  accent,
-  cardBg,
+  sub,
+  valueColor,
   isLoading,
+  isLast,
 }: {
   label: string;
   value: string;
-  subValue?: string;
-  accent: string;
-  cardBg: string;
+  sub?: string;
+  valueColor?: string;
   isLoading?: boolean;
+  isLast?: boolean;
 }) {
   return (
-    <View style={[infoStyles.card, { backgroundColor: cardBg }]}>
-      <ThemedText style={infoStyles.label}>{label}</ThemedText>
+    <View style={[statStyles.cell, !isLast && statStyles.cellBorder]}>
+      <Text style={statStyles.label}>{label}</Text>
       {isLoading ? (
-        <ActivityIndicator size="small" color={accent} style={{ marginTop: 4 }} />
+        <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 4 }} />
       ) : (
         <>
-          <ThemedText style={[infoStyles.value, { color: accent }]}>
+          <Text style={[statStyles.value, valueColor ? { color: valueColor } : undefined]}>
             {value}
-          </ThemedText>
-          {subValue ? (
-            <ThemedText style={infoStyles.subValue}>{subValue}</ThemedText>
-          ) : null}
+          </Text>
+          {sub ? <Text style={statStyles.sub}>{sub}</Text> : null}
         </>
       )}
     </View>
   );
 }
 
-function TirRingCard({
-  percent,
-  accent,
-  cardBg,
-  isLoading,
-}: {
-  percent: number | null;
-  accent: string;
-  cardBg: string;
-  isLoading?: boolean;
-}) {
-  const size = 44;
-  const stroke = 4;
+function TirCell({ percent, isLoading }: { percent: number | null; isLoading?: boolean }) {
+  const size = 38;
+  const stroke = 3.5;
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
   const filled = percent !== null ? (percent / 100) * circ : 0;
-
   const tirColor =
-    percent === null
-      ? "#9BA1A6"
-      : percent >= 70
-      ? "#43A047"
-      : percent >= 54
-      ? "#FB8C00"
-      : "#E53935";
+    percent === null ? colors.textTertiary
+    : percent >= 70 ? colors.glucoseInRange
+    : percent >= 54 ? colors.glucoseHigh
+    : colors.glucoseLow;
 
   return (
-    <View style={[infoStyles.card, { backgroundColor: cardBg }]}>
-      <ThemedText style={infoStyles.label}>Time in Range</ThemedText>
+    <View style={[statStyles.cell]}>
+      <Text style={statStyles.label}>Time in Range</Text>
       {isLoading ? (
-        <ActivityIndicator size="small" color={accent} style={{ marginTop: 4 }} />
+        <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 4 }} />
       ) : (
-        <View style={infoStyles.tirRow}>
+        <View style={statStyles.tirRow}>
           <Svg width={size} height={size}>
-            {/* Track */}
-            <Circle
-              cx={size / 2}
-              cy={size / 2}
-              r={r}
-              stroke="#E0E0E0"
-              strokeWidth={stroke}
-              fill="none"
-            />
-            {/* Fill */}
+            <Circle cx={size / 2} cy={size / 2} r={r} stroke={colors.border} strokeWidth={stroke} fill="none" />
             {percent !== null && (
               <Circle
-                cx={size / 2}
-                cy={size / 2}
-                r={r}
-                stroke={tirColor}
-                strokeWidth={stroke}
-                fill="none"
+                cx={size / 2} cy={size / 2} r={r}
+                stroke={tirColor} strokeWidth={stroke} fill="none"
                 strokeDasharray={`${filled} ${circ - filled}`}
                 strokeDashoffset={circ / 4}
                 strokeLinecap="round"
               />
             )}
           </Svg>
-          <View style={infoStyles.tirTextWrap}>
-            <ThemedText style={[infoStyles.value, { color: tirColor }]}>
+          <View>
+            <Text style={[statStyles.value, { color: tirColor }]}>
               {percent !== null ? `${percent}%` : "—"}
-            </ThemedText>
-            <ThemedText style={infoStyles.subValue}>70–180</ThemedText>
+            </Text>
+            <Text style={statStyles.sub}>70–180</Text>
           </View>
         </View>
       )}
@@ -358,103 +331,63 @@ function TirRingCard({
   );
 }
 
-// ─── Main export ─────────────────────────────────────────────────────────────
-
 export function GlucoseCard() {
-  const borderColor = useThemeColor({}, "icon");
-  const accent = useThemeColor({}, "accent");
-  const cardBg = useThemeColor(
-    { light: "#F4F6F8", dark: "#1A1A1A" },
-    "background"
-  );
-
   const iob = useIOB();
-
   const [reading, setReading] = useState<GlucoseReading | null>(null);
   const [records, setRecords] = useState<EgvRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const [lastBolus, setLastBolus] = useState<LastBolus>(null);
   const [bolusLoading, setBolusLoading] = useState(true);
 
-  // ── Fetch last bolus from Firestore ──────────────────────────────────────
   const fetchLastBolus = useCallback(async () => {
     const uid = auth.currentUser?.uid;
-    if (!uid) {
-      setBolusLoading(false);
-      return;
-    }
+    if (!uid) { setBolusLoading(false); return; }
     try {
-      const dosesRef = collection(db, "users", uid, "doses");
-      const q = query(dosesRef, orderBy("timestamp", "desc"), limit(1));
+      const q = query(
+        collection(db, "users", uid, "doses"),
+        orderBy("timestamp", "desc"),
+        limit(1)
+      );
       const snap = await getDocs(q);
       if (!snap.empty) {
         const data = snap.docs[0].data();
-        setLastBolus({
-          amount: data.amount ?? 0,
-          time: data.time ?? "",
-          type: data.type ?? "Dose",
-        });
+        setLastBolus({ amount: data.amount ?? 0, time: data.time ?? "", type: data.type ?? "Dose" });
       } else {
         setLastBolus(null);
       }
-    } catch (err) {
-      console.error("Failed to fetch last bolus:", err);
+    } catch {
       setLastBolus(null);
     } finally {
       setBolusLoading(false);
     }
   }, []);
 
-  // ── Fetch glucose data ────────────────────────────────────────────────────
   const fetchGlucose = async (isRefresh = false) => {
     const userId = getAuth().currentUser?.uid;
-    if (!userId) {
-      setError("Not signed in");
-      setLoading(false);
-      return;
-    }
-
+    if (!userId) { setError("Not signed in"); setLoading(false); return; }
     if (isRefresh) setRefreshing(true);
-
     try {
       const [realtimeRes, historyRes] = await Promise.all([
         fetch(`${API_BASE}/realtime?minutes=10&maxCount=1`),
         fetch(`${API_BASE}/latest?userId=${userId}`),
       ]);
-
-      const historyData = historyRes.ok
-        ? await historyRes.json().catch(() => null)
-        : null;
-
+      const historyData = historyRes.ok ? await historyRes.json().catch(() => null) : null;
       if (realtimeRes.ok) {
-        const realtimeData = await realtimeRes.json();
-        if (realtimeData.latest) {
-          setReading({
-            value: realtimeData.latest.value,
-            trend: realtimeData.latest.trend || "flat",
-            systemTime: realtimeData.latest.systemTime,
-          });
+        const data = await realtimeRes.json();
+        if (data.latest) {
+          setReading({ value: data.latest.value, trend: data.latest.trend || "flat", systemTime: data.latest.systemTime });
           setError(null);
         }
       } else if (historyData?.latest) {
-        setReading({
-          value: historyData.latest.value,
-          trend: historyData.latest.trend || "flat",
-          systemTime: historyData.latest.systemTime,
-        });
+        setReading({ value: historyData.latest.value, trend: historyData.latest.trend || "flat", systemTime: historyData.latest.systemTime });
         setError(null);
       } else {
         setError("No recent readings");
       }
-
-      if (historyData?.records) {
-        setRecords(historyData.records);
-      }
-    } catch (err) {
-      console.error("Glucose fetch error:", err);
+      if (historyData?.records) setRecords(historyData.records);
+    } catch {
       setError("Connection error");
     } finally {
       setLoading(false);
@@ -471,263 +404,275 @@ export function GlucoseCard() {
     }, [fetchLastBolus])
   );
 
-  // Re-fetch bolus when IOB changes (new dose just logged)
   useEffect(() => {
     if (!bolusLoading) fetchLastBolus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [iob]);
 
   const timeInRange = computeTimeInRange(records);
 
-  // ── Loading state ─────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <ThemedView style={[styles.card, { borderColor }]}>
-        <ThemedText type="subtitle">Glucose</ThemedText>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" />
-          <ThemedText style={styles.loadingText}>
-            Fetching glucose data...
-          </ThemedText>
+      <View style={styles.card}>
+        <View style={[styles.accentStrip, { backgroundColor: colors.border }]} />
+        <View style={styles.loadingState}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Fetching glucose…</Text>
         </View>
-      </ThemedView>
+      </View>
     );
   }
 
-  // ── Error state ───────────────────────────────────────────────────────────
   if (error || !reading) {
     return (
-      <ThemedView style={[styles.card, { borderColor }]}>
-        <View style={styles.headerRow}>
-          <ThemedText type="subtitle">Glucose</ThemedText>
-          <Pressable
-            style={styles.refreshTouchable}
-            onPress={() => fetchGlucose(true)}
-            disabled={refreshing}
-          >
-            {refreshing ? (
-              <ActivityIndicator size="small" color="#1976D2" />
-            ) : (
-              <ThemedText style={styles.refreshButton}>Refresh</ThemedText>
-            )}
+      <View style={styles.card}>
+        <View style={[styles.accentStrip, { backgroundColor: colors.danger }]} />
+        <View style={styles.heroSection}>
+          <Text style={[styles.glucoseNumber, { color: colors.textTertiary }]}>—</Text>
+          <Pressable onPress={() => fetchGlucose(true)} disabled={refreshing} style={styles.refreshButton}>
+            {refreshing
+              ? <ActivityIndicator size="small" color={colors.primary} />
+              : <Text style={styles.refreshLabel}>Refresh</Text>
+            }
           </Pressable>
         </View>
-        <View style={styles.centered}>
-          <ThemedText style={styles.errorText}>
-            {error || "No data available"}
-          </ThemedText>
-        </View>
-      </ThemedView>
+        <Text style={styles.errorText}>{error || "No data available"}</Text>
+      </View>
     );
   }
 
-  // ── Main render ───────────────────────────────────────────────────────────
-  return (
-    <ThemedView style={[styles.card, { borderColor }]}>
-      {/* Header */}
-      <View style={styles.headerRow}>
-        <ThemedText type="subtitle">Glucose</ThemedText>
-        <Pressable
-          style={styles.refreshTouchable}
-          onPress={() => fetchGlucose(true)}
-          disabled={refreshing}
-        >
-          {refreshing ? (
-            <ActivityIndicator size="small" color="#1976D2" />
-          ) : (
-            <ThemedText style={styles.refreshButton}>Refresh</ThemedText>
-          )}
-        </Pressable>
-      </View>
+  const glucoseColor = getGlucoseColor(reading.value);
+  const rangeLabel = getRangeLabel(reading.value);
 
-      {/* Current reading */}
-      <View style={styles.readingRow}>
-        <ThemedText
-          style={[
-            styles.glucoseValue,
-            { color: getGlucoseColor(reading.value) },
-          ]}
-        >
-          {reading.value}
-        </ThemedText>
-        <View style={styles.readingMeta}>
-          <ThemedText style={styles.unit}>mg/dL</ThemedText>
-          <ThemedText style={styles.trend}>
-            {getTrendArrow(reading.trend)} {getTrendLabel(reading.trend)}
-          </ThemedText>
+  return (
+    <View style={styles.card}>
+      {/* Status accent strip */}
+      <View style={[styles.accentStrip, { backgroundColor: glucoseColor }]} />
+
+      <View style={styles.inner}>
+        {/* Hero row */}
+        <View style={styles.heroSection}>
+          <View style={styles.heroLeft}>
+            {/* Status pill above the number */}
+            <View style={[styles.statusPill, { backgroundColor: glucoseColor + "18" }]}>
+              <View style={[styles.statusDot, { backgroundColor: glucoseColor }]} />
+              <Text style={[styles.statusLabel, { color: glucoseColor }]}>{rangeLabel}</Text>
+            </View>
+
+            <Text style={[styles.glucoseNumber, { color: glucoseColor }]}>
+              {reading.value}
+            </Text>
+
+            <View style={styles.heroMeta}>
+              <Text style={styles.unit}>mg/dL</Text>
+              <View style={styles.trendRow}>
+                <Text style={[styles.trendArrow, { color: glucoseColor }]}>
+                  {getTrendArrow(reading.trend)}
+                </Text>
+                <Text style={styles.trendLabel}>{getTrendLabel(reading.trend)}</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.heroRight}>
+            <Pressable onPress={() => fetchGlucose(true)} disabled={refreshing} style={styles.refreshButton}>
+              {refreshing
+                ? <ActivityIndicator size="small" color={colors.primary} />
+                : <Text style={styles.refreshLabel}>Refresh</Text>
+              }
+            </Pressable>
+            <Text style={styles.updatedAt}>{getTimeAgo(reading.systemTime)}</Text>
+          </View>
+        </View>
+
+        {/* Graph */}
+        <View style={styles.graphWrap}>
+          <GlucoseGraph records={records} accentColor={glucoseColor} />
+        </View>
+
+        {/* Stats strip */}
+        <View style={styles.statsStrip}>
+          <StatCell
+            label="Last Bolus"
+            value={lastBolus ? `${lastBolus.amount.toFixed(1)}u` : "—"}
+            sub={lastBolus ? lastBolus.type : "No doses today"}
+            valueColor={lastBolus ? colors.primary : colors.textTertiary}
+            isLoading={bolusLoading}
+          />
+          <StatCell
+            label="Active IOB"
+            value={`${iob.toFixed(1)}u`}
+            sub={iob > 0 ? "insulin active" : "clear"}
+            valueColor={iob > 0 ? colors.primary : colors.textTertiary}
+          />
+          <TirCell percent={timeInRange} isLoading={loading} />
         </View>
       </View>
-      <ThemedText style={styles.lastUpdated}>
-        Updated {getTimeAgo(reading.systemTime)}
-      </ThemedText>
-
-      {/* Graph */}
-      <View style={styles.graphContainer}>
-        <GlucoseGraph records={records} />
-      </View>
-
-      {/* ── Info Cards ── */}
-      <View style={infoStyles.row}>
-        {/* Last Bolus */}
-        <InfoCard
-          label="Last Bolus"
-          value={
-            lastBolus
-              ? `${lastBolus.amount.toFixed(1)}u`
-              : "—"
-          }
-          subValue={
-            lastBolus
-              ? `${lastBolus.type} · ${lastBolus.time}`
-              : "No doses today"
-          }
-          accent={accent}
-          cardBg={cardBg}
-          isLoading={bolusLoading}
-        />
-
-        {/* Active IOB */}
-        <InfoCard
-          label="Active IOB"
-          value={`${iob.toFixed(1)}u`}
-          subValue={iob > 0 ? "insulin active" : "no active insulin"}
-          accent={iob > 0 ? accent : "#9BA1A6"}
-          cardBg={cardBg}
-        />
-
-        {/* Time in Range */}
-        <TirRingCard
-          percent={timeInRange}
-          accent={accent}
-          cardBg={cardBg}
-          isLoading={loading}
-        />
-      </View>
-    </ThemedView>
+    </View>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
   card: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    marginHorizontal: layout.screenHorizontalPadding,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    flexDirection: "row",
+    overflow: "hidden",
+    ...shadows.card,
   },
-  headerRow: {
+  accentStrip: {
+    width: 4,
+    borderTopLeftRadius: radius.xl,
+    borderBottomLeftRadius: radius.xl,
+  },
+  inner: {
+    flex: 1,
+    padding: spacing[4],
+  },
+  heroSection: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
   },
-  refreshTouchable: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    minWidth: 60,
-    alignItems: "center",
-    justifyContent: "center",
+  heroLeft: {
+    gap: spacing[1],
   },
-  refreshButton: {
-    fontSize: 14,
-    color: "#1976D2",
+  heroRight: {
+    alignItems: "flex-end",
+    gap: spacing[2],
+  },
+  statusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    alignSelf: "flex-start",
+    paddingHorizontal: spacing[2],
+    paddingVertical: 4,
+    borderRadius: radius.full,
+    marginBottom: spacing[1],
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  statusLabel: {
+    ...textStyles.caption1Medium,
     fontWeight: "600",
   },
-  readingRow: {
+  glucoseNumber: {
+    fontSize: 72,
+    fontWeight: "800",
+    letterSpacing: -3,
+    lineHeight: 76,
+  },
+  heroMeta: {
     flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 8,
-    marginTop: 8,
-  },
-  glucoseValue: {
-    fontSize: 48,
-    fontWeight: "bold",
-    lineHeight: 52,
-  },
-  readingMeta: {
-    paddingBottom: 6,
+    alignItems: "center",
+    gap: spacing[3],
+    marginTop: 2,
   },
   unit: {
-    fontSize: 14,
-    opacity: 0.7,
+    ...textStyles.subheadline,
+    color: colors.textTertiary,
   },
-  trend: {
-    fontSize: 14,
-    opacity: 0.7,
+  trendRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
-  lastUpdated: {
-    fontSize: 12,
-    opacity: 0.5,
-    marginTop: 4,
+  trendArrow: {
+    ...textStyles.subheadlineSemibold,
   },
-  centered: {
+  trendLabel: {
+    ...textStyles.subheadline,
+    color: colors.textSecondary,
+  },
+  refreshButton: {
+    minWidth: layout.minTouchTarget,
+    minHeight: layout.minTouchTarget,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 32,
+  },
+  refreshLabel: {
+    ...textStyles.callout,
+    color: colors.primary,
+  },
+  updatedAt: {
+    ...textStyles.caption1,
+    color: colors.textTertiary,
+  },
+  graphWrap: {
+    marginTop: spacing[2],
+    marginHorizontal: -spacing[1],
+  },
+  statsStrip: {
+    flexDirection: "row",
+    marginTop: spacing[3],
+    paddingTop: spacing[3],
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  loadingState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing[10],
+    gap: spacing[2],
   },
   loadingText: {
-    fontSize: 14,
-    opacity: 0.5,
-    marginTop: 8,
+    ...textStyles.footnote,
+    color: colors.textTertiary,
   },
   errorText: {
-    fontSize: 14,
-    opacity: 0.6,
+    ...textStyles.subheadline,
+    color: colors.textSecondary,
+    marginTop: spacing[2],
   },
-  graphContainer: {
-    marginTop: 12,
+});
+
+const statStyles = StyleSheet.create({
+  cell: {
+    flex: 1,
+    paddingHorizontal: spacing[2],
+    gap: 2,
+  },
+  cellBorder: {
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: colors.border,
+  },
+  label: {
+    ...textStyles.caption2Semibold,
+    color: colors.textTertiary,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  value: {
+    ...textStyles.title3Semibold,
+    color: colors.textPrimary,
+    marginTop: 2,
+  },
+  sub: {
+    ...textStyles.caption1,
+    color: colors.textTertiary,
+    marginTop: 1,
+  },
+  tirRow: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: spacing[2],
+    marginTop: 2,
   },
-  graphEmpty: {
+});
+
+const graphStyles = StyleSheet.create({
+  empty: {
     height: GRAPH_HEIGHT,
     alignItems: "center",
     justifyContent: "center",
   },
-  graphEmptyText: {
-    fontSize: 14,
-    opacity: 0.4,
-  },
-});
-
-const infoStyles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 14,
-  },
-  card: {
-    flex: 1,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    gap: 2,
-  },
-  label: {
-    fontSize: 10,
-    fontWeight: "600",
-    opacity: 0.5,
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
-    marginBottom: 2,
-  },
-  value: {
-    fontSize: 18,
-    fontWeight: "700",
-    lineHeight: 22,
-  },
-  subValue: {
-    fontSize: 10,
-    opacity: 0.5,
-    marginTop: 1,
-  },
-  // TIR ring card
-  tirRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 2,
-  },
-  tirTextWrap: {
-    flex: 1,
+  emptyText: {
+    ...textStyles.footnote,
+    color: colors.textTertiary,
   },
 });
