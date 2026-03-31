@@ -1,5 +1,6 @@
 import { ThemedText } from "@/components/themed-text";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { hapticError, hapticHeavy, hapticSuccess } from "@/utils/haptics";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -89,7 +90,6 @@ export function DoseConfirmationSheet({
         warningTimerRef.current = null;
       }
     } else {
-      // Start the warning timer when sheet opens
       warningTimerRef.current = setTimeout(() => {
         setShowConfirmButton(true);
       }, 3000);
@@ -115,7 +115,23 @@ export function DoseConfirmationSheet({
           dosingTimerRef.current = null;
         }
       };
-    } else if (dosingPhase === "complete" || dosingPhase === "cancelled") {
+    } else if (dosingPhase === "complete") {
+      hapticSuccess();
+      Animated.parallel([
+        Animated.spring(checkmarkScale, {
+          toValue: 1,
+          tension: 50,
+          friction: 5,
+          useNativeDriver: true,
+        }),
+        Animated.timing(checkmarkOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else if (dosingPhase === "cancelled") {
+      hapticError();
       Animated.parallel([
         Animated.spring(checkmarkScale, {
           toValue: 1,
@@ -164,6 +180,7 @@ export function DoseConfirmationSheet({
 
         if (progress >= SLIDER_THRESHOLD) {
           slidePosition.current = maxSlide;
+          hapticHeavy();
           Animated.spring(slideAnim, {
             toValue: maxSlide,
             useNativeDriver: false,
@@ -185,7 +202,7 @@ export function DoseConfirmationSheet({
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType="slide"
       onRequestClose={onCancel}
     >
       <Pressable
@@ -278,6 +295,7 @@ export function DoseConfirmationSheet({
                   </ThemedText>
                 </View>
               </View>
+
               <View style={styles.sliderContainer}>
                 {warningAcknowledged && (
                   <ThemedText style={styles.sliderLabel}>
@@ -289,9 +307,7 @@ export function DoseConfirmationSheet({
                   <View
                     style={[
                       styles.warningOverlay,
-                      {
-                        backgroundColor: warningBgColor,
-                      },
+                      { backgroundColor: warningBgColor },
                     ]}
                   >
                     <ThemedText
@@ -302,7 +318,10 @@ export function DoseConfirmationSheet({
                     </ThemedText>
                     {showConfirmButton && (
                       <Pressable
-                        style={[styles.warningButton, { backgroundColor: accent }]}
+                        style={[
+                          styles.warningButton,
+                          { backgroundColor: accent },
+                        ]}
                         onPress={() => setWarningAcknowledged(true)}
                       >
                         <ThemedText style={styles.warningButtonText}>
@@ -313,7 +332,10 @@ export function DoseConfirmationSheet({
                   </View>
                 ) : (
                   <View
-                    style={[styles.sliderTrack, { backgroundColor: accent + "20" }]}
+                    style={[
+                      styles.sliderTrack,
+                      { backgroundColor: accent + "20" },
+                    ]}
                     onLayout={(e) => {
                       sliderWidthRef.current = e.nativeEvent.layout.width;
                     }}
@@ -341,7 +363,11 @@ export function DoseConfirmationSheet({
                       ]}
                       {...panResponder.panHandlers}
                     >
-                      <Ionicons name="chevron-forward" size={24} color="#FFFFFF" />
+                      <Ionicons
+                        name="chevron-forward"
+                        size={24}
+                        color="#FFFFFF"
+                      />
                     </Animated.View>
                   </View>
                 )}
@@ -592,16 +618,16 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#FFFFFF",
   },
-warningOverlay: {
-  borderRadius: 16,
-  justifyContent: "center",
-  alignItems: "center",
-  paddingHorizontal: 20,
-  paddingVertical: 16,
-  gap: 12,
-  borderWidth: 2,
-  borderColor: "#DAA520",
-},
+  warningOverlay: {
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 12,
+    borderWidth: 2,
+    borderColor: "#DAA520",
+  },
   warningText: {
     fontSize: 14,
     fontWeight: "600",

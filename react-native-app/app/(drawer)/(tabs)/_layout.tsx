@@ -1,6 +1,5 @@
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Colors } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { colors } from "@/constants/theme";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { Tabs } from "expo-router";
@@ -9,7 +8,7 @@ import { Alert, TouchableOpacity, View } from "react-native";
 import { logout } from "../../../services/logout-service";
 
 function LogoutButton() {
-    const handleLogout = () => {
+    const handleLogout = () => { 
         Alert.alert("Logout", "Are you sure you want to log out?", [
             { text: "Cancel", style: "cancel" },
             {
@@ -37,13 +36,12 @@ function LogoutButton() {
 }
 
 export default function TabLayout() {
-    const colorScheme = useColorScheme();
     const navigation = useNavigation();
 
     return (
         <Tabs
             screenOptions={{
-                tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+                tabBarActiveTintColor: colors.tabActive,
                 headerShown: false,
             }}
         >
