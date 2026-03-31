@@ -415,6 +415,38 @@ export const glucoseRange = {
 } as const;
 
 // ---------------------------------------------------------------------------
+// Colors (light/dark) — backward compatibility for useThemeColor hook
+// Maps legacy color names to semantic tokens. Both themes use the same
+// values since SnapDose currently only supports light mode.
+// ---------------------------------------------------------------------------
+export const Colors = {
+  light: {
+    text: colors.textPrimary,
+    background: colors.background,
+    tint: colors.primary,
+    icon: colors.tabInactive,
+    tabIconDefault: colors.tabInactive,
+    tabIconSelected: colors.tabActive,
+    accent: colors.accent,
+    surface: colors.surface,
+    border: colors.border,
+    primary: colors.primary,
+  },
+  dark: {
+    text: colors.textPrimary,
+    background: colors.background,
+    tint: colors.primary,
+    icon: colors.tabInactive,
+    tabIconDefault: colors.tabInactive,
+    tabIconSelected: colors.tabActive,
+    accent: colors.accent,
+    surface: colors.surface,
+    border: colors.border,
+    primary: colors.primary,
+  },
+} as const;
+
+// ---------------------------------------------------------------------------
 // Root export
 // ---------------------------------------------------------------------------
 export const theme = {

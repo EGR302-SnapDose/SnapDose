@@ -1,4 +1,5 @@
 import { ThemedText } from "@/components/themed-text";
+import { useAccentColor } from "@/context/accent-color";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { Pressable, StyleSheet, View } from "react-native";
 
@@ -11,7 +12,7 @@ export function DoseModeSelector({
   mode,
   onModeChange,
 }: DoseModeSelectorProps) {
-  const accent = useThemeColor({}, "accent");
+  const accent = useAccentColor();
   const buttonBg = useThemeColor(
     { light: "#F5F5F5", dark: "#1E2022" },
     "background",

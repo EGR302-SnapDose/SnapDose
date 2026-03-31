@@ -1,5 +1,6 @@
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors } from "@/constants/theme";
+import { useAccentColor } from "@/context/accent-color";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -39,11 +40,12 @@ function LogoutButton() {
 export default function TabLayout() {
     const colorScheme = useColorScheme();
     const navigation = useNavigation();
+    const accent = useAccentColor();
 
     return (
         <Tabs
             screenOptions={{
-                tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+                tabBarActiveTintColor: accent,
                 headerShown: false,
             }}
         >
