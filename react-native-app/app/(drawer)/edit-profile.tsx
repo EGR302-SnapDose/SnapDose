@@ -1,6 +1,5 @@
 import { ThemedText } from "@/components/themed-text";
-import { Colors } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { colors } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { getApp, getApps, initializeApp } from "firebase/app";
@@ -60,6 +59,7 @@ interface EditableProfile {
   correctionFactor: string;
   targetGlucoseMin: string;
   targetGlucoseMax: string;
+  accentColor: string;
 }
 
 const EMPTY_FORM: EditableProfile = {
@@ -76,7 +76,13 @@ const EMPTY_FORM: EditableProfile = {
   correctionFactor: "",
   targetGlucoseMin: "70",
   targetGlucoseMax: "180",
+  accentColor: "#EF4444",
 };
+
+const ACCENT_COLORS = [
+  '#EF4444', '#3B82F6', '#A855F7',
+  '#10B981', '#F59E0B', '#EC4899',
+];
 
 // Safely converts a Firestore Timestamp (or anything date-like) to "YYYY-MM-DD"
 function timestampToISO(ts: unknown): string {
@@ -197,11 +203,10 @@ function SectionCard({
 // Screen
 // ---------------------------------------------------------------------------
 export default function EditProfileScreen() {
-  const colorScheme = useColorScheme() ?? "dark";
-  const theme = Colors[colorScheme];
-  const cardBg = colorScheme === "dark" ? "#1c1c1c" : "#f2f2f2";
-  const inputBg = colorScheme === "dark" ? "#2a2a2a" : "#e8e8e8";
-  const accentRed = "#e84040";
+  const cardBg = colors.surfaceSubtle;
+  const inputBg = colors.inputBackground;
+  const textColor = colors.textPrimary;
+  const accentRed = colors.danger;
 
   const [form, setForm] = useState<EditableProfile>(EMPTY_FORM);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -242,6 +247,7 @@ export default function EditProfileScreen() {
           correctionFactor:   ins.correctionFactor   != null ? String(ins.correctionFactor)   : "",
           targetGlucoseMin:   p.targetGlucose?.min   != null ? String(p.targetGlucose.min)   : "70",
           targetGlucoseMax:   p.targetGlucose?.max   != null ? String(p.targetGlucose.max)   : "180",
+          accentColor:        data.accentColor ?? "#EF4444",
         });
       })
       .catch((err) => {
@@ -291,6 +297,7 @@ export default function EditProfileScreen() {
 
       const payload: Record<string, unknown> = {
         displayName:                          form.displayName.trim(),
+        accentColor:                          form.accentColor,
         "profile.diabetesType":               form.diabetesType,
         "profile.glucoseUnit":                form.glucoseUnit,
         "profile.diagnosisYear":              form.diagnosisYear ? parseInt(form.diagnosisYear, 10) : null,
@@ -331,7 +338,7 @@ export default function EditProfileScreen() {
   if (loadingProfile) {
     return (
       <SafeAreaView
-        style={[styles.safe, { backgroundColor: theme.background }]}
+        style={[styles.safe, { backgroundColor: colors.background }]}
         edges={["top", "bottom"]}
       >
         <View style={styles.centered}>
@@ -346,7 +353,7 @@ export default function EditProfileScreen() {
   if (loadError) {
     return (
       <SafeAreaView
-        style={[styles.safe, { backgroundColor: theme.background }]}
+        style={[styles.safe, { backgroundColor: colors.background }]}
         edges={["top", "bottom"]}
       >
         <View style={styles.centered}>
@@ -365,7 +372,7 @@ export default function EditProfileScreen() {
   // ── Main form ─────────────────────────────────────────────────────────────
   return (
     <SafeAreaView
-      style={[styles.safe, { backgroundColor: theme.background }]}
+      style={[styles.safe, { backgroundColor: colors.background }]}
       edges={["top", "bottom"]}
     >
       {/* Header */}
@@ -399,7 +406,7 @@ export default function EditProfileScreen() {
               onChangeText={(v) => setField("displayName", v)}
               placeholder="Your full name"
               inputBg={inputBg}
-              textColor={theme.text}
+              textColor={textColor}
             />
 
             <FieldLabel label="Email (read-only)" />
@@ -409,7 +416,7 @@ export default function EditProfileScreen() {
               placeholder="—"
               keyboardType="email-address"
               inputBg={inputBg}
-              textColor={theme.text}
+              textColor={textColor}
               editable={false}
             />
 
@@ -419,7 +426,7 @@ export default function EditProfileScreen() {
               onChangeText={(v) => setField("dateOfBirth", v)}
               placeholder="1990-01-25"
               inputBg={inputBg}
-              textColor={theme.text}
+              textColor={textColor}
             />
 
             <FieldLabel label="Diabetes Type" />
@@ -432,7 +439,7 @@ export default function EditProfileScreen() {
               onSelect={(v) => setField("diabetesType", v)}
               accentColor={accentRed}
               pillBg={inputBg}
-              textColor={theme.text}
+              textColor={textColor}
             />
 
             <FieldLabel label="Diagnosis Year" />
@@ -442,8 +449,30 @@ export default function EditProfileScreen() {
               placeholder="2010"
               keyboardType="numeric"
               inputBg={inputBg}
-              textColor={theme.text}
+              textColor={textColor}
             />
+          </SectionCard>
+
+          {/* ── Appearance ── */}
+          <SectionCard title="Appearance" cardBg={cardBg}>
+            <FieldLabel label="Accent Color" />
+            <View style={styles.colorGrid}>
+              {ACCENT_COLORS.map((color) => (
+                <TouchableOpacity
+                  key={color}
+                  style={[
+                    styles.colorOption,
+                    { backgroundColor: color },
+                    form.accentColor === color && styles.colorOptionSelected,
+                  ]}
+                  onPress={() => setField("accentColor", color)}
+                >
+                  {form.accentColor === color && (
+                    <Ionicons name="checkmark" size={24} color="#fff" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
           </SectionCard>
 
           {/* ── Physical ── */}
@@ -457,7 +486,7 @@ export default function EditProfileScreen() {
                   placeholder="Feet"
                   keyboardType="numeric"
                   inputBg={inputBg}
-                  textColor={theme.text}
+                  textColor={textColor}
                 />
               </View>
               <View style={{ width: 10 }} />
@@ -468,7 +497,7 @@ export default function EditProfileScreen() {
                   placeholder="Inches"
                   keyboardType="numeric"
                   inputBg={inputBg}
-                  textColor={theme.text}
+                  textColor={textColor}
                 />
               </View>
             </View>
@@ -480,7 +509,7 @@ export default function EditProfileScreen() {
               placeholder="150"
               keyboardType="decimal-pad"
               inputBg={inputBg}
-              textColor={theme.text}
+              textColor={textColor}
             />
           </SectionCard>
 
@@ -496,7 +525,7 @@ export default function EditProfileScreen() {
               onSelect={(v) => setField("glucoseUnit", v as "mg/dL" | "mmol/L")}
               accentColor={accentRed}
               pillBg={inputBg}
-              textColor={theme.text}
+              textColor={textColor}
             />
 
             <FieldLabel label={`Target Glucose Range (${form.glucoseUnit})`} />
@@ -508,7 +537,7 @@ export default function EditProfileScreen() {
                   placeholder="Min (70)"
                   keyboardType="numeric"
                   inputBg={inputBg}
-                  textColor={theme.text}
+                  textColor={textColor}
                 />
               </View>
               <View style={{ width: 10 }} />
@@ -519,7 +548,7 @@ export default function EditProfileScreen() {
                   placeholder="Max (180)"
                   keyboardType="numeric"
                   inputBg={inputBg}
-                  textColor={theme.text}
+                  textColor={textColor}
                 />
               </View>
             </View>
@@ -534,7 +563,7 @@ export default function EditProfileScreen() {
               placeholder="10"
               keyboardType="decimal-pad"
               inputBg={inputBg}
-              textColor={theme.text}
+              textColor={textColor}
             />
 
             <FieldLabel label={`Correction Factor (${form.glucoseUnit} drop per unit)`} />
@@ -544,7 +573,7 @@ export default function EditProfileScreen() {
               placeholder="50"
               keyboardType="decimal-pad"
               inputBg={inputBg}
-              textColor={theme.text}
+              textColor={textColor}
             />
           </SectionCard>
 
@@ -657,5 +686,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     letterSpacing: 0.3,
+  },
+  colorGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginTop: 8,
+  },
+  colorOption: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 3,
+    borderColor: "transparent",
+  },
+  colorOptionSelected: {
+    borderColor: "#fff",
   },
 });

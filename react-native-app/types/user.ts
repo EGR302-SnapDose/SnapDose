@@ -32,6 +32,7 @@ export interface DeviceSettings {
 export interface User {
   email: string;
   displayName: string;
+  accentColor: string;
   profile: UserProfile;
   insulinSettings: InsulinSettings;
   devices: DeviceSettings;

@@ -22,6 +22,7 @@ export async function saveOnboardingData(data: OnboardingData) {
   const userData = {
     email: user.email || "",
     displayName: data.displayName,
+    accentColor: data.accentColor,
     profile: {
       dateOfBirth: Timestamp.fromDate(dateOfBirth),
       diabetesType: "type1",
