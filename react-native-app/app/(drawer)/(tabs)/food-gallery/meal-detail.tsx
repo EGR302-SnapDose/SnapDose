@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { View, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Dimensions } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getStorage, ref, getDownloadURL, deleteObject } from "firebase/storage";
@@ -64,6 +65,7 @@ const MealDetailScreen = () => {
     const { mealId } = useLocalSearchParams<{ mealId: string }>();
     const router = useRouter();
     const colors = useColors();
+    const insets = useSafeAreaInsets();
     const insulinOnBoard = useIOB();
 
     const [meal, setMeal] = useState<MealCarbEstimate | null>(null);
@@ -298,7 +300,7 @@ const MealDetailScreen = () => {
                 </View>
             </ScrollView>
 
-            <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
+            <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.background, paddingBottom: Math.max(36, insets.bottom + 16) }]}>
                 <TouchableOpacity
                     style={[styles.footerBtn, { borderColor: colors.danger }]}
                     onPress={handleDelete}
@@ -362,7 +364,7 @@ const styles = StyleSheet.create({
     doseCardLabel: { fontSize: 14 },
     doseCardValue: { fontSize: 14, fontWeight: "600" },
     doseCardDivider: { height: StyleSheet.hairlineWidth, marginVertical: 2 },
-    footer: { position: "absolute", bottom: 0, left: 0, right: 0, padding: 20, paddingBottom: 36, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: "row", gap: 12 },
+    footer: { position: "absolute", bottom: 0, left: 0, right: 0, padding: 20, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: "row", gap: 12 },
     footerBtn: { flex: 1, borderWidth: 1.5, borderRadius: 12, paddingVertical: 14, alignItems: "center" },
     footerBtnFill: { borderWidth: 0 },
     footerBtnText: { fontSize: 15, fontWeight: "600" },

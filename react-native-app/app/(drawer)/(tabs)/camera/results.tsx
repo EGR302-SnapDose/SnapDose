@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, View, TouchableOpacity, Alert, Dimensions, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
@@ -34,6 +35,7 @@ export default function ResultsScreen() {
   const { meal, isLoading, error } = useMealByImage(imagePath);
   const insulinOnBoard = useIOB();
   const colors = useColors();
+  const insets = useSafeAreaInsets();
 
   const [adjustedCarbs, setAdjustedCarbs] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -117,7 +119,7 @@ export default function ResultsScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + 12 }]} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="chevron-back" size={24} color={colors.muted} />
@@ -171,7 +173,7 @@ export default function ResultsScreen() {
       </ScrollView>
 
       {!isProcessing && !isLoading && meal && (
-        <View style={[styles.bottomBar, { backgroundColor: colors.controlsBg, borderTopColor: colors.border }]}>
+        <View style={[styles.bottomBar, { backgroundColor: colors.controlsBg, borderTopColor: colors.border, paddingBottom: Math.max(32, insets.bottom + 16) }]}>
           <TouchableOpacity
             style={[styles.doseButton, { borderColor: colors.accent }]}
             onPress={() => setShowDoseSheet(true)}
@@ -207,7 +209,7 @@ export default function ResultsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 16 },
-  content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 32, gap: 16 },
+  content: { paddingHorizontal: 16, paddingBottom: 32, gap: 16 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
   backButton: { padding: 4 },
   title: { fontSize: 18, fontWeight: '700' },
@@ -216,7 +218,7 @@ const styles = StyleSheet.create({
   imagePlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   processingBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 10 },
   processingText: { fontSize: 14, fontWeight: '500' },
-  bottomBar: { padding: 16, paddingBottom: 32, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: 12 },
+  bottomBar: { padding: 16, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: 12 },
   doseButton: { flex: 1, height: 52, borderRadius: 14, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   doseButtonText: { fontSize: 15, fontWeight: '700' },
   confirmButton: { flex: 1, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },

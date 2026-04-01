@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { View, ScrollView, StyleSheet, Dimensions, TouchableOpacity, ActivityIndicator, Alert, Modal } from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
@@ -127,6 +128,7 @@ const CameraModal = ({ visible, onClose, onCapture }: CameraModalProps) => {
     const { background, border, accent } = useColors();
     const [permission, requestPermission] = useCameraPermissions();
     const cameraRef = React.useRef<CameraView>(null);
+    const insets = useSafeAreaInsets();
 
     useEffect(() => {
         if (visible && !permission?.granted) requestPermission();
@@ -162,7 +164,7 @@ const CameraModal = ({ visible, onClose, onCapture }: CameraModalProps) => {
                         <ThemedText>Camera permission required</ThemedText>
                     </View>
                 )}
-                <View style={styles.cameraControls}>
+                <View style={[styles.cameraControls, { paddingBottom: Math.max(24, insets.bottom + 16) }]}>
                     <TouchableOpacity style={[styles.cameraBtn, { borderColor: border }]} onPress={onClose}>
                         <ThemedText style={styles.cameraBtnText}>Cancel</ThemedText>
                     </TouchableOpacity>
@@ -370,7 +372,7 @@ const styles = StyleSheet.create({
     cameraContainer: { flex: 1 },
     camera: { flex: 1 },
     cameraPermissionBox: { flex: 1, alignItems: "center", justifyContent: "center" },
-    cameraControls: { flexDirection: "row", justifyContent: "space-around", alignItems: "center", paddingVertical: 24, paddingHorizontal: 16, backgroundColor: "#000" },
+    cameraControls: { flexDirection: "row", justifyContent: "space-around", alignItems: "center", paddingTop: 24, paddingHorizontal: 16, backgroundColor: "#000" },
     cameraBtn: { paddingVertical: 12, paddingHorizontal: 20, borderRadius: 10, borderWidth: 1 },
     captureBtn: { paddingHorizontal: 32 },
     cameraBtnText: { fontSize: 15, fontWeight: "600", color: "#fff" },

@@ -6,9 +6,11 @@ import { checkOnboardingStatus } from '@/services/user-service';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -42,7 +44,7 @@ export default function LoginScreen() {
     };
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <Text style={[styles.title, { color: textColor }]}>SnapDose</Text>
       <Text style={[styles.subtitle, { color: subtitleColor }]}>Login to your account</Text>
 
