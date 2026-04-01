@@ -1,5 +1,6 @@
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { colors } from "@/constants/theme";
+import { useAccentColor } from "@/context/accent-color";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { Tabs } from "expo-router";
@@ -42,7 +43,7 @@ export default function TabLayout() {
     return (
         <Tabs
             screenOptions={{
-                tabBarActiveTintColor: colors.tabActive,
+                tabBarActiveTintColor: accent,
                 headerShown: false,
             }}
         >
