@@ -1,3 +1,4 @@
+import { useAccentColor } from "@/context/accent-color";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { router } from "expo-router";
 import { useRef } from "react";
@@ -45,7 +46,7 @@ function AnimatedButton({ onPress, accent, buttonBg, children }: {
 
 export function QuickActions() {
     const pageBg = useThemeColor({ light: "#FFFFFF", dark: "#121212" }, "background");
-    const accent = useThemeColor({}, "accent");
+    const accent = useAccentColor();
 
     return (
         <View style={styles.container}>

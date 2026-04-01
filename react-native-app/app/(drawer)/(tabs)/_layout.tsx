@@ -37,6 +37,7 @@ function LogoutButton() {
 
 export default function TabLayout() {
     const navigation = useNavigation();
+    const accent = useAccentColor();
 
     return (
         <Tabs

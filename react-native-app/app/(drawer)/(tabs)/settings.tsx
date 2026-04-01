@@ -1,7 +1,10 @@
 import PumpPairingSection from '@/components/ui/PumpPairingSection';
+import { db } from "@/config/firebase";
+import { useAccentColor } from "@/context/accent-color";
 import { useFocusEffect } from "@react-navigation/native";
 import * as WebBrowser from "expo-web-browser";
 import { getAuth } from "firebase/auth";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useCallback, useState } from "react";
 import {
     ActivityIndicator,
@@ -9,17 +12,30 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    TouchableOpacity,
     View,
 } from "react-native";
 const API_BASE =
     "https://us-central1-egr302-snapdose.cloudfunctions.net/dexcom-auth";
+
+const ACCENT_COLORS = [
+    '#EF4444',
+    '#3B82F6',
+    '#A855F7',
+    '#10B981',
+    '#F59E0B',
+    '#EC4899',
+];
 
 export default function SettingsScreen() {
     const [dexcomConnected, setDexcomConnected] = useState(false);
     const [loading, setLoading] = useState(true);
     const [connecting, setConnecting] = useState(false);
     const [cgmLastSeen, setCgmLastSeen] = useState<string | undefined>(undefined);
+    const [selectedAccentColor, setSelectedAccentColor] = useState('#3B82F6');
+    const [savingColor, setSavingColor] = useState(false);
     const userId = getAuth().currentUser?.uid;
+    const currentAccent = useAccentColor();
 
     const checkDexcomStatus = async () => {
         if (!userId) return;
@@ -30,6 +46,14 @@ setDexcomConnected(data.connected);
 if (data.connected) {
     setCgmLastSeen('Just now');
 }
+            // Load accent color from Firebase
+            const userDoc = await getDoc(doc(db, 'users', userId));
+            if (userDoc.exists()) {
+                const accentColor = userDoc.data().accentColor;
+                if (accentColor) {
+                    setSelectedAccentColor(accentColor);
+                }
+            }
         } catch (err) {
             console.error("Failed to check Dexcom status:", err);
         } finally {
@@ -55,6 +79,21 @@ if (data.connected) {
             console.error("Failed to connect Dexcom:", err);
         } finally {
             setConnecting(false);
+        }
+    };
+
+    const handleColorSelect = async (color: string) => {
+        if (!userId) return;
+        setSelectedAccentColor(color);
+        setSavingColor(true);
+        try {
+            await updateDoc(doc(db, 'users', userId), {
+                accentColor: color,
+            });
+        } catch (err) {
+            console.error("Failed to save accent color:", err);
+        } finally {
+            setSavingColor(false);
         }
     };
 
@@ -145,6 +184,33 @@ if (data.connected) {
             {/* App Preferences Section */}
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>App Preferences</Text>
+
+                {/* Theme Color */}
+                <View style={styles.colorSection}>
+                    <Text style={styles.label}>Theme Color</Text>
+                    <View style={styles.colorGrid}>
+                        {ACCENT_COLORS.map((color) => (
+                            <TouchableOpacity
+                                key={color}
+                                style={[
+                                    styles.colorOption,
+                                    { backgroundColor: color },
+                                    selectedAccentColor === color && {
+                                        borderColor: '#FFF',
+                                        borderWidth: 3,
+                                    },
+                                ]}
+                                onPress={() => handleColorSelect(color)}
+                                disabled={savingColor}
+                            >
+                                {selectedAccentColor === color && (
+                                    <Text style={styles.checkmark}>✓</Text>
+                                )}
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </View>
+
                 <View style={styles.row}>
                     <View style={styles.rowText}>
                         <Text style={styles.label}>Theme</Text>
@@ -241,5 +307,33 @@ const styles = StyleSheet.create({
     lastSeen: {
         fontSize: 11,
         color: '#888',
+    },
+    colorSection: {
+        backgroundColor: '#f8f8f8',
+        borderRadius: 10,
+        paddingVertical: 16,
+        paddingHorizontal: 16,
+        marginBottom: 12,
+    },
+    colorGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        gap: 12,
+        marginTop: 12,
+    },
+    colorOption: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 3,
+        borderColor: 'transparent',
+    },
+    checkmark: {
+        fontSize: 24,
+        color: '#FFF',
+        fontWeight: '700',
     },
 });

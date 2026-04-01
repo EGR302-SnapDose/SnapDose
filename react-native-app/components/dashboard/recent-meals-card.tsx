@@ -2,24 +2,25 @@ import { Image } from "expo-image";
 import { router } from "expo-router";
 import { getAuth } from "firebase/auth";
 import {
-  collection,
-  limit,
-  onSnapshot,
-  orderBy,
-  query,
-  Timestamp,
-  where,
+    collection,
+    limit,
+    onSnapshot,
+    orderBy,
+    query,
+    Timestamp,
+    where,
 } from "firebase/firestore";
 import { getDownloadURL, getStorage, ref } from "firebase/storage";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  StyleSheet,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from "react-native";
- 
+
 import { app, db } from "@/config/firebase";
+import { useAccentColor } from "@/context/accent-color";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { ThemedText } from "../themed-text";
 import { ThemedView } from "../themed-view";
@@ -64,7 +65,7 @@ function MealRow({ meal, isLast, dividerColor }: {
     { light: "#888888", dark: "#888888" },
     "icon"
   );
-  const accent = useThemeColor({}, "accent");
+  const accent = useAccentColor();
  
   const label = meal.foodsDetected[0] ?? "Meal";
   const timeStr = formatTimeAgo(meal.createdAt);
