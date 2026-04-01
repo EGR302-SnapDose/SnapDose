@@ -1,6 +1,5 @@
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Colors } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { colors } from "@/constants/theme";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { Tabs } from "expo-router";
@@ -25,25 +24,24 @@ function LogoutButton() {
             <TouchableOpacity
                 onPress={handleLogout}
                 style={{
-                    backgroundColor: "#FF3B30",
+                    backgroundColor: colors.danger,
                     borderRadius: 8,
                     padding: 6,
                 }}
             >
-                <Ionicons name="log-out-outline" size={22} color="#fff" />
+                <Ionicons name="log-out-outline" size={22} color={colors.textInverse} />
             </TouchableOpacity>
         </View>
     );
 }
 
 export default function TabLayout() {
-    const colorScheme = useColorScheme();
     const navigation = useNavigation();
 
     return (
         <Tabs
             screenOptions={{
-                tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+                tabBarActiveTintColor: colors.tabActive,
                 headerShown: false,
             }}
         >
