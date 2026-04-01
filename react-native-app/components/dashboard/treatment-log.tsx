@@ -20,14 +20,15 @@ import {
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
- 
+
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { db } from '@/config/firebase';
+import { colors, Colors } from '@/constants/theme';
 import { useThemeColor } from '@/hooks/use-theme-color';
- 
+
 // ─── Constants ────────────────────────────────────────────────────────────────
- 
+
 const API_BASE =
   'https://us-central1-egr302-snapdose.cloudfunctions.net/dexcom-auth';
  
@@ -101,9 +102,9 @@ function toDate(value: unknown): Date | null {
 }
  
 function glucoseColor(value: number): string {
-  if (value < 70 || value > 180) return '#E53935';
-  if (value > 140) return '#FB8C00';
-  return '#43A047';
+  if (value < 70 || value > 180) return colors.glucoseLow;
+  if (value > 140) return colors.glucoseHigh;
+  return colors.glucoseInRange;
 }
  
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -388,18 +389,18 @@ function FullLogModal({
   const insets = useSafeAreaInsets();
   const accent = useThemeColor({}, 'accent');
   const background = useThemeColor({}, 'background');
-  const cardBg = useThemeColor({ light: '#F5F5F5', dark: '#1C1C1E' }, 'background');
+  const cardBg = useThemeColor({ light: colors.surfaceSubtle, dark: colors.surface }, 'surface');
   const mutedColor = useThemeColor(
-    { light: '#888888', dark: '#888888' },
+    { light: colors.textSecondary, dark: colors.textSecondary },
     'icon',
   );
   const dividerColor = useThemeColor(
-    { light: '#E8E8E8', dark: '#2A2A2A' },
-    'icon',
+    { light: colors.border, dark: colors.border },
+    'border',
   );
   const headerBorderColor = useThemeColor(
-    { light: '#EBEBEB', dark: '#222222' },
-    'icon',
+    { light: colors.border, dark: colors.border },
+    'border',
   );
  
   const slideAnim = useRef(new Animated.Value(60)).current;
@@ -546,20 +547,20 @@ export function TreatmentLogCard() {
  
   const accent = useThemeColor({}, 'accent');
   const borderColor = useThemeColor(
-    { light: '#E8E8E8', dark: '#222222' },
-    'icon',
+    { light: colors.border, dark: Colors.dark.border },
+    'border',
   );
   const mutedColor = useThemeColor(
-    { light: '#888888', dark: '#888888' },
+    { light: colors.textSecondary, dark: Colors.dark.icon },
     'icon',
   );
   const dividerColor = useThemeColor(
-    { light: '#EFEFEF', dark: '#252525' },
-    'icon',
+    { light: colors.border, dark: Colors.dark.border },
+    'border',
   );
   const arrowBg = useThemeColor(
-    { light: '#F0F0F0', dark: '#1E1E1E' },
-    'background',
+    { light: colors.surfaceSubtle, dark: Colors.dark.surface },
+    'surface',
   );
  
   const compactEvents = events.slice(0, COMPACT_MAX_ROWS);

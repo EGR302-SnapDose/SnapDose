@@ -1,29 +1,23 @@
 /**
  * Theme color hook - bridges legacy color names to new semantic tokens
+ * Now with proper light/dark mode support
  */
 
-import { colors } from '@/constants/theme';
-
-// Map legacy color names to new semantic color tokens
-const colorMapping: Record<string, string> = {
-  text: colors.textPrimary,
-  background: colors.background,
-  tint: colors.primary,
-  icon: colors.tabInactive,
-  tabIconDefault: colors.tabInactive,
-  tabIconSelected: colors.tabActive,
-};
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export function useThemeColor(
   props: { light?: string; dark?: string },
-  colorName: string
+  colorName: keyof typeof Colors.light
 ) {
-  // If explicit color provided in props, use it
-  const colorFromProps = props.light || props.dark;
+  const theme = useColorScheme() ?? 'light';
+
+  // If explicit colors provided, use them based on scheme
+  const colorFromProps = theme === 'dark' ? props.dark : props.light;
   if (colorFromProps) {
     return colorFromProps;
   }
 
-  // Otherwise, map to new semantic colors
-  return colorMapping[colorName] ?? colors.textPrimary;
+  // Otherwise use Colors mapping for the current theme
+  return Colors[theme][colorName] ?? Colors[theme].text;
 }

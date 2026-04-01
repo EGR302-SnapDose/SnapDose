@@ -1,3 +1,5 @@
+import { colors, Colors, spacing } from "@/constants/theme";
+import { useThemeColor } from "@/hooks/use-theme-color";
 import {
     DrawerContentComponentProps,
     DrawerContentScrollView,
@@ -5,12 +7,11 @@ import {
 } from "@react-navigation/drawer";
 import { StyleSheet, View } from "react-native";
 import { ThemedText } from "../themed-text";
-import { useThemeColor } from "@/hooks/use-theme-color";
 
 export function DrawerContent(props: DrawerContentComponentProps) {
     const borderColor = useThemeColor(
-        { light: "#E0E0E0", dark: "#333333" },
-        "icon",
+        { light: colors.border, dark: Colors.dark.border },
+        "border",
     );
 
     return (
@@ -27,11 +28,11 @@ export function DrawerContent(props: DrawerContentComponentProps) {
 
 const styles = StyleSheet.create({
     header: {
-        paddingHorizontal: 16,
-        paddingTop: 8,
-        paddingBottom: 20,
+        paddingHorizontal: spacing[4],
+        paddingTop: spacing[2],
+        paddingBottom: spacing[5],
         borderBottomWidth: 1,
-        marginBottom: 8,
+        marginBottom: spacing[2],
     },
     appName: {
         fontSize: 28,
