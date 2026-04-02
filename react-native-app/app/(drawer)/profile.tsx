@@ -15,7 +15,10 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
+ 
+// ---------------------------------------------------------------------------
+// Types — unchanged
+// ---------------------------------------------------------------------------
 interface UserProfile {
   displayName: string;
   email: string;
@@ -34,7 +37,10 @@ interface UserProfile {
     insulinToCarbRatio: number;
   };
 }
-
+ 
+// ---------------------------------------------------------------------------
+// Helpers — unchanged
+// ---------------------------------------------------------------------------
 function calcAge(dob: Date): number {
   const today = new Date();
   let age = today.getFullYear() - dob.getFullYear();
@@ -42,56 +48,74 @@ function calcAge(dob: Date): number {
   if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
   return age;
 }
-
+ 
 function formatDiabetesType(type: string): string {
   if (type === "type1") return "Type 1 Diabetes";
   if (type === "type2") return "Type 2 Diabetes";
   return type;
 }
-
+ 
+// ---------------------------------------------------------------------------
+// HIG Inset Grouped Section
+// cardBg  = secondarySystemBackground  (#F2F2F7 light / #1C1C1E dark)
+// rowBg   = systemBackground           (#FFFFFF light / #000000 dark)
+// ---------------------------------------------------------------------------
 function SectionCard({
   title,
   children,
-  cardBg,
-  rowBg,
+  theme,
 }: {
   title: string;
   children: React.ReactNode;
-  cardBg: string;
-  rowBg: string;
+  theme: typeof Colors["light"];
 }) {
+  const isDark = theme.background === "#000000";
+  const cardBg = isDark ? "#1C1C1E" : "#F2F2F7";
+ 
   return (
-    <View style={[styles.sectionCard, { backgroundColor: cardBg }]}>
-      <ThemedText style={styles.sectionTitle}>{title}</ThemedText>
-      {children}
+    <View style={styles.sectionOuter}>
+      {/* HIG uppercase section header above the card */}
+      <ThemedText style={[styles.sectionHeader, { color: theme.icon }]}>
+        {title.toUpperCase()}
+      </ThemedText>
+      <View style={[styles.sectionCard, { backgroundColor: cardBg }]}>
+        {children}
+      </View>
     </View>
   );
 }
-
+ 
+// HIG inset grouped row — separator between rows, not cards
 function InfoRow({
   icon,
   label,
   value,
   isLast,
-  rowBg,
+  theme,
   shrinkValue,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   isLast?: boolean;
-  rowBg: string;
+  theme: typeof Colors["light"];
   shrinkValue?: boolean;
 }) {
   return (
     <>
-      <View style={[styles.infoRow, { backgroundColor: rowBg }]}>
+      <View style={[styles.infoRow, { backgroundColor: "transparent" }]}>
         <View style={styles.infoLeft}>
           <View style={styles.infoIconWrap}>{icon}</View>
-          <ThemedText style={styles.infoLabel}>{label}</ThemedText>
+          <ThemedText style={[styles.infoLabel, { color: theme.text }]}>
+            {label}
+          </ThemedText>
         </View>
         <ThemedText
-          style={[styles.infoValue, shrinkValue && styles.infoValueShrink]}
+          style={[
+            styles.infoValue,
+            { color: theme.icon },
+            shrinkValue && styles.infoValueShrink,
+          ]}
           numberOfLines={1}
           adjustsFontSizeToFit={shrinkValue}
           minimumFontScale={0.85}
@@ -99,25 +123,36 @@ function InfoRow({
           {value}
         </ThemedText>
       </View>
-      {!isLast && <View style={styles.rowGap} />}
+      {/* HIG hairline separator — not shown after last row */}
+      {!isLast && (
+        <View
+          style={[
+            styles.separator,
+            { backgroundColor: theme.tabIconDefault + "40" },
+          ]}
+        />
+      )}
     </>
   );
 }
-
+ 
+// ---------------------------------------------------------------------------
+// Screen
+// ---------------------------------------------------------------------------
 export default function ProfileScreen() {
-  const colorScheme = useColorScheme() ?? "dark";
+  const colorScheme = useColorScheme() ?? "light";
   const theme = Colors[colorScheme];
-
-  const cardBg = colorScheme === "dark" ? "#1c1c1c" : "#f2f2f2";
-  const rowBg = colorScheme === "dark" ? "#2a2a2a" : "#e8e8e8";
-  const avatarBg = colorScheme === "dark" ? "#2e1a1a" : "#fde8e8";
-  const iconColor = colorScheme === "dark" ? "#8a8a8a" : "#888";
-  const accentRed = "#e84040";
-
+  const isDark = colorScheme === "dark";
+ 
+  // HIG semantic background layers derived from theme
+  const cardBg   = isDark ? "#1C1C1E" : "#F2F2F7"; // secondarySystemBackground
+  const avatarBg = isDark ? "#1C1C1E" : "#F2F2F7"; // same layer as card
+ 
   const [userData, setUserData] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState<string | null>(null);
+ 
+  // ── Fetch — unchanged ───────────────────────────────────────────────────
   useEffect(() => {
     const uid = auth.currentUser?.uid;
     if (!uid) {
@@ -125,7 +160,6 @@ export default function ProfileScreen() {
       setLoading(false);
       return;
     }
-
     getDoc(doc(db, "users", uid))
       .then((snap) => {
         if (snap.exists()) {
@@ -137,15 +171,15 @@ export default function ProfileScreen() {
       .catch(() => setError("Failed to load profile."))
       .finally(() => setLoading(false));
   }, []);
-
+ 
   if (loading) {
     return (
       <ThemedView style={styles.centered}>
-        <ActivityIndicator size="large" color={accentRed} />
+        <ActivityIndicator size="large" color={theme.tint} />
       </ThemedView>
     );
   }
-
+ 
   if (error || !userData) {
     return (
       <ThemedView style={styles.centered}>
@@ -153,27 +187,26 @@ export default function ProfileScreen() {
       </ThemedView>
     );
   }
-
+ 
+  // ── Derived display values — unchanged ──────────────────────────────────
   const { profile, insulinSettings, displayName } = userData;
-  const dob = profile.dateOfBirth?.toDate?.();
-  const age = dob ? calcAge(dob) : "—";
-  const weightLbs = profile.weight?.lbs ?? "—";
-  const heightStr =
+  const dob         = profile.dateOfBirth?.toDate?.();
+  const age         = dob ? calcAge(dob) : "—";
+  const weightLbs   = profile.weight?.lbs ?? "—";
+  const heightStr   =
     profile.height?.feet != null
       ? `${profile.height.feet}'${profile.height.inches}"`
       : "—";
-  const glucoseUnit = profile.glucoseUnit ?? "mg/dL";
-  const carbRatio = insulinSettings?.insulinToCarbRatio
+  const glucoseUnit       = profile.glucoseUnit ?? "mg/dL";
+  const carbRatio         = insulinSettings?.insulinToCarbRatio
     ? `1:${insulinSettings.insulinToCarbRatio}g`
     : "—";
-  const correctionFactor = insulinSettings?.correctionFactor
+  const correctionFactor  = insulinSettings?.correctionFactor
     ? `${insulinSettings.correctionFactor} ${glucoseUnit}`
     : "—";
-
-  // Target glucose with defaults for users created before this feature
-  const targetGlucoseMax = profile.targetGlucose?.max ?? 180;
-  const targetGlucoseMin = profile.targetGlucose?.min ?? 70;
-
+  const targetGlucoseMax  = profile.targetGlucose?.max ?? 180;
+  const targetGlucoseMin  = profile.targetGlucose?.min ?? 70;
+ 
   const initials = displayName
     ? displayName
         .split(" ")
@@ -182,7 +215,27 @@ export default function ProfileScreen() {
         .toUpperCase()
         .slice(0, 2)
     : "?";
-
+ 
+  // ── Edit button navigation — unchanged ──────────────────────────────────
+  const goToEdit = () =>
+    router.push({
+      pathname: "/edit-profile" as any,
+      params: {
+        displayName,
+        diabetesType:       profile.diabetesType,
+        dateOfBirth:        dob ? dob.toISOString().split("T")[0] : "",
+        diagnosisYear:      profile.diagnosisYear ? String(profile.diagnosisYear) : "",
+        glucoseUnit:        profile.glucoseUnit ?? "mg/dL",
+        heightFeet:         profile.height?.feet   != null ? String(profile.height.feet)   : "",
+        heightInches:       profile.height?.inches != null ? String(profile.height.inches) : "",
+        weightLbs:          profile.weight?.lbs    != null ? String(profile.weight.lbs)    : "",
+        insulinToCarbRatio: insulinSettings?.insulinToCarbRatio ? String(insulinSettings.insulinToCarbRatio) : "",
+        correctionFactor:   insulinSettings?.correctionFactor   ? String(insulinSettings.correctionFactor)   : "",
+        targetGlucoseMin:   String(targetGlucoseMin),
+        targetGlucoseMax:   String(targetGlucoseMax),
+      },
+    });
+ 
   return (
     <SafeAreaView
       style={[styles.safe, { backgroundColor: theme.background }]}
@@ -193,236 +246,198 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.profileCard, { backgroundColor: cardBg }]}>
-          <View style={[styles.avatarWrap, { backgroundColor: avatarBg }]}>
-            <ThemedText style={[styles.avatarInitials, { color: accentRed }]}>
+ 
+        {/* ── Avatar + name hero card ── */}
+        <View style={[styles.heroCard, { backgroundColor: cardBg }]}>
+          {/* Avatar circle — tint-coloured ring, icon-coloured bg */}
+          <View
+            style={[
+              styles.avatarWrap,
+              {
+                backgroundColor: avatarBg,
+                borderColor: theme.tint,
+              },
+            ]}
+          >
+            <ThemedText style={[styles.avatarInitials, { color: theme.tint }]}>
               {initials}
             </ThemedText>
           </View>
-
-          <ThemedText style={styles.profileName}>{displayName}</ThemedText>
+ 
+          <ThemedText style={[styles.profileName, { color: theme.text }]}>
+            {displayName}
+          </ThemedText>
           <ThemedText style={[styles.profileSub, { color: theme.icon }]}>
             {formatDiabetesType(profile.diabetesType)}
           </ThemedText>
-
+ 
+          {/* HIG primary button — filled, rounded, tint colour */}
           <TouchableOpacity
-            style={[styles.editButton, { backgroundColor: accentRed }]}
-            onPress={() =>
-              router.push({
-                pathname: "/edit-profile" as any,
-                params: {
-                  displayName,
-                  diabetesType: profile.diabetesType,
-                  // Convert Firestore Timestamp → "YYYY-MM-DD" string for the form
-                  dateOfBirth: dob
-                    ? dob.toISOString().split("T")[0]
-                    : "",
-                  diagnosisYear: profile.diagnosisYear
-                    ? String(profile.diagnosisYear)
-                    : "",
-                  glucoseUnit: profile.glucoseUnit ?? "mg/dL",
-                  heightFeet: profile.height?.feet != null
-                    ? String(profile.height.feet)
-                    : "",
-                  heightInches: profile.height?.inches != null
-                    ? String(profile.height.inches)
-                    : "",
-                  weightLbs: profile.weight?.lbs != null
-                    ? String(profile.weight.lbs)
-                    : "",
-                  insulinToCarbRatio: insulinSettings?.insulinToCarbRatio
-                    ? String(insulinSettings.insulinToCarbRatio)
-                    : "",
-                  correctionFactor: insulinSettings?.correctionFactor
-                    ? String(insulinSettings.correctionFactor)
-                    : "",
-                  targetGlucoseMin: String(targetGlucoseMin),
-                  targetGlucoseMax: String(targetGlucoseMax),
-                },
-              })
-            }
+            style={[styles.editButton, { backgroundColor: theme.tint }]}
+            onPress={goToEdit}
             activeOpacity={0.85}
           >
             <ThemedText style={styles.editButtonText}>Edit Profile</ThemedText>
           </TouchableOpacity>
         </View>
-
-        <SectionCard title="Basic Information" cardBg={cardBg} rowBg={rowBg}>
+ 
+        {/* ── Basic Information ── */}
+        <SectionCard title="Basic Information" theme={theme}>
           <InfoRow
-            icon={<Ionicons name="calendar-outline" size={18} color={iconColor} />}
+            icon={<Ionicons name="calendar-outline" size={18} color={theme.icon} />}
             label="Age"
             value={`${age} years`}
-            rowBg={rowBg}
+            theme={theme}
           />
           <InfoRow
-            icon={<Feather name="shopping-bag" size={18} color={iconColor} />}
+            icon={<Feather name="shopping-bag" size={18} color={theme.icon} />}
             label="Weight"
             value={`${weightLbs} lbs`}
-            rowBg={rowBg}
+            theme={theme}
           />
           <InfoRow
-            icon={<MaterialCommunityIcons name="human-male-height" size={18} color={iconColor} />}
+            icon={<MaterialCommunityIcons name="human-male-height" size={18} color={theme.icon} />}
             label="Height"
             value={heightStr}
-            rowBg={rowBg}
+            theme={theme}
             isLast
           />
         </SectionCard>
-
+ 
         {/* ── Target Glucose Range ── */}
-        <SectionCard title="Target Glucose Range" cardBg={cardBg} rowBg={rowBg}>
+        <SectionCard title="Target Glucose Range" theme={theme}>
           <InfoRow
-            icon={<MaterialCommunityIcons name="trending-up" size={18} color={iconColor} />}
+            icon={<MaterialCommunityIcons name="trending-up" size={18} color={theme.icon} />}
             label="Maximum"
             value={`${targetGlucoseMax} ${glucoseUnit}`}
-            rowBg={rowBg}
+            theme={theme}
           />
           <InfoRow
-            icon={<MaterialCommunityIcons name="target" size={18} color={iconColor} />}
+            icon={<MaterialCommunityIcons name="target" size={18} color={theme.icon} />}
             label="Minimum"
             value={`${targetGlucoseMin} ${glucoseUnit}`}
-            rowBg={rowBg}
+            theme={theme}
             isLast
           />
         </SectionCard>
-
-        <SectionCard title="Insulin Settings" cardBg={cardBg} rowBg={rowBg}>
+ 
+        {/* ── Insulin Settings ── */}
+        <SectionCard title="Insulin Settings" theme={theme}>
           <InfoRow
-            icon={<MaterialCommunityIcons name="pulse" size={18} color={iconColor} />}
+            icon={<MaterialCommunityIcons name="pulse" size={18} color={theme.icon} />}
             label="Carb Ratio"
             value={carbRatio}
-            rowBg={rowBg}
+            theme={theme}
           />
           <InfoRow
-            icon={<MaterialCommunityIcons name="pulse" size={18} color={iconColor} />}
+            icon={<MaterialCommunityIcons name="pulse" size={18} color={theme.icon} />}
             label="Correction Factor"
             value={correctionFactor}
-            rowBg={rowBg}
+            theme={theme}
             isLast
           />
         </SectionCard>
-
-        <SectionCard title="Account" cardBg={cardBg} rowBg={rowBg}>
+ 
+        {/* ── Account ── */}
+        <SectionCard title="Account" theme={theme}>
           <InfoRow
-            icon={<Ionicons name="mail-outline" size={18} color={iconColor} />}
-            label="Email "
+            icon={<Ionicons name="mail-outline" size={18} color={theme.icon} />}
+            label="Email"
             value={userData.email}
-            rowBg={rowBg}
+            theme={theme}
             shrinkValue
           />
           <InfoRow
-            icon={<Ionicons name="calendar-outline" size={18} color={iconColor} />}
+            icon={<Ionicons name="calendar-outline" size={18} color={theme.icon} />}
             label="Diagnosis Year"
             value={`${profile.diagnosisYear}`}
-            rowBg={rowBg}
+            theme={theme}
             isLast
           />
         </SectionCard>
+ 
       </ScrollView>
     </SafeAreaView>
   );
 }
-
+ 
+// ---------------------------------------------------------------------------
+// Styles — layout & sizing only, zero hardcoded colours
+// ---------------------------------------------------------------------------
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-  },
-  centered: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scroll: {
-    flex: 1,
-  },
+  safe:         { flex: 1 },
+  centered:     { flex: 1, alignItems: "center", justifyContent: "center" },
+  scroll:       { flex: 1 },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 32,
-    gap: 14,
+    paddingTop: 16,
+    paddingBottom: 40,
+    gap: 0, // gaps handled by sectionOuter marginTop
   },
-
-  profileCard: {
-    borderRadius: 18,
+ 
+  // ── Hero card ──
+  heroCard: {
+    borderRadius: 16,
     padding: 24,
     alignItems: "center",
     gap: 4,
+    marginBottom: 32,
   },
   avatarWrap: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 8,
+    marginBottom: 10,
   },
-  avatarInitials: {
-    fontSize: 22,
-    fontWeight: "700",
-  },
-  profileName: {
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  profileSub: {
-    fontSize: 14,
-    marginBottom: 4,
-  },
+  avatarInitials: { fontSize: 24, fontWeight: "700" },
+  profileName:    { fontSize: 20, fontWeight: "700" },
+  profileSub:     { fontSize: 14, marginBottom: 4 },
   editButton: {
-    marginTop: 12,
+    marginTop: 14,
     width: "100%",
-    borderRadius: 30,
+    borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",
   },
   editButtonText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: 0.3,
-  },
-
-  sectionCard: {
-    borderRadius: 18,
-    padding: 16,
-  },
-  sectionTitle: {
-    fontSize: 15,
     fontWeight: "600",
-    marginBottom: 12,
+    letterSpacing: 0.2,
   },
-
+ 
+  // ── Section ──
+  sectionOuter:  { marginBottom: 28 },
+  sectionHeader: {
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+    marginBottom: 6,
+    marginLeft: 4,
+  },
+  sectionCard: {
+    borderRadius: 12,
+    overflow: "hidden",
+    paddingHorizontal: 16,
+  },
+ 
+  // ── Row ──
   infoRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingVertical: 13,
   },
-  infoLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    flexShrink: 0,
-  },
-  infoIconWrap: {
-    width: 24,
-    alignItems: "center",
-  },
-  infoLabel: {
-    fontSize: 15,
-  },
-  infoValue: {
-    fontSize: 15,
-    fontWeight: "500",
-  },
-infoValueShrink: {
-    flexShrink: 1,
-    maxWidth: "70%",
-    textAlign: "right",
-},
-  rowGap: {
-    height: 6,
-  },
+  infoLeft:    { flexDirection: "row", alignItems: "center", gap: 10, flexShrink: 0 },
+  infoIconWrap:{ width: 24, alignItems: "center" },
+  infoLabel:   { fontSize: 16 },
+  infoValue:   { fontSize: 16, fontWeight: "500" },
+  infoValueShrink: { flexShrink: 1, maxWidth: "55%", textAlign: "right" },
+ 
+  // HIG hairline separator
+  separator: { height: StyleSheet.hairlineWidth, marginLeft: 44 },
 });
+ 
