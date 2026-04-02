@@ -1,5 +1,6 @@
 import { auth, db } from "@/config/firebase";
 import { colors, Colors, radius, spacing, textStyles, typography } from "@/constants/theme";
+import { useAccentColor } from "@/context/accent-color";
 import { useIOB } from "@/hooks/use-iob";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { Ionicons } from "@expo/vector-icons";
@@ -128,7 +129,7 @@ function computeTimeInRange(records: EgvRecord[]): number | null {
   return Math.round((inRange.length / todayRecords.length) * 100);
 }
 
-function GlucoseGraph({ records, accent, borderColor, textColor }: { records: EgvRecord[]; accent?: string; borderColor?: string; textColor?: string }) {
+function GlucoseGraph({ records, accent, borderColor, textColor, timeFrameHours = 24 }: { records: EgvRecord[]; accent?: string; borderColor?: string; textColor?: string; timeFrameHours?: number }) {
   const screenWidth = Dimensions.get("window").width;
   const cardPadding = 32;
   const svgWidth = screenWidth - cardPadding - 2;
@@ -139,8 +140,12 @@ function GlucoseGraph({ records, accent, borderColor, textColor }: { records: Eg
   const graphBorderColor = borderColor || colors.border;
   const graphTextColor = textColor || colors.textSecondary;
 
+  // Filter records to the selected time frame
+  const now = Date.now();
+  const cutoffTime = now - timeFrameHours * 60 * 60 * 1000;
+
   const validRecords = records.filter(
-    (r) => r.value !== null && r.value >= 39 && r.value <= 401
+    (r) => r.value !== null && r.value >= 39 && r.value <= 401 && new Date(r.systemTime).getTime() >= cutoffTime
   );
 
   if (validRecords.length < 2) {
@@ -183,12 +188,20 @@ function GlucoseGraph({ records, accent, borderColor, textColor }: { records: Eg
   const startHour = new Date(minTime);
   startHour.setMinutes(0, 0, 0);
   startHour.setHours(startHour.getHours() + 1);
-  for (let t = startHour.getTime(); t < maxTime; t += 2 * 60 * 60 * 1000) {
+
+  // Adjust label interval based on time frame
+  const labelIntervalHours = timeFrameHours <= 2 ? 0.5 : timeFrameHours <= 6 ? 1 : 2;
+  const labelIntervalMs = labelIntervalHours * 60 * 60 * 1000;
+
+  for (let t = startHour.getTime(); t < maxTime; t += labelIntervalMs) {
     const d = new Date(t);
     const hr = d.getHours();
+    const min = d.getMinutes();
     const ampm = hr >= 12 ? "pm" : "am";
     const hr12 = hr % 12 || 12;
-    hourLabels.push({ x: scaleX(t), label: `${hr12}${ampm}` });
+    // Show minutes for sub-hour intervals
+    const label = labelIntervalHours < 1 ? `${hr12}:${min.toString().padStart(2, '0')}` : `${hr12}${ampm}`;
+    hourLabels.push({ x: scaleX(t), label });
   }
 
   const yLabels = [70, 120, 180, 250];
@@ -202,7 +215,7 @@ function GlucoseGraph({ records, accent, borderColor, textColor }: { records: Eg
         width={plotWidth}
         height={lowY - highY}
         fill={colors.glucoseInRange}
-        opacity={0.1}
+        opacity={0.25}
       />
       {/* High zone (red) */}
       <Rect
@@ -294,7 +307,7 @@ function InfoCard({
         <ActivityIndicator size="small" color={accent} style={{ marginTop: 4 }} />
       ) : (
         <>
-          <ThemedText style={[infoStyles.value, { color: accent }]}>
+          <ThemedText style={infoStyles.value}>
             {value}
           </ThemedText>
           {subValue ? (
@@ -382,7 +395,7 @@ function TirRingCard({
 
 export function GlucoseCard() {
   const borderColor = useThemeColor({light: colors.border, dark: Colors.dark.border}, "border");
-  const accent = useThemeColor({}, "accent");
+  const accent = useAccentColor();
   const cardBg = useThemeColor(
     { light: colors.surfaceSubtle, dark: Colors.dark.surface },
     "surface"
@@ -414,6 +427,7 @@ export function GlucoseCard() {
 
   const [lastBolus, setLastBolus] = useState<LastBolus>(null);
   const [bolusLoading, setBolusLoading] = useState(true);
+  const [timeFrame, setTimeFrame] = useState<2 | 6 | 12>(2);
 
   // ── Fetch last bolus from Firestore ──────────────────────────────────────
   const fetchLastBolus = useCallback(async () => {
@@ -639,9 +653,32 @@ export function GlucoseCard() {
         />
       </View>
 
+      {/* Time Frame Selector */}
+      <View style={styles.timeFrameRow}>
+        {([2, 6, 12] as const).map((hours) => (
+          <Pressable
+            key={hours}
+            style={[
+              styles.timeFrameButton,
+              { backgroundColor: timeFrame === hours ? accent : cardBg },
+            ]}
+            onPress={() => setTimeFrame(hours)}
+          >
+            <ThemedText
+              style={[
+                styles.timeFrameText,
+                timeFrame === hours && styles.timeFrameTextActive,
+              ]}
+            >
+              {hours}hr
+            </ThemedText>
+          </Pressable>
+        ))}
+      </View>
+
       {/* Graph */}
       <View style={styles.graphContainer}>
-        <GlucoseGraph records={records} accent={accent} borderColor={graphBorderColor} textColor={graphTextColor} />
+        <GlucoseGraph records={records} accent={accent} borderColor={graphBorderColor} textColor={graphTextColor} timeFrameHours={timeFrame} />
       </View>
     </ThemedView>
   );
@@ -711,8 +748,28 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   graphContainer: {
-    marginTop: spacing[3],
+    marginTop: spacing[2],
     alignItems: "center",
+  },
+  timeFrameRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: spacing[2],
+    marginTop: spacing[3],
+  },
+  timeFrameButton: {
+    paddingVertical: spacing[1] + 2,
+    paddingHorizontal: spacing[3],
+    borderRadius: radius.full,
+  },
+  timeFrameText: {
+    fontSize: typography.sizes.caption1,
+    fontWeight: "600",
+    opacity: 0.6,
+  },
+  timeFrameTextActive: {
+    color: colors.textInverse,
+    opacity: 1,
   },
   graphEmpty: {
     height: GRAPH_HEIGHT,
@@ -741,7 +798,7 @@ const infoStyles = StyleSheet.create({
   label: {
     fontSize: typography.sizes.caption2,
     fontWeight: "600",
-    opacity: 0.5,
+    opacity: 0.6,
     textTransform: "uppercase",
     letterSpacing: 0.4,
     marginBottom: spacing[1] / 2,

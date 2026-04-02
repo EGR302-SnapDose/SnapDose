@@ -25,6 +25,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { db } from '@/config/firebase';
 import { colors, Colors } from '@/constants/theme';
+import { useAccentColor } from '@/context/accent-color';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -387,7 +388,7 @@ function FullLogModal({
   loading,
 }: FullLogModalProps) {
   const insets = useSafeAreaInsets();
-  const accent = useThemeColor({}, 'accent');
+  const accent = useAccentColor();
   const background = useThemeColor({}, 'background');
   const cardBg = useThemeColor({ light: colors.surfaceSubtle, dark: colors.surface }, 'surface');
   const mutedColor = useThemeColor(
@@ -545,7 +546,7 @@ export function TreatmentLogCard() {
   const [modalOpen, setModalOpen] = useState(false);
   const { events, loading } = useTreatmentLog();
  
-  const accent = useThemeColor({}, 'accent');
+  const accent = useAccentColor();
   const borderColor = useThemeColor(
     { light: colors.border, dark: Colors.dark.border },
     'border',
