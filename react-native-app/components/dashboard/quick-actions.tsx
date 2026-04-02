@@ -1,3 +1,4 @@
+import { colors, Colors, radius, spacing, typography } from "@/constants/theme";
 import { useAccentColor } from "@/context/accent-color";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { router } from "expo-router";
@@ -45,7 +46,7 @@ function AnimatedButton({ onPress, accent, buttonBg, children }: {
 }
 
 export function QuickActions() {
-    const pageBg = useThemeColor({ light: "#FFFFFF", dark: "#121212" }, "background");
+    const pageBg = useThemeColor({ light: colors.surface, dark: Colors.dark.surface }, "surface");
     const accent = useAccentColor();
 
     return (
@@ -56,7 +57,7 @@ export function QuickActions() {
                 buttonBg={pageBg}
             >
                 <ThemedText style={[styles.buttonText, { color: accent }]}>
-                    Snap a Meal
+                    Log Meal
                 </ThemedText>
             </AnimatedButton>
 
@@ -66,7 +67,7 @@ export function QuickActions() {
                 buttonBg={pageBg}
             >
                 <ThemedText style={[styles.buttonText, { color: accent }]}>
-                    Dose Insulin
+                    Dose
                 </ThemedText>
             </AnimatedButton>
         </View>
@@ -76,18 +77,18 @@ export function QuickActions() {
 const styles = StyleSheet.create({
     container: {
         flexDirection: "row",
-        gap: 12,
-        marginBottom: 16,
+        gap: spacing[3],
+        marginBottom: spacing[4],
     },
     button: {
         flex: 1,
-        paddingVertical: 14,
-        borderRadius: 12,
+        paddingVertical: spacing[3] + spacing[1],
+        borderRadius: radius.lg,
         alignItems: "center",
         justifyContent: "center",
     },
     buttonText: {
-        fontSize: 16,
+        fontSize: typography.sizes.callout,
         fontWeight: "600",
     },
 });

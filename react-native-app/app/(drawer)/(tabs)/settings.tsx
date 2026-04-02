@@ -1,6 +1,10 @@
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
 import PumpPairingSection from '@/components/ui/PumpPairingSection';
 import { db } from "@/config/firebase";
+import { colors, Colors } from "@/constants/theme";
 import { useAccentColor } from "@/context/accent-color";
+import { useThemeColor } from "@/hooks/use-theme-color";
 import { useFocusEffect } from "@react-navigation/native";
 import * as WebBrowser from "expo-web-browser";
 import { getAuth } from "firebase/auth";
@@ -11,10 +15,10 @@ import {
     Pressable,
     ScrollView,
     StyleSheet,
-    Text,
     TouchableOpacity,
     View,
 } from "react-native";
+
 const API_BASE =
     "https://us-central1-egr302-snapdose.cloudfunctions.net/dexcom-auth";
 
@@ -37,15 +41,29 @@ export default function SettingsScreen() {
     const userId = getAuth().currentUser?.uid;
     const currentAccent = useAccentColor();
 
+    // Theme colors
+    const rowBg = useThemeColor(
+        { light: colors.surfaceSubtle, dark: Colors.dark.surface },
+        "surface"
+    );
+    const sectionTitleColor = useThemeColor(
+        { light: colors.textSecondary, dark: Colors.dark.icon },
+        "icon"
+    );
+    const statusColor = useThemeColor(
+        { light: colors.textSecondary, dark: Colors.dark.icon },
+        "icon"
+    );
+
     const checkDexcomStatus = async () => {
         if (!userId) return;
         try {
             const res = await fetch(`${API_BASE}/status?userId=${userId}`);
             const data = await res.json();
-setDexcomConnected(data.connected);
-if (data.connected) {
-    setCgmLastSeen('Just now');
-}
+            setDexcomConnected(data.connected);
+            if (data.connected) {
+                setCgmLastSeen('Just now');
+            }
             // Load accent color from Firebase
             const userDoc = await getDoc(doc(db, 'users', userId));
             if (userDoc.exists()) {
@@ -98,147 +116,162 @@ if (data.connected) {
     };
 
     return (
-        <ScrollView style={styles.container}>
-            <Text style={styles.title}>Settings</Text>
+        <ThemedView style={styles.container}>
+            <ScrollView style={styles.scrollView}>
+                <ThemedText style={styles.title}>Settings</ThemedText>
 
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Integrations</Text>
+                <View style={styles.section}>
+                    <ThemedText style={[styles.sectionTitle, { color: sectionTitleColor }]}>
+                        Integrations
+                    </ThemedText>
 
-                {/* Dexcom CGM Row */}
-<View style={styles.row}>
-    <Text style={styles.label}>Dexcom CGM</Text>
+                    {/* Dexcom CGM Row */}
+                    <View style={[styles.row, { backgroundColor: rowBg }]}>
+                        <ThemedText style={styles.label}>Dexcom CGM</ThemedText>
 
-    <View style={styles.rowRight}>
-        <View style={styles.statusBadge}>
-            <View style={[styles.statusDot, {
-                backgroundColor: loading ? '#888' : dexcomConnected ? '#4CAF50' : '#F44336'
-            }]} />
-            <Text style={[styles.statusText, {
-                color: loading ? '#888' : dexcomConnected ? '#4CAF50' : '#F44336'
-            }]}>
-                {loading ? 'Checking...' : dexcomConnected ? 'Online' : 'Offline'}
-            </Text>
-        </View>
-        {cgmLastSeen && <Text style={styles.lastSeen}>Last seen: {cgmLastSeen}</Text>}
-        {!loading && !dexcomConnected && (
-            <Pressable
-                style={styles.connectButton}
-                onPress={connectDexcom}
-                disabled={connecting}
-            >
-                {connecting ? (
-                    <ActivityIndicator color="#fff" />
-                ) : (
-                    <Text style={styles.connectButtonText}>Connect</Text>
-                )}
-            </Pressable>
-        )}
-    </View>
-</View>
-
+                        <View style={styles.rowRight}>
+                            <View style={styles.statusBadge}>
+                                <View style={[styles.statusDot, {
+                                    backgroundColor: loading ? '#888' : dexcomConnected ? '#4CAF50' : '#F44336'
+                                }]} />
+                                <ThemedText style={[styles.statusText, {
+                                    color: loading ? '#888' : dexcomConnected ? '#4CAF50' : '#F44336'
+                                }]}>
+                                    {loading ? 'Checking...' : dexcomConnected ? 'Online' : 'Offline'}
+                                </ThemedText>
+                            </View>
+                            {cgmLastSeen && (
+                                <ThemedText style={[styles.lastSeen, { color: statusColor }]}>
+                                    Last seen: {cgmLastSeen}
+                                </ThemedText>
+                            )}
+                            {!loading && !dexcomConnected && (
+                                <Pressable
+                                    style={styles.connectButton}
+                                    onPress={connectDexcom}
+                                    disabled={connecting}
+                                >
+                                    {connecting ? (
+                                        <ActivityIndicator color="#fff" />
+                                    ) : (
+                                        <ThemedText style={styles.connectButtonText}>Connect</ThemedText>
+                                    )}
+                                </Pressable>
+                            )}
+                        </View>
                     </View>
+                </View>
 
                 {/* Pump Connection Section */}
                 <PumpPairingSection />
 
-            {/* Units Section */}
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Units</Text>
-                <View style={styles.row}>
-                    <View style={styles.rowText}>
-                        <Text style={styles.label}>Blood Glucose</Text>
-                        <Text style={styles.status}>mg/dL</Text>
+                {/* Units Section */}
+                <View style={styles.section}>
+                    <ThemedText style={[styles.sectionTitle, { color: sectionTitleColor }]}>
+                        Units
+                    </ThemedText>
+                    <View style={[styles.row, { backgroundColor: rowBg }]}>
+                        <View style={styles.rowText}>
+                            <ThemedText style={styles.label}>Blood Glucose</ThemedText>
+                            <ThemedText style={[styles.status, { color: statusColor }]}>mg/dL</ThemedText>
+                        </View>
                     </View>
-                </View>
-                <View style={styles.row}>
-                    <View style={styles.rowText}>
-                        <Text style={styles.label}>Carbohydrates</Text>
-                        <Text style={styles.status}>grams</Text>
-                    </View>
-                </View>
-            </View>
-
-            {/* Notifications Section */}
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Notifications</Text>
-                <View style={styles.row}>
-                    <View style={styles.rowText}>
-                        <Text style={styles.label}>High Glucose Alerts</Text>
-                        <Text style={styles.status}>Enabled</Text>
-                    </View>
-                </View>
-                <View style={styles.row}>
-                    <View style={styles.rowText}>
-                        <Text style={styles.label}>Low Glucose Alerts</Text>
-                        <Text style={styles.status}>Enabled</Text>
-                    </View>
-                </View>
-                <View style={styles.row}>
-                    <View style={styles.rowText}>
-                        <Text style={styles.label}>Meal Reminders</Text>
-                        <Text style={styles.status}>Disabled</Text>
-                    </View>
-                </View>
-            </View>
-
-            {/* App Preferences Section */}
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>App Preferences</Text>
-
-                {/* Theme Color */}
-                <View style={styles.colorSection}>
-                    <Text style={styles.label}>Theme Color</Text>
-                    <View style={styles.colorGrid}>
-                        {ACCENT_COLORS.map((color) => (
-                            <TouchableOpacity
-                                key={color}
-                                style={[
-                                    styles.colorOption,
-                                    { backgroundColor: color },
-                                    selectedAccentColor === color && {
-                                        borderColor: '#FFF',
-                                        borderWidth: 3,
-                                    },
-                                ]}
-                                onPress={() => handleColorSelect(color)}
-                                disabled={savingColor}
-                            >
-                                {selectedAccentColor === color && (
-                                    <Text style={styles.checkmark}>✓</Text>
-                                )}
-                            </TouchableOpacity>
-                        ))}
+                    <View style={[styles.row, { backgroundColor: rowBg }]}>
+                        <View style={styles.rowText}>
+                            <ThemedText style={styles.label}>Carbohydrates</ThemedText>
+                            <ThemedText style={[styles.status, { color: statusColor }]}>grams</ThemedText>
+                        </View>
                     </View>
                 </View>
 
-                <View style={styles.row}>
-                    <View style={styles.rowText}>
-                        <Text style={styles.label}>Theme</Text>
-                        <Text style={styles.status}>Light</Text>
+                {/* Notifications Section */}
+                <View style={styles.section}>
+                    <ThemedText style={[styles.sectionTitle, { color: sectionTitleColor }]}>
+                        Notifications
+                    </ThemedText>
+                    <View style={[styles.row, { backgroundColor: rowBg }]}>
+                        <View style={styles.rowText}>
+                            <ThemedText style={styles.label}>High Glucose Alerts</ThemedText>
+                            <ThemedText style={[styles.status, { color: statusColor }]}>Enabled</ThemedText>
+                        </View>
+                    </View>
+                    <View style={[styles.row, { backgroundColor: rowBg }]}>
+                        <View style={styles.rowText}>
+                            <ThemedText style={styles.label}>Low Glucose Alerts</ThemedText>
+                            <ThemedText style={[styles.status, { color: statusColor }]}>Enabled</ThemedText>
+                        </View>
+                    </View>
+                    <View style={[styles.row, { backgroundColor: rowBg }]}>
+                        <View style={styles.rowText}>
+                            <ThemedText style={styles.label}>Meal Reminders</ThemedText>
+                            <ThemedText style={[styles.status, { color: statusColor }]}>Disabled</ThemedText>
+                        </View>
                     </View>
                 </View>
-                <View style={styles.row}>
-                    <View style={styles.rowText}>
-                        <Text style={styles.label}>Language</Text>
-                        <Text style={styles.status}>English</Text>
+
+                {/* App Preferences Section */}
+                <View style={styles.section}>
+                    <ThemedText style={[styles.sectionTitle, { color: sectionTitleColor }]}>
+                        App Preferences
+                    </ThemedText>
+
+                    {/* Theme Color */}
+                    <View style={[styles.colorSection, { backgroundColor: rowBg }]}>
+                        <ThemedText style={styles.label}>Theme Color</ThemedText>
+                        <View style={styles.colorGrid}>
+                            {ACCENT_COLORS.map((color) => (
+                                <TouchableOpacity
+                                    key={color}
+                                    style={[
+                                        styles.colorOption,
+                                        { backgroundColor: color },
+                                        selectedAccentColor === color && {
+                                            borderColor: '#FFF',
+                                            borderWidth: 3,
+                                        },
+                                    ]}
+                                    onPress={() => handleColorSelect(color)}
+                                    disabled={savingColor}
+                                >
+                                    {selectedAccentColor === color && (
+                                        <ThemedText style={styles.checkmark}>✓</ThemedText>
+                                    )}
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+
+                    <View style={[styles.row, { backgroundColor: rowBg }]}>
+                        <View style={styles.rowText}>
+                            <ThemedText style={styles.label}>Theme</ThemedText>
+                            <ThemedText style={[styles.status, { color: statusColor }]}>System</ThemedText>
+                        </View>
+                    </View>
+                    <View style={[styles.row, { backgroundColor: rowBg }]}>
+                        <View style={styles.rowText}>
+                            <ThemedText style={styles.label}>Language</ThemedText>
+                            <ThemedText style={[styles.status, { color: statusColor }]}>English</ThemedText>
+                        </View>
+                    </View>
+                    <View style={[styles.row, { backgroundColor: rowBg }]}>
+                        <View style={styles.rowText}>
+                            <ThemedText style={styles.label}>App Version</ThemedText>
+                            <ThemedText style={[styles.status, { color: statusColor }]}>1.0.0</ThemedText>
+                        </View>
                     </View>
                 </View>
-                <View style={styles.row}>
-                    <View style={styles.rowText}>
-                        <Text style={styles.label}>App Version</Text>
-                        <Text style={styles.status}>1.0.0</Text>
-                    </View>
-                </View>
-            </View>
-        </ScrollView>
+            </ScrollView>
+        </ThemedView>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+    },
+    scrollView: {
+        flex: 1,
         padding: 20,
-        backgroundColor: "#fff",
     },
     title: {
         fontSize: 24,
@@ -251,7 +284,6 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 16,
         fontWeight: "600",
-        color: "#666",
         marginBottom: 12,
     },
     row: {
@@ -260,8 +292,8 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         paddingVertical: 14,
         paddingHorizontal: 16,
-        backgroundColor: "#f8f8f8",
         borderRadius: 10,
+        marginBottom: 8,
     },
     rowText: {
         flex: 1,
@@ -272,7 +304,6 @@ const styles = StyleSheet.create({
     },
     status: {
         fontSize: 13,
-        color: "#888",
         marginTop: 2,
     },
     connectButton: {
@@ -306,10 +337,8 @@ const styles = StyleSheet.create({
     },
     lastSeen: {
         fontSize: 11,
-        color: '#888',
     },
     colorSection: {
-        backgroundColor: '#f8f8f8',
         borderRadius: 10,
         paddingVertical: 16,
         paddingHorizontal: 16,

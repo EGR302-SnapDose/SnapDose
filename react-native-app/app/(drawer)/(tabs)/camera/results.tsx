@@ -1,20 +1,21 @@
-import { useState, useEffect, useRef } from 'react';
-import { ScrollView, StyleSheet, View, TouchableOpacity, Alert, Dimensions, ActivityIndicator } from 'react-native';
+import { DoseConfirmationSheet } from '@/components/dosing/dose-confirmation-sheet';
+import { CarbEstimateDisplay } from '@/components/results/CarbEstimateDisplay';
+import { EditCarbsField } from '@/components/results/EditCarbsField';
+import { FoodsDetectedList } from '@/components/results/FoodsDetectedList';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { auth, db } from '@/config/firebase';
+import { useAccentColor } from '@/context/accent-color';
+import { useIOB } from '@/hooks/use-iob';
+import { useMealByImage } from '@/hooks/use-meal-by-image';
+import { useThemeColor } from '@/hooks/use-theme-color';
+import { updateCarbEstimate } from '@/services/meal-service';
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
-import { useThemeColor } from '@/hooks/use-theme-color';
-import { CarbEstimateDisplay } from '@/components/results/CarbEstimateDisplay';
-import { FoodsDetectedList } from '@/components/results/FoodsDetectedList';
-import { EditCarbsField } from '@/components/results/EditCarbsField';
-import { DoseConfirmationSheet } from '@/components/dosing/dose-confirmation-sheet';
-import { useMealByImage } from '@/hooks/use-meal-by-image';
-import { useIOB } from '@/hooks/use-iob';
-import { updateCarbEstimate } from '@/services/meal-service';
-import { auth, db } from '@/config/firebase';
-import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -22,7 +23,7 @@ function useColors() {
   const background = useThemeColor({}, 'background');
   const controlsBg = useThemeColor({ light: '#F2F2F2', dark: '#1e1e1e' }, 'background');
   const imageBg = useThemeColor({ light: '#E0E0E0', dark: '#252525' }, 'background');
-  const accent = useThemeColor({ light: '#007AFF', dark: '#0A84FF' }, 'background');
+  const accent = useAccentColor();
   const muted = useThemeColor({ light: '#888888', dark: '#888888' }, 'icon');
   const border = useThemeColor({ light: '#CCCCCC', dark: '#333333' }, 'icon');
   const danger = useThemeColor({ light: '#FF3B30', dark: '#FF453A' }, 'icon');
