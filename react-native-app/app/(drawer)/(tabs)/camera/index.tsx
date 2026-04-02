@@ -3,6 +3,7 @@ import { CameraControls } from '@/components/camera/CaptureButton';
 import { PhotoPreview } from '@/components/camera/PhotoPreview';
 import { ThemedView } from '@/components/themed-view';
 import { Toast } from '@/components/ui/Toast';
+import { Colors, colors, radius, spacing } from '@/constants/theme';
 import { useCameraPermission } from '@/hooks/use-camera-permissions';
 import { usePhotoStorage } from '@/hooks/use-photo-storage';
 import { useThemeColor } from '@/hooks/use-theme-color';
@@ -33,7 +34,12 @@ export default function CameraScreen() {
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { askForPermission } = useCameraPermission();
   const { savePhoto, removePhoto } = usePhotoStorage();
-  const controlsBg = useThemeColor({ light: '#F2F2F2', dark: '#1e1e1e' }, 'background');
+
+  // HIG: Use semantic surface tokens — never hardcoded hex
+  const controlsBg = useThemeColor(
+    { light: colors.surfaceSubtle, dark: Colors.dark.surface },
+    'surface'
+  );
 
   useEffect(() => {
     Camera.getCameraPermissionsAsync().then((permission) => {
@@ -133,7 +139,10 @@ export default function CameraScreen() {
   return (
     <ThemedView style={styles.container}>
       <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
-      <SafeAreaView style={[styles.controls, { backgroundColor: controlsBg }]}>
+      <SafeAreaView
+        style={[styles.controls, { backgroundColor: controlsBg }]}
+        edges={['bottom']}
+      >
         <CameraControls
           onCapture={handleCapture}
           onFlip={toggleFacing}
@@ -147,7 +156,21 @@ export default function CameraScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  camera: { flex: 1 },
-  controls: { justifyContent: 'flex-end' },
+  container: {
+    flex: 1,
+  },
+  camera: {
+    flex: 1,
+  },
+  // HIG: Controls bar sits at the bottom, respects safe area, uses
+  // consistent padding from the 8pt grid. borderRadius on top corners
+  // gives a sheet-like appearance matching iOS native camera UI.
+  controls: {
+    justifyContent: 'flex-end',
+    paddingHorizontal: spacing[5],
+    paddingTop: spacing[4],
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+
+  },
 });

@@ -1,28 +1,31 @@
-import { StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { colors, Colors, spacing } from '@/constants/theme';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { Ionicons } from '@expo/vector-icons';
+import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface CameraControlsProps {
   onCapture: () => void;
   onFlip: () => void;
-  onBack: () => void;
+  onBack: () => void;  // kept in props for API compatibility, unused
   isCapturing: boolean;
 }
 
-export function CameraControls({ onCapture, onFlip, onBack, isCapturing }: CameraControlsProps) {
-  const buttonBg = useThemeColor({ light: '#fff', dark: '#fff' }, 'background');
+export function CameraControls({ onCapture, onFlip, isCapturing }: CameraControlsProps) {
+  const buttonBg = useThemeColor({ light: colors.surface, dark: Colors.dark.text }, 'surface');
   const borderColor = useThemeColor(
-    { light: 'rgba(0,0,0,0.2)', dark: 'rgba(255,255,255,0.5)' },
-    'background'
+    { light: 'rgba(0,0,0,0.2)', dark: 'rgba(255,255,255,0.3)' },
+    'border'
   );
-  const iconColor = useThemeColor({ light: '#000', dark: '#fff' }, 'background');
-  const barBg = useThemeColor({ light: '#F2F2F2', dark: '#1e1e1e' }, 'background');
+  const iconColor = useThemeColor(
+    { light: colors.textPrimary, dark: Colors.dark.text },
+    'text'
+  );
 
   return (
-    <View style={[styles.container, { backgroundColor: barBg }]}>
-      <TouchableOpacity style={styles.sideButton} onPress={onBack}>
-        <Ionicons name="chevron-back" size={24} color={iconColor} />
-      </TouchableOpacity>
+    // No backgroundColor here — lets the parent controls bar show through cleanly
+    <View style={styles.container}>
+      {/* Empty view keeps the capture button centered */}
+      <View style={styles.sideSlot} />
 
       <TouchableOpacity
         style={[
@@ -40,7 +43,7 @@ export function CameraControls({ onCapture, onFlip, onBack, isCapturing }: Camer
         )}
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.sideButton} onPress={onFlip}>
+      <TouchableOpacity style={styles.sideSlot} onPress={onFlip}>
         <Ionicons name="camera-reverse-outline" size={24} color={iconColor} />
       </TouchableOpacity>
     </View>
@@ -52,13 +55,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 48,
-    paddingBottom: 24,
-    paddingTop: 16,
+    paddingHorizontal: spacing[12],
+    paddingBottom: spacing[6],
+    paddingTop: spacing[4],
   },
-  sideButton: {
-    width: 40,
-    height: 40,
+  sideSlot: {
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -70,12 +73,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 4,
   },
-  disabled: {
-    opacity: 0.6,
-  },
   captureButtonInner: {
     width: 48,
     height: 48,
     borderRadius: 24,
+  },
+  disabled: {
+    opacity: 0.6,
   },
 });
