@@ -1,14 +1,12 @@
 package com.snapdose.api.service;
 
-import java.util.Optional;
-
-import org.springframework.stereotype.Service;
-
 import com.snapdose.api.model.BolusRecord;
 import com.snapdose.api.model.BolusRequest;
 import com.snapdose.api.model.BolusResponse;
 import com.snapdose.api.model.PumpStatusResponse;
 import com.snapdose.api.repository.BolusRepository;
+import java.util.Optional;
+import org.springframework.stereotype.Service;
 
 @Service
 public class PumpService {
@@ -16,7 +14,10 @@ public class PumpService {
     private final BolusService bolusService;
     private final BolusRepository bolusRepository;
 
-    public PumpService(BolusService bolusService, BolusRepository bolusRepository) {
+    public PumpService(
+        BolusService bolusService,
+        BolusRepository bolusRepository
+    ) {
         this.bolusService = bolusService;
         this.bolusRepository = bolusRepository;
     }
@@ -29,9 +30,11 @@ public class PumpService {
         PumpStatusResponse response = new PumpStatusResponse();
         response.setDeviceId(deviceId);
 
-        Optional<BolusRecord> activeBolus = bolusRepository.findActiveByDeviceId(deviceId);
-        if (activeBolus.isPresent()) {
-            BolusRecord record = activeBolus.get();
+        Optional<BolusRecord> active = bolusRepository.findActiveByDeviceId(
+            deviceId
+        );
+        if (active.isPresent()) {
+            BolusRecord record = active.get();
             response.setConnected(true);
             response.setStatus("busy");
             response.setActiveBolusId(record.getBolusId());
@@ -43,14 +46,6 @@ public class PumpService {
             response.setLastHeartbeat(System.currentTimeMillis());
         }
 
-        return response;
-    }
-
-    public PumpStatusResponse getPumpStatusGeneric() {
-        PumpStatusResponse response = new PumpStatusResponse();
-        response.setConnected(true);
-        response.setStatus("idle");
-        response.setLastHeartbeat(System.currentTimeMillis());
         return response;
     }
 }

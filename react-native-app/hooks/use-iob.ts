@@ -1,6 +1,6 @@
-import { auth, db } from '@/config/firebase';
-import { collection, getDocs, Timestamp } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { auth, db } from "@/config/firebase";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { useEffect, useState } from "react";
 
 let _refreshIOB: (() => void) | null = null;
 
@@ -16,27 +16,21 @@ export function useIOB(): number {
       }
 
       try {
-        const dosesCollection = collection(db, 'users', user.uid, 'doses');
-        const snapshot = await getDocs(dosesCollection);
+        const bolusesRef = collection(db, "users", user.uid, "boluses");
+        const q = query(bolusesRef, where("status", "==", "COMPLETED"));
+        const snapshot = await getDocs(q);
         const now = Date.now();
         let totalIOB = 0;
 
         snapshot.forEach((doc) => {
           const data = doc.data();
-          const units = data.amount as number;
-          let timestamp = data.timestamp;
+          const units = (data.unitsDelivered ?? data.unitsRequested) as number;
+          const createdAt = data.createdAt as number;
 
-          if (timestamp instanceof Timestamp) {
-            timestamp = timestamp.toMillis();
-          } else if (timestamp instanceof Date) {
-            timestamp = timestamp.getTime();
-          } else {
-            return;
-          }
+          if (!units || !createdAt) return;
 
-          const minutesElapsed = (now - timestamp) / 60000;
+          const minutesElapsed = (now - createdAt) / 60000;
 
-          //4 hour decay curve with 90 minute half-life
           if (minutesElapsed >= 0 && minutesElapsed < 240) {
             const remainingInsulin = units * Math.exp(-minutesElapsed / 90);
             totalIOB += remainingInsulin;
@@ -46,23 +40,16 @@ export function useIOB(): number {
         const roundedIOB = Math.max(0, Math.round(totalIOB * 100) / 100);
         setIOB(roundedIOB);
       } catch (error) {
-        console.error('Failed to calculate IOB:', error);
+        console.error("Failed to calculate IOB:", error);
         setIOB(0);
       }
     };
 
     _refreshIOB = calculateIOB;
-
-    // Initial calculation
     calculateIOB();
 
-    const intervalId = setInterval(() => {
-      calculateIOB();
-    }, 60000);
-
-    return () => {
-      clearInterval(intervalId);
-    };
+    const intervalId = setInterval(calculateIOB, 60000);
+    return () => clearInterval(intervalId);
   }, []);
 
   return iob;

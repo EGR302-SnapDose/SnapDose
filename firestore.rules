@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /devices/{serialNumber} {
+      allow read: if request.auth != null
+        && (resource.data.boundToUid == request.auth.uid
+            || request.auth.token.deviceId == serialNumber);
+      allow write: if false;
+    }
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+      match /boluses/{bolusId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+      match /meal_carb_estimation/{docId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+      match /integrations/{integrationId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+  }
+}

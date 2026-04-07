@@ -14,226 +14,226 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const DRAWER_ITEMS = [
-    { label: "Home", icon: "house.fill", path: "/", match: ["/"] },
-    {
-        label: "Food Gallery",
-        icon: "rectangle.grid.2x2",
-        path: "/food-gallery",
-        match: ["/food-gallery"],
-    },
-    {
-        label: "Settings",
-        icon: "gearshape.fill",
-        path: "/settings",
-        match: ["/settings"],
-    },
+  { label: "Home", icon: "house.fill", path: "/", match: ["/"] },
+  {
+    label: "Food Gallery",
+    icon: "rectangle.grid.2x2",
+    path: "/food-gallery",
+    match: ["/food-gallery"],
+  },
+  {
+    label: "Settings",
+    icon: "gearshape.fill",
+    path: "/settings",
+    match: ["/settings"],
+  },
 ] as const;
 
 function CustomDrawerContent(props: any) {
-    const tint = colors.primary;
-    const iconDefault = colors.tabInactive;
-    const activeBg = colors.surfaceSubtle;
-    const pathname = usePathname();
-    const insets = useSafeAreaInsets();
-    const [displayName, setDisplayName] = useState<string>("");
+  const tint = colors.primary;
+  const iconDefault = colors.tabInactive;
+  const activeBg = colors.surfaceSubtle;
+  const pathname = usePathname();
+  const insets = useSafeAreaInsets();
+  const [displayName, setDisplayName] = useState<string>("");
 
-    useEffect(() => {
-        const uid = auth.currentUser?.uid;
-        if (!uid) return;
-        getDoc(doc(db, "users", uid)).then((snap) => {
-            if (snap.exists()) {
-                const name = snap.data()?.displayName;
-                if (name) setDisplayName(name);
-            }
-        });
-    }, []);
+  useEffect(() => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    getDoc(doc(db, "users", uid)).then((snap) => {
+      if (snap.exists()) {
+        const name = snap.data()?.displayName;
+        if (name) setDisplayName(name);
+      }
+    });
+  }, []);
 
-    const initials = displayName
-        ? displayName
-              .split(" ")
-              .map((w) => w[0])
-              .join("")
-              .toUpperCase()
-              .slice(0, 2)
-        : "?";
+  const initials = displayName
+    ? displayName
+        .split(" ")
+        .map((w) => w[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : "?";
 
-    const handleLogout = () => {
-        Alert.alert("Logout", "Are you sure you want to log out?", [
-            { text: "Cancel", style: "cancel" },
-            {
-                text: "Logout",
-                style: "destructive",
-                onPress: async () => await logout(),
-            },
-        ]);
-    };
+  const handleLogout = () => {
+    Alert.alert("Logout", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => await logout(),
+      },
+    ]);
+  };
 
-    return (
-        <ThemedView style={{ flex: 1 }}>
-            <View style={[styles.drawerHeader, { paddingTop: insets.top }]}>
-                <TouchableOpacity
-                    onPress={() => {
-                        props.navigation.closeDrawer();
-                        router.navigate("/profile" as any);
-                    }}
-                    style={[styles.profileButton, { backgroundColor: colors.dangerSurface }]}
-                >
-                    <ThemedText style={[styles.profileInitials, { color: colors.danger }]}>
-                        {initials}
-                    </ThemedText>
-                </TouchableOpacity>
-            </View>
-            <DrawerContentScrollView
-                {...props}
-                scrollEnabled={false}
-                contentContainerStyle={{ flexGrow: 1 }}
+  return (
+    <ThemedView style={{ flex: 1 }}>
+      <View style={[styles.drawerHeader, { paddingTop: insets.top }]}>
+        <TouchableOpacity
+          onPress={() => {
+            props.navigation.closeDrawer();
+            router.navigate("/profile" as any);
+          }}
+          style={[
+            styles.profileButton,
+            { backgroundColor: colors.dangerSurface },
+          ]}
+        >
+          <ThemedText
+            style={[styles.profileInitials, { color: colors.danger }]}
+          >
+            {initials}
+          </ThemedText>
+        </TouchableOpacity>
+      </View>
+      <DrawerContentScrollView
+        {...props}
+        scrollEnabled={false}
+        contentContainerStyle={{ flexGrow: 1 }}
+      >
+        {DRAWER_ITEMS.map((item) => {
+          const isActive = (item.match as readonly string[]).includes(pathname);
+          return (
+            <TouchableOpacity
+              key={item.path}
+              onPress={() => {
+                props.navigation.closeDrawer();
+                router.navigate(item.path as any);
+              }}
+              style={[styles.item, isActive && { backgroundColor: activeBg }]}
             >
-                {DRAWER_ITEMS.map((item) => {
-                    const isActive = (item.match as readonly string[]).includes(
-                        pathname,
-                    );
-                    return (
-                        <TouchableOpacity
-                            key={item.path}
-                            onPress={() => {
-                                props.navigation.closeDrawer();
-                                router.navigate(item.path as any);
-                            }}
-                            style={[
-                                styles.item,
-                                isActive && { backgroundColor: activeBg },
-                            ]}
-                        >
-                            <IconSymbol
-                                name={item.icon}
-                                size={22}
-                                color={isActive ? tint : iconDefault}
-                            />
-                            <ThemedText
-                                style={[
-                                    styles.label,
-                                    isActive && { color: tint },
-                                ]}
-                            >
-                                {item.label}
-                            </ThemedText>
-                        </TouchableOpacity>
-                    );
-                })}
-            </DrawerContentScrollView>
+              <IconSymbol
+                name={item.icon}
+                size={22}
+                color={isActive ? tint : iconDefault}
+              />
+              <ThemedText style={[styles.label, isActive && { color: tint }]}>
+                {item.label}
+              </ThemedText>
+            </TouchableOpacity>
+          );
+        })}
+      </DrawerContentScrollView>
 
-            <ThemedView style={styles.footer}>
-                <TouchableOpacity
-                    style={styles.logoutButton}
-                    onPress={handleLogout}
-                >
-                    <ThemedText style={styles.logoutText}>Logout</ThemedText>
-                </TouchableOpacity>
-            </ThemedView>
-        </ThemedView>
-    );
+      <ThemedView style={styles.footer}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <ThemedText style={styles.logoutText}>Logout</ThemedText>
+        </TouchableOpacity>
+      </ThemedView>
+    </ThemedView>
+  );
 }
 
 export default function DrawerLayout() {
-    const tint = colors.primary;
-    const backgroundColor = colors.background;
+  const tint = colors.primary;
+  const backgroundColor = colors.background;
 
-    return (
-        <GestureHandlerRootView style={{ flex: 1 }}>
-            <Drawer
-                drawerContent={(props) => <CustomDrawerContent {...props} />}
-                screenOptions={{
-                    drawerActiveTintColor: tint,
-                    drawerStyle: { backgroundColor },
-                    headerShown: false,
-                }}
-            >
-                <Drawer.Screen
-                    name="(tabs)"
-                    options={{
-                        headerShown: true,
-                        title: "SnapDose",
-                        drawerLabel: "Home",
-                    }}
-                />
-                <Drawer.Screen
-                    name="food-gallery"
-                    options={{
-                        headerShown: true,
-                        title: "Food Gallery",
-                        drawerLabel: "Food Gallery",
-                    }}
-                />
-                <Drawer.Screen
-                    name="settings"
-                    options={{
-                        headerShown: true,
-                        title: "Settings",
-                        drawerLabel: "Settings",
-                    }}
-                />
-                <Drawer.Screen
-                    name="profile"
-                    options={{
-                        headerShown: true,
-                        title: "Profile",
-                        drawerLabel: "Profile",
-                        drawerItemStyle: { display: "none" },
-                    }}
-                />
-            </Drawer>
-        </GestureHandlerRootView>
-    );
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Drawer
+        drawerContent={(props) => <CustomDrawerContent {...props} />}
+        screenOptions={{
+          drawerActiveTintColor: tint,
+          drawerStyle: { backgroundColor },
+          headerShown: false,
+        }}
+      >
+        <Drawer.Screen
+          name="(tabs)"
+          options={{
+            headerShown: true,
+            title: "SnapDose",
+            drawerLabel: "Home",
+          }}
+        />
+        <Drawer.Screen
+          name="food-gallery"
+          options={{
+            headerShown: true,
+            title: "Food Gallery",
+            drawerLabel: "Food Gallery",
+          }}
+        />
+        <Drawer.Screen
+          name="settings"
+          options={{
+            headerShown: true,
+            title: "Settings",
+            drawerLabel: "Settings",
+          }}
+        />
+        <Drawer.Screen
+          name="profile"
+          options={{
+            headerShown: true,
+            title: "Profile",
+            drawerLabel: "Profile",
+            drawerItemStyle: { display: "none" },
+          }}
+        />
+        <Drawer.Screen
+          name="pair-pump"
+          options={{
+            headerShown: true,
+            title: "Pair Pump",
+            drawerItemStyle: { display: "none" },
+          }}
+        />
+      </Drawer>
+    </GestureHandlerRootView>
+  );
 }
 
 const styles = StyleSheet.create({
-    drawerHeader: {
-        paddingLeft: 24,
-    },
-    profileButton: {
-        marginTop: 15,
-        marginBottom: 4,
-        width: 52,
-        height: 52,
-        borderRadius: 26,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    profileInitials: {
-        fontSize: 20,
-        fontWeight: "700",
-        color: "#fff",
-    },
-    item: {
-        flexDirection: "row",
-        alignItems: "center",
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        borderRadius: 8,
-        marginHorizontal: 8,
-        marginVertical: 2,
-        gap: 14,
-    },
-    label: {
-        fontSize: 15,
-        fontWeight: "500",
-    },
-    footer: {
-        paddingHorizontal: 16,
-        paddingTop: 16,
-        paddingBottom: 32,
-        borderTopWidth: StyleSheet.hairlineWidth,
-        borderTopColor: "#ccc",
-    },
-    logoutButton: {
-        backgroundColor: "#FF3B30",
-        borderRadius: 8,
-        paddingVertical: 12,
-        alignItems: "center",
-    },
-    logoutText: {
-        color: "#fff",
-        fontWeight: "600",
-        fontSize: 15,
-    },
+  drawerHeader: {
+    paddingLeft: 24,
+  },
+  profileButton: {
+    marginTop: 15,
+    marginBottom: 4,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  profileInitials: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  item: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginHorizontal: 8,
+    marginVertical: 2,
+    gap: 14,
+  },
+  label: {
+    fontSize: 15,
+    fontWeight: "500",
+  },
+  footer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 32,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#ccc",
+  },
+  logoutButton: {
+    backgroundColor: "#FF3B30",
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  logoutText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 15,
+  },
 });

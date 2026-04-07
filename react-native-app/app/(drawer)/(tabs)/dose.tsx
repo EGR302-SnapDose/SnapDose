@@ -1,14 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAccentColor } from "@/context/accent-color";
 import { useGlucose } from "@/hooks/use-glucose";
 import { refreshIOB, useIOB } from "@/hooks/use-iob";
 import { calculateDose } from "@/utils/dose-calculator";
-
 import { CarbsInput } from "@/components/dosing/carbs-input";
 import { CorrectionInput } from "@/components/dosing/correction-input";
 import { DoseCalculation } from "@/components/dosing/dose-calculation";
@@ -16,9 +14,17 @@ import { DoseConfirmationSheet } from "@/components/dosing/dose-confirmation-she
 import { DoseModeSelector } from "@/components/dosing/dose-mode-selector";
 import { InsulinOnBoardCard } from "@/components/dosing/insulin-on-board-card";
 import { TodayDosesList } from "@/components/dosing/today-doses-list";
-
 import { auth, db } from "@/config/firebase";
-import { collection, doc, onSnapshot, setDoc } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+} from "firebase/firestore";
+
+const SNAPDOSE_API =
+  "https://snapdose-api-1044774150297.us-central1.run.app/api";
 
 interface Dose {
   id: string;
@@ -48,22 +54,18 @@ export default function DoseScreen() {
     const user = auth.currentUser;
     if (!user) return;
 
-    const userRef = doc(db, "users", user.uid);
-
     const unsubscribe = onSnapshot(
-      userRef,
-      (docSnapshot) => {
-        if (docSnapshot.exists()) {
-          const data = docSnapshot.data();
+      doc(db, "users", user.uid),
+      (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
           setCarbRatio(data.insulinSettings?.insulinToCarbRatio || 10);
           setCorrectionFactor(data.insulinSettings?.correctionFactor || 50);
           setTargetGlucoseMin(data.profile?.targetGlucose?.min || 70);
           setTargetGlucoseMax(data.profile?.targetGlucose?.max || 180);
         }
       },
-      (error) => {
-        console.error("Failed to load insulin settings:", error);
-      },
+      (error) => console.error("Failed to load insulin settings:", error),
     );
 
     return () => unsubscribe();
@@ -73,27 +75,35 @@ export default function DoseScreen() {
     const user = auth.currentUser;
     if (!user) return;
 
-    const dosesRef = collection(db, "users", user.uid, "doses");
+    const todayStartMs = new Date().setHours(0, 0, 0, 0);
+    const q = query(
+      collection(db, "users", user.uid, "boluses"),
+      orderBy("createdAt", "desc"),
+    );
 
     const unsubscribe = onSnapshot(
-      dosesRef,
+      q,
       (snapshot) => {
         const doses: Dose[] = [];
         snapshot.forEach((doc) => {
           const data = doc.data();
+          const createdAt = data.createdAt as number;
+          if (!createdAt || createdAt < todayStartMs) return;
+
           doses.push({
             id: doc.id,
-            time: data.time,
-            amount: data.amount,
-            type: data.type,
+            time: new Date(createdAt).toLocaleTimeString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            }),
+            amount: data.unitsRequested ?? 0,
+            type: (data.carbsG ?? 0) > 0 ? "Meal" : "Correction",
           });
         });
-        // Sort by id (timestamp) in descending order (newest first)
-        setTodayDoses(doses.sort((a, b) => parseInt(b.id) - parseInt(a.id)));
+        setTodayDoses(doses);
       },
-      (error) => {
-        console.error("Failed to load doses:", error);
-      },
+      (error) => console.error("Failed to load boluses:", error),
     );
 
     return () => unsubscribe();
@@ -101,7 +111,6 @@ export default function DoseScreen() {
 
   const calculateCorrectionDose = () => {
     if (currentGlucose === null) return 0;
-
     if (currentGlucose > targetGlucoseMax) {
       return (currentGlucose - targetGlucoseMax) / correctionFactor;
     } else if (currentGlucose < targetGlucoseMin) {
@@ -112,7 +121,6 @@ export default function DoseScreen() {
 
   const calculateRecommendedDose = () => {
     if (mode === "meal") {
-      // Use the new dose calculation formula if glucose is available
       if (currentGlucose !== null) {
         return calculateDose({
           carbs,
@@ -124,11 +132,8 @@ export default function DoseScreen() {
           iob: activeInsulin,
         });
       }
-      // Fallback if glucose not available: simple carb-based calculation
-      const carbBasedDose = carbs / carbRatio;
-      return Math.max(0, carbBasedDose - activeInsulin);
+      return Math.max(0, carbs / carbRatio - activeInsulin);
     } else {
-      // Correction mode: use manual correction insulin input
       return Math.max(0, correctionInsulin - activeInsulin);
     }
   };
@@ -136,89 +141,51 @@ export default function DoseScreen() {
   const correctionDose = calculateCorrectionDose();
   const recommendedDose = calculateRecommendedDose();
 
-  const handleDoseConfirm = () => {
-    setShowConfirmationSheet(true);
-  };
-
   const handleSliderConfirm = async () => {
-    // Save dose to Firestore
-    const newDose: Dose = {
-      id: Date.now().toString(),
-      time: new Date().toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      }),
-      amount: recommendedDose,
-      type: mode === "meal" ? "Meal" : "Correction",
-    };
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const user = auth.currentUser;
+      if (!user || !token) return;
 
-    // Save to Firebase
-    const user = auth.currentUser;
-    if (user) {
-      try {
-        const dosesRef = doc(
-          db,
-          "users",
-          user.uid,
-          "doses",
-          newDose.id,
-        );
-        await setDoc(dosesRef, {
-          ...newDose,
-          timestamp: new Date(),
-          mode: mode,
-          correctionInsulin: mode === "correction" ? correctionInsulin : null,
-        });
+      const response = await fetch(`${SNAPDOSE_API}/bolus`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          userId: user.uid,
+          units: recommendedDose,
+          carbsGrams: mode === "meal" ? carbs : 0,
+          glucoseLevel: currentGlucose ?? 100,
+          bolusType: mode === "meal" ? "MEAL" : "CORRECTION",
+          deviceId: "tab5-001",
+          insulinOnBoard: activeInsulin,
+        }),
+      });
 
-        // Save carb information separately if in meal mode
-        if (mode === "meal" && carbs > 0) {
-          const carbEstimationRef = doc(
-            db,
-            "users",
-            user.uid,
-            "meal_carb_estimation",
-            newDose.id,
-          );
-          await setDoc(carbEstimationRef, {
-            carbsEntered: carbs,
-            timestamp: new Date(),
-            mode: "manual_entry",
-          });
-        }
-      } catch (error) {
-        console.error("Failed to save dose to Firebase:", error);
+      if (!response.ok) {
+        const err = await response.text();
+        console.error("Bolus POST failed:", response.status, err);
       }
+    } catch (error) {
+      console.error("Failed to send bolus:", error);
     }
 
-    // Refresh IOB immediately after dose is saved
     refreshIOB();
-
-    // Reset the appropriate input based on mode
     if (mode === "meal") {
       setCarbs(0);
     } else {
       setCorrectionInsulin(0);
     }
-
-    // Don't close the modal here - let the user close it manually after seeing the completion
   };
 
-  const handleCancelConfirmation = () => {
-    setShowConfirmationSheet(false);
-  };
-
-  const totalTodayDoses = todayDoses.reduce(
-    (sum, dose) => sum + dose.amount,
-    0,
-  );
+  const totalTodayDoses = todayDoses.reduce((sum, d) => sum + d.amount, 0);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    // Immediately refresh IOB data
     refreshIOB();
-    // Wait a moment then stop the refresh animation
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     setIsRefreshing(false);
   };
 
@@ -251,7 +218,6 @@ export default function DoseScreen() {
         </View>
 
         <InsulinOnBoardCard activeInsulin={activeInsulin} />
-
         <DoseModeSelector mode={mode} onModeChange={setMode} />
 
         {mode === "meal" ? (
@@ -272,7 +238,7 @@ export default function DoseScreen() {
           correctionInsulin={correctionInsulin}
           insulinOnBoard={activeInsulin}
           recommendedDose={recommendedDose}
-          onCalculate={handleDoseConfirm}
+          onCalculate={() => setShowConfirmationSheet(true)}
         />
 
         <TodayDosesList doses={todayDoses} totalDoses={totalTodayDoses} />
@@ -289,34 +255,21 @@ export default function DoseScreen() {
         correctionInsulin={correctionInsulin}
         insulinOnBoard={activeInsulin}
         onConfirm={handleSliderConfirm}
-        onCancel={handleCancelConfirmation}
+        onCancel={() => setShowConfirmationSheet(false)}
       />
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  scrollView: { flex: 1 },
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 32,
   },
-  header: {
-    marginBottom: 24,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: "700",
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    opacity: 0.6,
-  },
+  header: { marginBottom: 24 },
+  headerTitle: { fontSize: 28, fontWeight: "700", marginBottom: 4 },
+  subtitle: { fontSize: 14, opacity: 0.6 },
 });
