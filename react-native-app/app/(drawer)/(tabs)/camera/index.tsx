@@ -28,7 +28,6 @@ export type CapturedPhoto = {
 const clamp = (val: number, min: number, max: number) =>
   Math.min(max, Math.max(min, val));
 
-// Full allowed range for pinch (0 = ultrawide, 0.3 = 2x)
 const PINCH_MIN = 0;
 const PINCH_MAX = 0.3;
 
@@ -40,10 +39,13 @@ export default function CameraScreen() {
   const [granted, setGranted] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState<StoredPhoto | null>(null);
   const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('Photo uploaded!');
+  const [toastMessage, setToastMessage] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Ref to abort an in-flight upload
+  const uploadCancelRef = useRef<(() => void) | null>(null);
+  const cancelRequestedRef = useRef(false);
 
-  // zoom is a plain number 0–0.5; default to 1x preset
   const [zoom, setZoom] = useState<number>(ZOOM_PRESETS[1].value);
   const pinchStartZoom = useRef<number>(ZOOM_PRESETS[1].value);
 
@@ -64,13 +66,11 @@ export default function CameraScreen() {
     };
   }, []);
 
-  // ── Pinch gesture ──────────────────────────────────────────────────────────
   const pinchGesture = Gesture.Pinch()
     .onBegin(() => {
       pinchStartZoom.current = zoom;
     })
     .onUpdate((e) => {
-      // Additive delta with sensitivity factor so it feels natural
       const next = pinchStartZoom.current + (e.scale - 1) * 0.25;
       setZoom(clamp(next, PINCH_MIN, PINCH_MAX));
     })
@@ -82,7 +82,7 @@ export default function CameraScreen() {
   };
 
   const toggleFacing = () => {
-    setZoom(ZOOM_PRESETS[1].value); // reset to 1x on flip
+    setZoom(ZOOM_PRESETS[1].value);
     setFacing((prev) => (prev === 'back' ? 'front' : 'back'));
   };
 
@@ -111,28 +111,61 @@ export default function CameraScreen() {
     setPreviewPhoto(null);
   };
 
+  const handleCancelUpload = () => {
+    cancelRequestedRef.current = true;
+    if (uploadCancelRef.current) {
+      uploadCancelRef.current();
+      uploadCancelRef.current = null;
+    }
+    setIsProcessing(false);
+    setUploadProgress(0);
+  };
+
   const handleUsePhoto = async (photo: StoredPhoto, notes?: string) => {
     setIsProcessing(true);
+    setUploadProgress(0);
+    cancelRequestedRef.current = false;
+
     try {
-      const uploadResult = await uploadImageToGCS(photo.uri, photo.fileName, undefined, notes);
+      const uploadResult = await uploadImageToGCS(
+        photo.uri,
+        photo.fileName,
+        (progress) => {
+          setUploadProgress(progress.percentage);
+        },
+        notes,
+        // Pass a cancel registration callback if the service supports it
+        (cancelFn) => {
+          if (cancelRequestedRef.current) {
+            cancelFn();
+            return;
+          }
+          uploadCancelRef.current = cancelFn;
+        }
+      );
+
+      if (uploadResult.canceled) {
+        return;
+      }
 
       if (!uploadResult.success || !uploadResult.fileName) {
         throw new Error(uploadResult.error ?? 'Upload failed');
       }
 
       setPreviewPhoto(null);
-      setToastMessage('Photo uploaded!');
-      setShowToast(true);
+      // Navigate immediately — no toast delay so the results screen
+      // mounts while the Cloud Function is still processing, giving
+      // the stage indicator time to animate through all three steps.
+      router.push({
+        pathname: '/(drawer)/(tabs)/camera/results' as any,
+        params: { imagePath: uploadResult.fileName, localUri: photo.uri },
+      });
 
-      toastTimer.current = setTimeout(() => {
-        setShowToast(false);
-        router.push({
-          pathname: '/(drawer)/(tabs)/camera/results' as any,
-          params: { imagePath: uploadResult.fileName, localUri: photo.uri },
-        });
-      }, 1500);
-
-    } catch (error) {
+    } catch (error: any) {
+      // Swallow cancellation — user deliberately aborted, no error toast needed
+      if (error?.code === 'storage/canceled' || error?.code === 'storage/cancelled') {
+        return;
+      }
       hapticError();
       console.error('Failed to process photo:', error);
       setToastMessage('Upload failed, please try again.');
@@ -140,6 +173,9 @@ export default function CameraScreen() {
       toastTimer.current = setTimeout(() => setShowToast(false), 2500);
     } finally {
       setIsProcessing(false);
+      setUploadProgress(0);
+      uploadCancelRef.current = null;
+      cancelRequestedRef.current = false;
     }
   };
 
@@ -158,7 +194,9 @@ export default function CameraScreen() {
         photo={previewPhoto}
         onRetake={handleRetake}
         onUsePhoto={handleUsePhoto}
+        onCancel={handleCancelUpload}
         isProcessing={isProcessing}
+        uploadProgress={uploadProgress}
       />
     );
   }

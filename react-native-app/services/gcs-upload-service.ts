@@ -19,6 +19,8 @@ export type UploadResult = {
   url?: string;
   fileName?: string;
   error?: string;
+  errorCode?: string;
+  canceled?: boolean;
 };
 
 // Upload a single image to Firebase Storage
@@ -27,6 +29,7 @@ export const uploadImageToGCS = async (
   fileName: string,
   onProgress?: (progress: UploadProgress) => void,
   notes?: string,
+  onCancelRegister?: (cancelFn: () => void) => void,
 ): Promise<UploadResult> => {
   try {
     const auth = getAuth();
@@ -47,6 +50,7 @@ export const uploadImageToGCS = async (
 
     return new Promise((resolve) => {
       const uploadTask = uploadBytesResumable(storageRef, blob, metadata);
+      onCancelRegister?.(() => uploadTask.cancel());
 
       uploadTask.on(
         "state_changed",
@@ -61,8 +65,16 @@ export const uploadImageToGCS = async (
           });
         },
         (error) => {
-          console.error("Upload error:", error);
-          resolve({ success: false, error: error.message });
+          const isCanceled = error.code === 'storage/canceled' || error.code === 'storage/cancelled';
+          if (!isCanceled) {
+            console.error("Upload error:", error);
+          }
+          resolve({
+            success: false,
+            error: error.message,
+            errorCode: error.code,
+            canceled: isCanceled,
+          });
         },
         async () => {
           // Get the download URL from the SDK

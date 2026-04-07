@@ -1,4 +1,6 @@
 import { DoseConfirmationSheet } from "@/components/dosing/dose-confirmation-sheet";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
 import { app, auth, db } from "@/config/firebase";
 import { useAccentColor } from "@/context/accent-color";
 import { useIOB } from "@/hooks/use-iob";
