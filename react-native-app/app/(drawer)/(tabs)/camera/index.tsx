@@ -11,8 +11,7 @@ import { StoredPhoto } from '@/services/photo-storage';
 import { Camera, CameraType, CameraView } from 'expo-camera';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 
 export type CapturedPhoto = {
   uri: string;
@@ -133,14 +132,14 @@ export default function CameraScreen() {
   return (
     <ThemedView style={styles.container}>
       <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
-      <SafeAreaView style={[styles.controls, { backgroundColor: controlsBg }]}>
+      <View style={[styles.controls, { backgroundColor: controlsBg }]}>
         <CameraControls
           onCapture={handleCapture}
           onFlip={toggleFacing}
           onBack={() => router.push('/(drawer)/(tabs)' as any)}
           isCapturing={isCapturing}
         />
-      </SafeAreaView>
+      </View>
       <Toast visible={showToast} message={toastMessage} />
     </ThemedView>
   );

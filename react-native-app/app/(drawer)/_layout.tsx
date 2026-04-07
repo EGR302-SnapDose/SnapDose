@@ -122,7 +122,7 @@ function CustomDrawerContent(props: any) {
                 })}
             </DrawerContentScrollView>
 
-            <ThemedView style={styles.footer}>
+            <ThemedView style={[styles.footer, { paddingBottom: Math.max(32, insets.bottom + 16) }]}>
                 <TouchableOpacity
                     style={styles.logoutButton}
                     onPress={handleLogout}
@@ -221,7 +221,6 @@ const styles = StyleSheet.create({
     footer: {
         paddingHorizontal: 16,
         paddingTop: 16,
-        paddingBottom: 32,
         borderTopWidth: StyleSheet.hairlineWidth,
         borderTopColor: "#ccc",
     },
