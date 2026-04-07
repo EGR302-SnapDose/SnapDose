@@ -8,11 +8,20 @@ import { doc, onSnapshot, setDoc, collection, query, where, getDocs } from "fire
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
 import { DoseConfirmationSheet } from "@/components/dosing/dose-confirmation-sheet";
-import { useThemeColor } from "@/hooks/use-theme-color";
-import { useIOB } from "@/hooks/use-iob";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
 import { app, auth, db } from "@/config/firebase";
-import { subscribeMeal, deleteMealEntry } from "@/services/meal-service";
+import { useAccentColor } from "@/context/accent-color";
+import { useIOB } from "@/hooks/use-iob";
+import { useThemeColor } from "@/hooks/use-theme-color";
+import { deleteMealEntry, subscribeMeal } from "@/services/meal-service";
 import { MealCarbEstimate } from "@/types/meal";
+import { Image } from "expo-image";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { collection, doc, getDocs, onSnapshot, query, setDoc, where } from "firebase/firestore";
+import { deleteObject, getDownloadURL, getStorage, ref } from "firebase/storage";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 
 const { width } = Dimensions.get("window");
 
@@ -30,7 +39,7 @@ function useColors() {
     const muted = useThemeColor({ light: "#888888", dark: "#888888" }, "icon");
     const subtle = useThemeColor({ light: "#AAAAAA", dark: "#555555" }, "icon");
     const border = useThemeColor({ light: "#CCCCCC", dark: "#333333" }, "icon");
-    const accent = useThemeColor({}, "accent");
+    const accent = useAccentColor();
     const danger = useThemeColor({ light: "#FF3B30", dark: "#FF453A" }, "icon");
     return { background, cardBg, imageBg, muted, subtle, border, accent, danger };
 }

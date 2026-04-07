@@ -1,16 +1,19 @@
 import { auth, db } from "@/config/firebase";
+import { colors, Colors, radius, spacing, textStyles, typography } from "@/constants/theme";
+import { useAccentColor } from "@/context/accent-color";
 import { useIOB } from "@/hooks/use-iob";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { getAuth } from "firebase/auth";
 import { collection, getDocs, limit, orderBy, query } from "firebase/firestore";
 import { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Dimensions,
-  Pressable,
-  StyleSheet,
-  View,
+    ActivityIndicator,
+    Dimensions,
+    Pressable,
+    StyleSheet,
+    View,
 } from "react-native";
 import Svg, { Circle, Line, Polyline, Rect, Text as SvgText } from "react-native-svg";
 import { ThemedText } from "../themed-text";
@@ -29,17 +32,26 @@ const GLUCOSE_MAX = 300;
 const LOW_THRESHOLD = 70;
 const HIGH_THRESHOLD = 180;
 
-function getTrendArrow(trend: string) {
-  switch (trend) {
-    case "doubleUp": return "^^";
-    case "singleUp": return "^";
-    case "fortyFiveUp": return "/";
-    case "flat": return "-";
-    case "fortyFiveDown": return "\\";
-    case "singleDown": return "v";
-    case "doubleDown": return "vv";
-    default: return "-";
-  }
+function renderTrendIcon(trend: string, color: string) {
+  const iconMap: Record<string, { name: string; count: number }> = {
+    'doubleUp': { name: 'chevron-up', count: 2 },
+    'singleUp': { name: 'chevron-up', count: 1 },
+    'fortyFiveUp': { name: 'trending-up', count: 1 },
+    'flat': { name: 'remove', count: 1 },
+    'fortyFiveDown': { name: 'trending-down', count: 1 },
+    'singleDown': { name: 'chevron-down', count: 1 },
+    'doubleDown': { name: 'chevron-down', count: 2 },
+  };
+
+  const config = iconMap[trend] || { name: 'help', count: 1 };
+
+  return (
+    <View style={{ flexDirection: 'row', gap: 2 }}>
+      {Array(config.count).fill(0).map((_, i) => (
+        <Ionicons key={i} name={config.name as any} size={20} color={color} />
+      ))}
+    </View>
+  );
 }
 
 function getTrendLabel(trend: string) {
@@ -56,10 +68,10 @@ function getTrendLabel(trend: string) {
 }
 
 function getGlucoseColor(value: number) {
-  if (value < LOW_THRESHOLD) return "#E53935";
-  if (value > HIGH_THRESHOLD) return "#E53935";
-  if (value > 140) return "#FB8C00";
-  return "#43A047";
+  if (value < LOW_THRESHOLD) return colors.glucoseLow;
+  if (value > HIGH_THRESHOLD) return colors.glucoseHigh;
+  if (value > 140) return colors.glucoseHigh;
+  return colors.glucoseInRange;
 }
 
 function getTimeAgo(dateString: string) {
@@ -117,15 +129,23 @@ function computeTimeInRange(records: EgvRecord[]): number | null {
   return Math.round((inRange.length / todayRecords.length) * 100);
 }
 
-function GlucoseGraph({ records }: { records: EgvRecord[] }) {
+function GlucoseGraph({ records, accent, borderColor, textColor, timeFrameHours = 24 }: { records: EgvRecord[]; accent?: string; borderColor?: string; textColor?: string; timeFrameHours?: number }) {
   const screenWidth = Dimensions.get("window").width;
   const cardPadding = 32;
   const svgWidth = screenWidth - cardPadding - 2;
   const plotWidth = svgWidth - GRAPH_PADDING_LEFT - GRAPH_PADDING_RIGHT;
   const plotHeight = GRAPH_HEIGHT - GRAPH_PADDING_TOP - GRAPH_PADDING_BOTTOM;
 
+  const lineColor = accent || colors.primary;
+  const graphBorderColor = borderColor || colors.border;
+  const graphTextColor = textColor || colors.textSecondary;
+
+  // Filter records to the selected time frame
+  const now = Date.now();
+  const cutoffTime = now - timeFrameHours * 60 * 60 * 1000;
+
   const validRecords = records.filter(
-    (r) => r.value !== null && r.value >= 39 && r.value <= 401
+    (r) => r.value !== null && r.value >= 39 && r.value <= 401 && new Date(r.systemTime).getTime() >= cutoffTime
   );
 
   if (validRecords.length < 2) {
@@ -168,41 +188,52 @@ function GlucoseGraph({ records }: { records: EgvRecord[] }) {
   const startHour = new Date(minTime);
   startHour.setMinutes(0, 0, 0);
   startHour.setHours(startHour.getHours() + 1);
-  for (let t = startHour.getTime(); t < maxTime; t += 2 * 60 * 60 * 1000) {
+
+  // Adjust label interval based on time frame
+  const labelIntervalHours = timeFrameHours <= 2 ? 0.5 : timeFrameHours <= 6 ? 1 : 2;
+  const labelIntervalMs = labelIntervalHours * 60 * 60 * 1000;
+
+  for (let t = startHour.getTime(); t < maxTime; t += labelIntervalMs) {
     const d = new Date(t);
     const hr = d.getHours();
+    const min = d.getMinutes();
     const ampm = hr >= 12 ? "pm" : "am";
     const hr12 = hr % 12 || 12;
-    hourLabels.push({ x: scaleX(t), label: `${hr12}${ampm}` });
+    // Show minutes for sub-hour intervals
+    const label = labelIntervalHours < 1 ? `${hr12}:${min.toString().padStart(2, '0')}` : `${hr12}${ampm}`;
+    hourLabels.push({ x: scaleX(t), label });
   }
 
   const yLabels = [70, 120, 180, 250];
 
   return (
     <Svg width={svgWidth} height={GRAPH_HEIGHT}>
+      {/* In-range zone (green) */}
       <Rect
         x={GRAPH_PADDING_LEFT}
         y={highY}
         width={plotWidth}
         height={lowY - highY}
-        fill="#E8F5E9"
-        opacity={0.4}
+        fill={colors.glucoseInRange}
+        opacity={0.25}
       />
+      {/* High zone (red) */}
       <Rect
         x={GRAPH_PADDING_LEFT}
         y={GRAPH_PADDING_TOP}
         width={plotWidth}
         height={highY - GRAPH_PADDING_TOP}
-        fill="#FFEBEE"
-        opacity={0.3}
+        fill={colors.glucoseHigh}
+        opacity={0.08}
       />
+      {/* Low zone (red) */}
       <Rect
         x={GRAPH_PADDING_LEFT}
         y={lowY}
         width={plotWidth}
         height={GRAPH_PADDING_TOP + plotHeight - lowY}
-        fill="#FFEBEE"
-        opacity={0.3}
+        fill={colors.glucoseLow}
+        opacity={0.08}
       />
       {yLabels.map((val) => (
         <Line
@@ -211,7 +242,7 @@ function GlucoseGraph({ records }: { records: EgvRecord[] }) {
           y1={scaleY(val)}
           x2={svgWidth - GRAPH_PADDING_RIGHT}
           y2={scaleY(val)}
-          stroke="#ddd"
+          stroke={graphBorderColor}
           strokeWidth={0.5}
           strokeDasharray="4,4"
         />
@@ -222,7 +253,7 @@ function GlucoseGraph({ records }: { records: EgvRecord[] }) {
           x={GRAPH_PADDING_LEFT - 6}
           y={scaleY(val) + 4}
           fontSize={10}
-          fill="#999"
+          fill={graphTextColor}
           textAnchor="end"
         >
           {val}
@@ -234,7 +265,7 @@ function GlucoseGraph({ records }: { records: EgvRecord[] }) {
           x={h.x}
           y={GRAPH_HEIGHT - 4}
           fontSize={10}
-          fill="#999"
+          fill={graphTextColor}
           textAnchor="middle"
         >
           {h.label}
@@ -243,7 +274,7 @@ function GlucoseGraph({ records }: { records: EgvRecord[] }) {
       <Polyline
         points={points}
         fill="none"
-        stroke="#1976D2"
+        stroke={lineColor}
         strokeWidth={2}
         strokeLinejoin="round"
         strokeLinecap="round"
@@ -276,7 +307,7 @@ function InfoCard({
         <ActivityIndicator size="small" color={accent} style={{ marginTop: 4 }} />
       ) : (
         <>
-          <ThemedText style={[infoStyles.value, { color: accent }]}>
+          <ThemedText style={infoStyles.value}>
             {value}
           </ThemedText>
           {subValue ? (
@@ -292,11 +323,13 @@ function TirRingCard({
   percent,
   accent,
   cardBg,
+  trackColor,
   isLoading,
 }: {
   percent: number | null;
   accent: string;
   cardBg: string;
+  trackColor: string;
   isLoading?: boolean;
 }) {
   const size = 44;
@@ -307,12 +340,12 @@ function TirRingCard({
 
   const tirColor =
     percent === null
-      ? "#9BA1A6"
+      ? colors.textTertiary
       : percent >= 70
-      ? "#43A047"
+      ? colors.glucoseInRange
       : percent >= 54
-      ? "#FB8C00"
-      : "#E53935";
+      ? colors.glucoseHigh
+      : colors.glucoseLow;
 
   return (
     <View style={[infoStyles.card, { backgroundColor: cardBg }]}>
@@ -327,7 +360,7 @@ function TirRingCard({
               cx={size / 2}
               cy={size / 2}
               r={r}
-              stroke="#E0E0E0"
+              stroke={trackColor}
               strokeWidth={stroke}
               fill="none"
             />
@@ -361,11 +394,27 @@ function TirRingCard({
 // ─── Main export ─────────────────────────────────────────────────────────────
 
 export function GlucoseCard() {
-  const borderColor = useThemeColor({}, "icon");
-  const accent = useThemeColor({}, "accent");
+  const borderColor = useThemeColor({light: colors.border, dark: Colors.dark.border}, "border");
+  const accent = useAccentColor();
   const cardBg = useThemeColor(
-    { light: "#F4F6F8", dark: "#1A1A1A" },
-    "background"
+    { light: colors.surfaceSubtle, dark: Colors.dark.surface },
+    "surface"
+  );
+  const graphBorderColor = useThemeColor(
+    { light: colors.border, dark: Colors.dark.border },
+    "border"
+  );
+  const graphTextColor = useThemeColor(
+    { light: colors.textSecondary, dark: Colors.dark.icon },
+    "icon"
+  );
+  const primaryColor = useThemeColor(
+    { light: colors.primary, dark: Colors.dark.primary },
+    "primary"
+  );
+  const trackColor = useThemeColor(
+    { light: colors.border, dark: Colors.dark.border },
+    "border"
   );
 
   const iob = useIOB();
@@ -378,6 +427,7 @@ export function GlucoseCard() {
 
   const [lastBolus, setLastBolus] = useState<LastBolus>(null);
   const [bolusLoading, setBolusLoading] = useState(true);
+  const [timeFrame, setTimeFrame] = useState<2 | 6 | 12>(2);
 
   // ── Fetch last bolus from Firestore ──────────────────────────────────────
   const fetchLastBolus = useCallback(async () => {
@@ -506,7 +556,7 @@ export function GlucoseCard() {
             disabled={refreshing}
           >
             {refreshing ? (
-              <ActivityIndicator size="small" color="#1976D2" />
+              <ActivityIndicator size="small" color={primaryColor} />
             ) : (
               <ThemedText style={styles.refreshButton}>Refresh</ThemedText>
             )}
@@ -533,7 +583,7 @@ export function GlucoseCard() {
           disabled={refreshing}
         >
           {refreshing ? (
-            <ActivityIndicator size="small" color="#1976D2" />
+            <ActivityIndicator size="small" color={primaryColor} />
           ) : (
             <ThemedText style={styles.refreshButton}>Refresh</ThemedText>
           )}
@@ -544,7 +594,7 @@ export function GlucoseCard() {
       <View style={styles.readingRow}>
         <ThemedText
           style={[
-            styles.glucoseValue,
+            textStyles.glucoseDisplay,
             { color: getGlucoseColor(reading.value) },
           ]}
         >
@@ -552,19 +602,17 @@ export function GlucoseCard() {
         </ThemedText>
         <View style={styles.readingMeta}>
           <ThemedText style={styles.unit}>mg/dL</ThemedText>
-          <ThemedText style={styles.trend}>
-            {getTrendArrow(reading.trend)} {getTrendLabel(reading.trend)}
-          </ThemedText>
+          <View style={styles.trendContainer}>
+            {renderTrendIcon(reading.trend, getGlucoseColor(reading.value))}
+            <ThemedText style={[textStyles.callout, { color: colors.textSecondary }]}>
+              {getTrendLabel(reading.trend)}
+            </ThemedText>
+          </View>
         </View>
       </View>
       <ThemedText style={styles.lastUpdated}>
         Updated {getTimeAgo(reading.systemTime)}
       </ThemedText>
-
-      {/* Graph */}
-      <View style={styles.graphContainer}>
-        <GlucoseGraph records={records} />
-      </View>
 
       {/* ── Info Cards ── */}
       <View style={infoStyles.row}>
@@ -591,7 +639,7 @@ export function GlucoseCard() {
           label="Active IOB"
           value={`${iob.toFixed(1)}u`}
           subValue={iob > 0 ? "insulin active" : "no active insulin"}
-          accent={iob > 0 ? accent : "#9BA1A6"}
+          accent={iob > 0 ? accent : colors.textTertiary}
           cardBg={cardBg}
         />
 
@@ -600,8 +648,37 @@ export function GlucoseCard() {
           percent={timeInRange}
           accent={accent}
           cardBg={cardBg}
+          trackColor={trackColor}
           isLoading={loading}
         />
+      </View>
+
+      {/* Time Frame Selector */}
+      <View style={styles.timeFrameRow}>
+        {([2, 6, 12] as const).map((hours) => (
+          <Pressable
+            key={hours}
+            style={[
+              styles.timeFrameButton,
+              { backgroundColor: timeFrame === hours ? accent : cardBg },
+            ]}
+            onPress={() => setTimeFrame(hours)}
+          >
+            <ThemedText
+              style={[
+                styles.timeFrameText,
+                timeFrame === hours && styles.timeFrameTextActive,
+              ]}
+            >
+              {hours}hr
+            </ThemedText>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* Graph */}
+      <View style={styles.graphContainer}>
+        <GlucoseGraph records={records} accent={accent} borderColor={graphBorderColor} textColor={graphTextColor} timeFrameHours={timeFrame} />
       </View>
     </ThemedView>
   );
@@ -612,9 +689,9 @@ export function GlucoseCard() {
 const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: radius.lg,
+    padding: spacing[4],
+    marginBottom: spacing[4],
   },
   headerRow: {
     flexDirection: "row",
@@ -629,36 +706,32 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   refreshButton: {
-    fontSize: 14,
-    color: "#1976D2",
+    fontSize: typography.sizes.subheadline,
+    color: colors.primary,
     fontWeight: "600",
   },
   readingRow: {
     flexDirection: "row",
     alignItems: "flex-end",
-    gap: 8,
-    marginTop: 8,
-  },
-  glucoseValue: {
-    fontSize: 48,
-    fontWeight: "bold",
-    lineHeight: 52,
+    gap: spacing[2],
+    marginTop: spacing[2],
   },
   readingMeta: {
     paddingBottom: 6,
   },
   unit: {
-    fontSize: 14,
+    fontSize: typography.sizes.subheadline,
     opacity: 0.7,
   },
-  trend: {
-    fontSize: 14,
-    opacity: 0.7,
+  trendContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
   },
   lastUpdated: {
-    fontSize: 12,
+    fontSize: typography.sizes.footnote,
     opacity: 0.5,
-    marginTop: 4,
+    marginTop: spacing[1],
   },
   centered: {
     alignItems: "center",
@@ -666,17 +739,37 @@ const styles = StyleSheet.create({
     paddingVertical: 32,
   },
   loadingText: {
-    fontSize: 14,
+    fontSize: typography.sizes.subheadline,
     opacity: 0.5,
-    marginTop: 8,
+    marginTop: spacing[2],
   },
   errorText: {
-    fontSize: 14,
+    fontSize: typography.sizes.subheadline,
     opacity: 0.6,
   },
   graphContainer: {
-    marginTop: 12,
+    marginTop: spacing[2],
     alignItems: "center",
+  },
+  timeFrameRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: spacing[2],
+    marginTop: spacing[3],
+  },
+  timeFrameButton: {
+    paddingVertical: spacing[1] + 2,
+    paddingHorizontal: spacing[3],
+    borderRadius: radius.full,
+  },
+  timeFrameText: {
+    fontSize: typography.sizes.caption1,
+    fontWeight: "600",
+    opacity: 0.6,
+  },
+  timeFrameTextActive: {
+    color: colors.textInverse,
+    opacity: 1,
   },
   graphEmpty: {
     height: GRAPH_HEIGHT,
@@ -684,7 +777,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   graphEmptyText: {
-    fontSize: 14,
+    fontSize: typography.sizes.subheadline,
     opacity: 0.4,
   },
 });
@@ -692,31 +785,31 @@ const styles = StyleSheet.create({
 const infoStyles = StyleSheet.create({
   row: {
     flexDirection: "row",
-    gap: 8,
-    marginTop: 14,
+    gap: spacing[2],
+    marginTop: spacing[3] + spacing[1],
   },
   card: {
     flex: 1,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    gap: 2,
+    borderRadius: radius.md,
+    paddingVertical: spacing[2] + spacing[1],
+    paddingHorizontal: spacing[2] + spacing[1],
+    gap: spacing[1] / 2,
   },
   label: {
-    fontSize: 10,
+    fontSize: typography.sizes.caption2,
     fontWeight: "600",
-    opacity: 0.5,
+    opacity: 0.6,
     textTransform: "uppercase",
     letterSpacing: 0.4,
-    marginBottom: 2,
+    marginBottom: spacing[1] / 2,
   },
   value: {
-    fontSize: 18,
+    fontSize: typography.sizes.title3,
     fontWeight: "700",
     lineHeight: 22,
   },
   subValue: {
-    fontSize: 10,
+    fontSize: typography.sizes.caption2,
     opacity: 0.5,
     marginTop: 1,
   },

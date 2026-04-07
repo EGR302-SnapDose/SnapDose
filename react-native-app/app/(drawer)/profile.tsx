@@ -1,7 +1,8 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { auth, db } from "@/config/firebase";
-import { colors } from "@/constants/theme";
+import { colors, Colors } from "@/constants/theme";
+import { useThemeColor } from "@/hooks/use-theme-color";
 import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
@@ -104,11 +105,31 @@ function InfoRow({
 }
 
 export default function ProfileScreen() {
-  const cardBg = colors.surfaceSubtle;
-  const rowBg = colors.surface;
-  const avatarBg = colors.dangerSurface;
-  const iconColor = colors.tabInactive;
+  const cardBg = useThemeColor(
+    { light: colors.surfaceSubtle, dark: Colors.dark.surface },
+    "surface"
+  );
+  const rowBg = useThemeColor(
+    { light: colors.surface, dark: '#0D0D0D' },
+    "surface"
+  );
+  const avatarBg = useThemeColor(
+    { light: colors.dangerSurface, dark: '#3D1515' },
+    "surface"
+  );
+  const iconColor = useThemeColor(
+    { light: colors.tabInactive, dark: Colors.dark.icon },
+    "icon"
+  );
   const accentRed = colors.danger;
+  const backgroundColor = useThemeColor(
+    { light: colors.background, dark: Colors.dark.background },
+    "background"
+  );
+  const textSecondary = useThemeColor(
+    { light: colors.textSecondary, dark: Colors.dark.icon },
+    "icon"
+  );
 
   const [userData, setUserData] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -181,7 +202,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView
-      style={[styles.safe, { backgroundColor: colors.background }]}
+      style={[styles.safe, { backgroundColor }]}
       edges={["bottom"]}
     >
       <ScrollView
@@ -197,7 +218,7 @@ export default function ProfileScreen() {
           </View>
 
           <ThemedText style={styles.profileName}>{displayName}</ThemedText>
-          <ThemedText style={[styles.profileSub, { color: colors.textSecondary }]}>
+          <ThemedText style={[styles.profileSub, { color: textSecondary }]}>
             {formatDiabetesType(profile.diabetesType)}
           </ThemedText>
 
