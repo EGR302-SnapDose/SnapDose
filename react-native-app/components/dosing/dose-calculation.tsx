@@ -1,6 +1,6 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { useThemeColor } from "@/hooks/use-theme-color";
+import { useAccentColor } from "@/context/accent-color";
 import { Ionicons } from "@expo/vector-icons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -28,7 +28,7 @@ export function DoseCalculation({
   recommendedDose,
   onCalculate,
 }: DoseCalculationProps) {
-  const accent = useThemeColor({}, "accent");
+  const accent = useAccentColor();
 
   return (
     <ThemedView style={styles.container}>

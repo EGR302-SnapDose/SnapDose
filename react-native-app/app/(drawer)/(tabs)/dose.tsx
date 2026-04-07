@@ -3,9 +3,9 @@ import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { useAccentColor } from "@/context/accent-color";
 import { useGlucose } from "@/hooks/use-glucose";
 import { refreshIOB, useIOB } from "@/hooks/use-iob";
-import { useThemeColor } from "@/hooks/use-theme-color";
 import { calculateDose } from "@/utils/dose-calculator";
 
 import { CarbsInput } from "@/components/dosing/carbs-input";
@@ -27,7 +27,8 @@ interface Dose {
 }
 
 export default function DoseScreen() {
-  const accent = useThemeColor({}, "accent");
+  const insets = useSafeAreaInsets();
+  const accent = useAccentColor();
 
   const [mode, setMode] = useState<"meal" | "correction">("meal");
   const [carbs, setCarbs] = useState(0);

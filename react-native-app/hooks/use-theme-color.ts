@@ -1,21 +1,29 @@
 /**
- * Learn more about light and dark modes:
- * https://docs.expo.dev/guides/color-schemes/
+ * Theme color hook - bridges legacy color names to new semantic tokens
  */
 
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { colors } from '@/constants/theme';
+
+// Map legacy color names to new semantic color tokens
+const colorMapping: Record<string, string> = {
+  text: colors.textPrimary,
+  background: colors.background,
+  tint: colors.primary,
+  icon: colors.tabInactive,
+  tabIconDefault: colors.tabInactive,
+  tabIconSelected: colors.tabActive,
+};
 
 export function useThemeColor(
   props: { light?: string; dark?: string },
-  colorName: keyof typeof Colors.light & keyof typeof Colors.dark
+  colorName: string
 ) {
-  const theme = useColorScheme() ?? 'light';
-  const colorFromProps = props[theme];
-
+  // If explicit color provided in props, use it
+  const colorFromProps = props.light || props.dark;
   if (colorFromProps) {
     return colorFromProps;
-  } else {
-    return Colors[theme][colorName];
   }
+
+  // Otherwise, map to new semantic colors
+  return colorMapping[colorName] ?? colors.textPrimary;
 }

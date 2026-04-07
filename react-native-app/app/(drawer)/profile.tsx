@@ -1,8 +1,7 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { auth, db } from "@/config/firebase";
-import { Colors } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { colors } from "@/constants/theme";
 import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
@@ -105,14 +104,11 @@ function InfoRow({
 }
 
 export default function ProfileScreen() {
-  const colorScheme = useColorScheme() ?? "dark";
-  const theme = Colors[colorScheme];
-
-  const cardBg = colorScheme === "dark" ? "#1c1c1c" : "#f2f2f2";
-  const rowBg = colorScheme === "dark" ? "#2a2a2a" : "#e8e8e8";
-  const avatarBg = colorScheme === "dark" ? "#2e1a1a" : "#fde8e8";
-  const iconColor = colorScheme === "dark" ? "#8a8a8a" : "#888";
-  const accentRed = "#e84040";
+  const cardBg = colors.surfaceSubtle;
+  const rowBg = colors.surface;
+  const avatarBg = colors.dangerSurface;
+  const iconColor = colors.tabInactive;
+  const accentRed = colors.danger;
 
   const [userData, setUserData] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -185,7 +181,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView
-      style={[styles.safe, { backgroundColor: theme.background }]}
+      style={[styles.safe, { backgroundColor: colors.background }]}
       edges={["bottom"]}
     >
       <ScrollView
@@ -201,7 +197,7 @@ export default function ProfileScreen() {
           </View>
 
           <ThemedText style={styles.profileName}>{displayName}</ThemedText>
-          <ThemedText style={[styles.profileSub, { color: theme.icon }]}>
+          <ThemedText style={[styles.profileSub, { color: colors.textSecondary }]}>
             {formatDiabetesType(profile.diabetesType)}
           </ThemedText>
 

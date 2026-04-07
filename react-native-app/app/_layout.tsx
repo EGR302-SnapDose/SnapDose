@@ -1,3 +1,4 @@
+import { AccentColorProvider } from "@/context/accent-color";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import {
     DarkTheme,
@@ -12,25 +13,27 @@ export default function RootLayout() {
     const colorScheme = useColorScheme();
 
     return (
-        <ThemeProvider
-            value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-        >
-            <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="index" options={{ headerShown: false }} />
-                <Stack.Screen name="auth/login" options={{ headerShown: false }} />
-                <Stack.Screen name="auth/register" options={{ headerShown: false }} />
-                <Stack.Screen name="onboarding" />
-                <Stack.Screen name="(drawer)" />
-                <Stack.Screen
-                    name="modal"
-                    options={{
-                        presentation: "modal",
-                        headerShown: true,
-                        title: "Modal",
-                    }}
-                />
-            </Stack>
-            <StatusBar style="auto" />
-        </ThemeProvider>
+        <AccentColorProvider>
+            <ThemeProvider
+                value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+            >
+                <Stack screenOptions={{ headerShown: false }}>
+                    <Stack.Screen name="index" options={{ headerShown: false }} />
+                    <Stack.Screen name="auth/login" options={{ headerShown: false }} />
+                    <Stack.Screen name="auth/register" options={{ headerShown: false }} />
+                    <Stack.Screen name="onboarding" />
+                    <Stack.Screen name="(drawer)" />
+                    <Stack.Screen
+                        name="modal"
+                        options={{
+                            presentation: "modal",
+                            headerShown: true,
+                            title: "Modal",
+                        }}
+                    />
+                </Stack>
+                <StatusBar style="auto" />
+            </ThemeProvider>
+        </AccentColorProvider>
     );
 }

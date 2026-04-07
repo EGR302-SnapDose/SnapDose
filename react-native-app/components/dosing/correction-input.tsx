@@ -1,14 +1,14 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { useThemeColor } from "@/hooks/use-theme-color";
+import { useAccentColor } from "@/context/accent-color";
 import { useRef, useState } from "react";
 import {
-  Keyboard,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Keyboard,
+    Pressable,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 interface CorrectionInputProps {
@@ -17,7 +17,7 @@ interface CorrectionInputProps {
 }
 
 export function CorrectionInput({ value, onValueChange }: CorrectionInputProps) {
-  const accent = useThemeColor({}, "accent");
+  const accent = useAccentColor();
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState(value.toFixed(1));
   const inputRef = useRef<TextInput>(null);

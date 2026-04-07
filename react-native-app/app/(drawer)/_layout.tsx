@@ -2,8 +2,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { auth, db } from "@/config/firebase";
-import { Colors } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { colors } from "@/constants/theme";
 import { logout } from "@/services/logout-service";
 import { DrawerContentScrollView } from "@react-navigation/drawer";
 import { router, usePathname } from "expo-router";
@@ -31,10 +30,9 @@ const DRAWER_ITEMS = [
 ] as const;
 
 function CustomDrawerContent(props: any) {
-    const colorScheme = useColorScheme();
-    const tint = Colors[colorScheme ?? "light"].tint;
-    const iconDefault = Colors[colorScheme ?? "light"].icon;
-    const activeBg = colorScheme === "dark" ? "#1e1e1e" : "#f0f0f0";
+    const tint = colors.primary;
+    const iconDefault = colors.tabInactive;
+    const activeBg = colors.surfaceSubtle;
     const pathname = usePathname();
     const insets = useSafeAreaInsets();
     const [displayName, setDisplayName] = useState<string>("");
@@ -78,10 +76,9 @@ function CustomDrawerContent(props: any) {
                         props.navigation.closeDrawer();
                         router.navigate("/profile" as any);
                     }}
-                        style={[styles.profileButton, { backgroundColor: colorScheme === "dark" ? "#2e1a1a" : "#fde8e8" }]}
-
+                    style={[styles.profileButton, { backgroundColor: colors.dangerSurface }]}
                 >
-                    <ThemedText style={[styles.profileInitials, { color: "#e84040" }]}>
+                    <ThemedText style={[styles.profileInitials, { color: colors.danger }]}>
                         {initials}
                     </ThemedText>
                 </TouchableOpacity>
@@ -138,9 +135,8 @@ function CustomDrawerContent(props: any) {
 }
 
 export default function DrawerLayout() {
-    const colorScheme = useColorScheme();
-    const tint = Colors[colorScheme ?? "light"].tint;
-    const backgroundColor = Colors[colorScheme ?? "light"].background;
+    const tint = colors.primary;
+    const backgroundColor = colors.background;
 
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
