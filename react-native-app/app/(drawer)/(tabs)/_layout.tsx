@@ -1,16 +1,14 @@
-import { Tabs } from "expo-router";
-import React from "react";
-import { Pressable, TouchableOpacity, View, Alert } from "react-native";
-import { DrawerActions, useNavigation } from "@react-navigation/native";
 import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Colors } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { colors } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
+import { Tabs } from "expo-router";
+import React from "react";
+import { Alert, TouchableOpacity, View } from "react-native";
 import { logout } from "../../../services/logout-service";
 
 function LogoutButton() {
-    const handleLogout = () => {
+    const handleLogout = () => { 
         Alert.alert("Logout", "Are you sure you want to log out?", [
             { text: "Cancel", style: "cancel" },
             {
@@ -36,15 +34,14 @@ function LogoutButton() {
         </View>
     );
 }
-export default function TabLayout() {
-    const colorScheme = useColorScheme();
-    const navigation = useNavigation();
 
+export default function TabLayout() {
     return (
         <Tabs
             screenOptions={{
-                tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+                tabBarActiveTintColor: colors.tabActive,
                 headerShown: false,
+                tabBarButton: HapticTab,
             }}
         >
             <Tabs.Screen
@@ -52,12 +49,8 @@ export default function TabLayout() {
                 options={{
                     title: "Snap",
                     tabBarIcon: ({ color }) => (
-                        <IconSymbol
-                            size={28}
-                            name="camera.fill"
-                            color={color}
-                        />
-                    ),
+                        <IconSymbol size={28} name="camera.fill" color={color} />
+                    )
                 }}
             />
             <Tabs.Screen
@@ -80,13 +73,6 @@ export default function TabLayout() {
                             color={color}
                         />
                     ),
-                }}
-            />
-            <Tabs.Screen
-                name="settings"
-                options={{
-                    title: "Settings",
-                    href: null,
                 }}
             />
             <Tabs.Screen

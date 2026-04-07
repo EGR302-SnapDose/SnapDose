@@ -1,45 +1,52 @@
 import { ThemedView } from '@/components/themed-view';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { colors, layout, radius, shadows, spacing, textStyles } from '@/constants/theme';
 import { registerUser } from '@/services/auth-service';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-
+import { useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+} from 'react-native';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const textColor = useThemeColor({}, 'text');
-  const subtitleColor = useThemeColor({ light: '#888', dark: '#999' }, 'icon');
-  const inputBackground = useThemeColor({ light: '#f0f0f0', dark: '#1A1A1A' }, 'background');
-  const inputPlaceholder = useThemeColor({ light: '#aaa', dark: '#666' }, 'icon');
-  const colorScheme = useColorScheme();
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
+  const [confirmFocused, setConfirmFocused] = useState(false);
+  const passwordRef = useRef<TextInput>(null);
+  const confirmRef = useRef<TextInput>(null);
 
   const handleRegister = async () => {
     if (!email || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
       return;
     }
-
     if (password.length < 6) {
       Alert.alert('Error', 'Password must be at least 6 characters');
       return;
     }
-
     setLoading(true);
     try {
       await registerUser(email, password);
-      
       router.replace('/onboarding/step1');
     } catch (error: any) {
       Alert.alert('Registration Failed', error.message);
@@ -50,56 +57,106 @@ export default function RegisterScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <Text style={[styles.title, { color: textColor }]}>Create Account</Text>
-      <Text style={[styles.subtitle, { color: subtitleColor }]}>Join SnapDose today</Text>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* ── Brand ── */}
+            <View style={styles.header}>
+              <Text style={styles.title}>Create Account</Text>
+              <Text style={styles.subtitle}>Join SnapDose today</Text>
+            </View>
 
-      <View style={styles.form}>
-        <TextInput
-          style={[styles.input, { backgroundColor: inputBackground, color: textColor }]}
-          placeholder="Email"
-          placeholderTextColor={inputPlaceholder}
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
+            {/* ── Form card ── */}
+            <View style={styles.card}>
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Email</Text>
+                <TextInput
+                  style={[styles.input, emailFocused && styles.inputFocused]}
+                  placeholder="you@example.com"
+                  placeholderTextColor={colors.inputPlaceholder}
+                  value={email}
+                  onChangeText={setEmail}
+                  onFocus={() => setEmailFocused(true)}
+                  onBlur={() => setEmailFocused(false)}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  returnKeyType="next"
+                  onSubmitEditing={() => passwordRef.current?.focus()}
+                  blurOnSubmit={false}
+                />
+              </View>
 
-        <TextInput
-          style={[styles.input, { backgroundColor: inputBackground, color: textColor }]}
-          placeholder="Password"
-          placeholderTextColor={inputPlaceholder}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Password</Text>
+                <TextInput
+                  ref={passwordRef}
+                  style={[styles.input, passwordFocused && styles.inputFocused]}
+                  placeholder="••••••••"
+                  placeholderTextColor={colors.inputPlaceholder}
+                  value={password}
+                  onChangeText={setPassword}
+                  onFocus={() => setPasswordFocused(true)}
+                  onBlur={() => setPasswordFocused(false)}
+                  secureTextEntry
+                  returnKeyType="next"
+                  onSubmitEditing={() => confirmRef.current?.focus()}
+                  blurOnSubmit={false}
+                />
+              </View>
 
-        <TextInput
-          style={[styles.input, { backgroundColor: inputBackground, color: textColor }]}
-          placeholder="Confirm Password"
-          placeholderTextColor={inputPlaceholder}
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry
-        />
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Confirm Password</Text>
+                <TextInput
+                  ref={confirmRef}
+                  style={[styles.input, confirmFocused && styles.inputFocused]}
+                  placeholder="••••••••"
+                  placeholderTextColor={colors.inputPlaceholder}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  onFocus={() => setConfirmFocused(true)}
+                  onBlur={() => setConfirmFocused(false)}
+                  secureTextEntry
+                  returnKeyType="done"
+                  onSubmitEditing={Keyboard.dismiss}
+                />
+              </View>
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleRegister}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Create Account</Text>
-          )}
-        </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, loading && styles.buttonDisabled]}
+                onPress={handleRegister}
+                disabled={loading}
+                activeOpacity={0.82}
+              >
+                {loading ? (
+                  <ActivityIndicator color={colors.textInverse} />
+                ) : (
+                  <Text style={styles.buttonText}>Create Account</Text>
+                )}
+              </TouchableOpacity>
+            </View>
 
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={[styles.linkText, { color: subtitleColor }]}>
-            Already have an account? <Text style={styles.linkTextBold}>Login here</Text>
-          </Text>
-        </TouchableOpacity>
-      </View>
+            {/* ── Login link ── */}
+            <TouchableOpacity
+              onPress={() => router.back()}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={styles.loginLink}
+            >
+              <Text style={styles.linkText}>
+                Already have an account?{' '}
+                <Text style={styles.linkTextBold}>Sign in</Text>
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </ThemedView>
   );
 }
@@ -107,48 +164,93 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.background,
+  },
+  keyboardAvoid: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
-    padding: 20,
+    paddingHorizontal: layout.screenHorizontalPadding,
+    paddingVertical: layout.screenVerticalPadding,
+  },
+
+  // ── Brand ──────────────────────────────────────────────────────────────
+  header: {
+    alignItems: 'center',
+    marginBottom: spacing[8],
   },
   title: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 10,
+    ...textStyles.largeTitleBold,
+    color: colors.primary,
+    marginBottom: spacing[1],
   },
   subtitle: {
-    fontSize: 18,
-    textAlign: 'center',
-    marginBottom: 40,
+    ...textStyles.callout,
+    color: colors.textSecondary,
   },
-  form: {
-    width: '100%',
+
+  // ── Form card ──────────────────────────────────────────────────────────
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: spacing[5],
+    gap: spacing[4],
+    ...shadows.card,
+  },
+  fieldGroup: {
+    gap: spacing[1],
+  },
+  fieldLabel: {
+    ...textStyles.footnoteSemibold,
+    color: colors.textSecondary,
+    marginLeft: spacing[1],
   },
   input: {
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
-    fontSize: 16,
+    height: layout.inputHeight,
+    backgroundColor: colors.inputBackground,
+    borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.inputBorder,
+    paddingHorizontal: spacing[4],
+    ...textStyles.body,
+    color: colors.textPrimary,
   },
+  inputFocused: {
+    borderColor: colors.inputBorderFocus,
+    borderWidth: 1.5,
+  },
+
+  // ── CTA ────────────────────────────────────────────────────────────────
   button: {
-    backgroundColor: '#007AFF',
-    borderRadius: 10,
-    padding: 15,
+    height: layout.buttonHeightLg,
+    backgroundColor: colors.buttonPrimary,
+    borderRadius: radius.lg,
     alignItems: 'center',
-    marginTop: 10,
+    justifyContent: 'center',
+    marginTop: spacing[1],
+    ...shadows.sm,
+  },
+  buttonDisabled: {
+    backgroundColor: colors.buttonDisabled,
   },
   buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+    ...textStyles.calloutSemibold,
+    color: colors.textInverse,
+  },
+
+  // ── Login link ───────────────────────────────────────────────────────────
+  loginLink: {
+    alignItems: 'center',
+    marginTop: spacing[6],
   },
   linkText: {
-    textAlign: 'center',
-    marginTop: 20,
-    fontSize: 14,
+    ...textStyles.footnote,
+    color: colors.textSecondary,
   },
   linkTextBold: {
-    color: '#007AFF',
-    fontWeight: '600',
+    ...textStyles.footnoteSemibold,
+    color: colors.textLink,
   },
 });

@@ -38,7 +38,7 @@ export default function Step1Screen() {
   return (
     <OnboardingLayout
       currentStep={1}
-      totalSteps={6}
+      totalSteps={7}
       icon="person-outline"
       title="Create Your Profile"
       subtitle="Let's get to know you better"
