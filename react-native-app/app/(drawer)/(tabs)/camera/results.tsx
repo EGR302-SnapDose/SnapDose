@@ -1,17 +1,16 @@
-import { useState, useEffect, useRef } from 'react';
-import { ScrollView, StyleSheet, View, TouchableOpacity, Alert, Dimensions, ActivityIndicator } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { ThemedView } from '@/components/themed-view';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { DoseConfirmationSheet } from '@/components/dosing/dose-confirmation-sheet';
 import { ThemedText } from '@/components/themed-text';
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { ThemedView } from '@/components/themed-view';
 import { CarbEstimateDisplay } from '@/components/results/CarbEstimateDisplay';
 import { EditCarbsField } from '@/components/results/EditCarbsField';
 import { FoodsDetectedList } from '@/components/results/FoodsDetectedList';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { auth, db } from '@/config/firebase';
 import { useAccentColor } from '@/context/accent-color';
 import { useIOB } from '@/hooks/use-iob';
@@ -19,12 +18,6 @@ import { useMealByImage } from '@/hooks/use-meal-by-image';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { updateCarbEstimate } from '@/services/meal-service';
 import { hapticError, hapticSuccess } from '@/utils/haptics';
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import { router, useLocalSearchParams } from 'expo-router';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { useEffect, useRef, useState } from 'react';
-import { Alert, Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
 

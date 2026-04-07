@@ -8,20 +8,12 @@ import { doc, onSnapshot, setDoc, collection, query, where, getDocs } from "fire
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
 import { DoseConfirmationSheet } from "@/components/dosing/dose-confirmation-sheet";
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
 import { app, auth, db } from "@/config/firebase";
 import { useAccentColor } from "@/context/accent-color";
 import { useIOB } from "@/hooks/use-iob";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { deleteMealEntry, subscribeMeal } from "@/services/meal-service";
 import { MealCarbEstimate } from "@/types/meal";
-import { Image } from "expo-image";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { collection, doc, getDocs, onSnapshot, query, setDoc, where } from "firebase/firestore";
-import { deleteObject, getDownloadURL, getStorage, ref } from "firebase/storage";
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 
 const { width } = Dimensions.get("window");
 

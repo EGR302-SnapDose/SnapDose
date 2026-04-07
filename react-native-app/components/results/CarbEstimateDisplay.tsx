@@ -23,7 +23,7 @@ export function CarbEstimateDisplay({
 }: CarbEstimateDisplayProps) {
   const cardBg = useThemeColor({ light: '#F2F2F2', dark: '#1e1e1e' }, 'background');
   const mutedColor = useThemeColor({ light: '#888888', dark: '#888888' }, 'icon');
-  const { label, color } = confidenceConfig[confidence];
+  const { label, color } = confidenceConfig[confidence] ?? confidenceConfig['low'];
 
   return (
     <ThemedView style={[styles.card, { backgroundColor: cardBg }]}>

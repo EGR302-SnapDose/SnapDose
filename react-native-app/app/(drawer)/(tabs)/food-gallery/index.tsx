@@ -1,21 +1,18 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { View, ScrollView, StyleSheet, Dimensions, TouchableOpacity, ActivityIndicator, Alert, Modal } from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { ThemedView } from "@/components/themed-view";
+import { ThemedText } from "@/components/themed-text";
 import { app, db } from "@/config/firebase";
 import { useAccentColor } from "@/context/accent-color";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { Image } from "expo-image";
 import { launchImageLibraryAsync, MediaType, requestMediaLibraryPermissionsAsync } from "expo-image-picker";
-import { useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
 import { collection, onSnapshot, orderBy, query, Timestamp } from "firebase/firestore";
 import { getDownloadURL, getStorage, ref } from "firebase/storage";
-import React, { useCallback, useEffect, useState, } from "react";
-import { ActivityIndicator, Alert, Dimensions, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 
 const { width } = Dimensions.get("window");
 const CARD_SIZE = (width - 48) / 2;
