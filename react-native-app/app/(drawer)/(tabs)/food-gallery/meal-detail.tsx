@@ -1,12 +1,3 @@
-import React, { useState, useEffect } from "react";
-import { View, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Dimensions } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Image } from "expo-image";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { getStorage, ref, getDownloadURL, deleteObject } from "firebase/storage";
-import { doc, onSnapshot, setDoc, collection, query, where, getDocs } from "firebase/firestore";
-import { ThemedView } from "@/components/themed-view";
-import { ThemedText } from "@/components/themed-text";
 import { DoseConfirmationSheet } from "@/components/dosing/dose-confirmation-sheet";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -22,6 +13,7 @@ import { collection, doc, getDocs, onSnapshot, query, setDoc, where } from "fire
 import { deleteObject, getDownloadURL, getStorage, ref } from "firebase/storage";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 
