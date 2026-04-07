@@ -1,41 +1,251 @@
-import { DoseConfirmationSheet } from "@/components/dosing/dose-confirmation-sheet";
-import { CarbEstimateDisplay } from "@/components/results/CarbEstimateDisplay";
-import { EditCarbsField } from "@/components/results/EditCarbsField";
-import { FoodsDetectedList } from "@/components/results/FoodsDetectedList";
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
-import { auth, db } from "@/config/firebase";
-import {
-  colors,
-  Colors,
-  radius,
-  spacing,
-  textStyles,
-  typography,
-} from "@/constants/theme";
-import { useAccentColor } from "@/context/accent-color";
-import { useIOB } from "@/hooks/use-iob";
-import { useMealByImage } from "@/hooks/use-meal-by-image";
-import { useThemeColor } from "@/hooks/use-theme-color";
-import { updateCarbEstimate } from "@/services/meal-service";
-import { hapticError, hapticSuccess } from "@/utils/haptics";
-import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
-import { router, useLocalSearchParams } from "expo-router";
-import { doc, onSnapshot, setDoc } from "firebase/firestore";
-import { useEffect, useRef, useState } from "react";
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { router, useLocalSearchParams } from 'expo-router';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  Animated,
   Dimensions,
+  Easing,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
   View,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { DoseConfirmationSheet } from '@/components/dosing/dose-confirmation-sheet';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { CarbEstimateDisplay } from '@/components/results/CarbEstimateDisplay';
+import { EditCarbsField } from '@/components/results/EditCarbsField';
+import { FoodsDetectedList } from '@/components/results/FoodsDetectedList';
+import { auth, db } from '@/config/firebase';
+import { colors, Colors, radius, spacing, textStyles, typography } from '@/constants/theme';
+import { useAccentColor } from '@/context/accent-color';
+import { useIOB } from '@/hooks/use-iob';
+import { useMealByImage } from '@/hooks/use-meal-by-image';
+import { useThemeColor } from '@/hooks/use-theme-color';
+import { updateCarbEstimate } from '@/services/meal-service';
+import { hapticError, hapticSuccess } from '@/utils/haptics';
 
 const { width } = Dimensions.get("window");
 
+// ─── Stage definitions ───────────────────────────────────────────────────────
+type StageStep = 0 | 1 | 2;
+type Stage = { label: string; step: StageStep };
+
+function getStage(status: string | null | undefined): Stage {
+  if (status === 'processing') return { label: 'Analyzing food…', step: 1 };
+  if (status === 'completed')  return { label: 'Calculating nutrition…', step: 2 };
+  // null, undefined, 'pending', or any unknown value → uploading
+  return { label: 'Uploading image…', step: 0 };
+}
+
+// ─── Multi-stage progress indicator component ─────────────────────────────────
+interface ProgressIndicatorProps {
+  step: StageStep;
+  accent: string;
+  muted: string;
+  trackBg: string;
+  onCancel: () => void;
+}
+
+const STAGE_LABELS = ['Uploading', 'Analyzing', 'Calculating'];
+const STAGE_DESCRIPTIONS = ['Uploading image…', 'Analyzing food…', 'Calculating nutrition…'];
+const MIN_STEP_MS = 1000;
+
+function MultiStageProgressIndicator({
+  step,
+  accent,
+  muted,
+  trackBg,
+  onCancel,
+}: ProgressIndicatorProps) {
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const bar0Anim = useRef(new Animated.Value(0)).current;
+  const bar1Anim = useRef(new Animated.Value(0)).current;
+  const barAnims = [bar0Anim, bar1Anim];
+
+  // Restart pulse on each step change
+  useEffect(() => {
+    pulseAnim.setValue(1);
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 0.3,
+          duration: 650,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 650,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [step]);
+
+  // Fill connector bars as displayStep advances
+  useEffect(() => {
+    if (step >= 1) {
+      Animated.timing(bar0Anim, {
+        toValue: 1,
+        duration: 350,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: false,
+      }).start();
+    }
+    if (step >= 2) {
+      Animated.timing(bar1Anim, {
+        toValue: 1,
+        duration: 350,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [step]);
+
+  return (
+    <View style={piStyles.wrapper}>
+      <View style={piStyles.stepsRow}>
+        {STAGE_LABELS.map((name, i) => {
+          const isCompleted = i < step;
+          const isActive = i === step;
+          return (
+            <View key={name} style={piStyles.stepCol}>
+              {i > 0 && (
+                <View style={[piStyles.connectorTrack, { backgroundColor: trackBg }]}>
+                  <Animated.View
+                    style={[
+                      piStyles.connectorFill,
+                      { backgroundColor: accent },
+                      {
+                        width: barAnims[i - 1].interpolate({
+                          inputRange: [0, 1],
+                          outputRange: ['0%', '100%'],
+                        }),
+                      },
+                    ]}
+                  />
+                </View>
+              )}
+              <View style={piStyles.dotCol}>
+                <Animated.View
+                  style={[
+                    piStyles.dot,
+                    { borderColor: isCompleted || isActive ? accent : muted },
+                    isCompleted && { backgroundColor: accent },
+                    isActive && { opacity: pulseAnim },
+                  ]}
+                >
+                  {isCompleted
+                    ? <Ionicons name="checkmark" size={11} color="#fff" />
+                    : isActive
+                      ? <View style={[piStyles.dotInner, { backgroundColor: accent }]} />
+                      : null}
+                </Animated.View>
+                <ThemedText
+                  style={[
+                    piStyles.stepLabel,
+                    { color: isActive ? accent : muted },
+                    isActive && { fontWeight: '600' },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {name}
+                </ThemedText>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+
+      <ThemedText style={[piStyles.stageText, { color: accent }]}>
+        {STAGE_DESCRIPTIONS[step]}
+      </ThemedText>
+
+      <TouchableOpacity onPress={onCancel} style={piStyles.cancelButton} hitSlop={8}>
+        <ThemedText style={[piStyles.cancelText, { color: muted }]}>Cancel</ThemedText>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const piStyles = StyleSheet.create({
+  wrapper: {
+    alignItems: 'center',
+    paddingVertical: spacing[4],
+    paddingHorizontal: spacing[6],
+    gap: spacing[3],
+  },
+  // Outer row holds [stepCol] items; connector bars are inside stepCol to the left of the dot
+  stepsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  // Each stepCol: [connector?] + [dotCol] side by side
+  stepCol: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  // Dot stacked above label
+  dotCol: {
+    alignItems: 'center',
+    gap: spacing[1],
+  },
+  connectorTrack: {
+    width: 44,
+    height: 3,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  connectorFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  dot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dotInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  stepLabel: {
+    fontSize: 11,
+    marginTop: spacing[1],
+    textAlign: 'center',
+    minWidth: 64,
+  },
+  stageText: {
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginTop: spacing[1],
+  },
+  cancelButton: {
+    paddingVertical: spacing[2],
+    paddingHorizontal: spacing[4],
+  },
+  cancelText: {
+    fontSize: 14,
+  },
+});
+
+// ─── Color hook ───────────────────────────────────────────────────────────────
 function useColors() {
   const background = useThemeColor({}, "background");
   // Matches the controls bar token used in camera/index.tsx
@@ -64,27 +274,36 @@ function useColors() {
     { light: colors.danger, dark: "#FF453A" },
     "icon",
   );
-  return {
-    background,
-    bottomBarBg,
-    imageBg,
-    cardBg,
-    accent,
-    muted,
-    border,
-    danger,
-  };
+  const progressTrackBg = useThemeColor(
+    { light: '#E5E5EA', dark: '#3A3A3C' },
+    'background'
+  );
+  return { background, bottomBarBg, imageBg, cardBg, accent, muted, border, danger, progressTrackBg };
 }
 
+// ─── Results screen ───────────────────────────────────────────────────────────
 export default function ResultsScreen() {
-  const { imagePath, localUri } = useLocalSearchParams<{
-    imagePath: string;
-    localUri: string;
-  }>();
-  const { meal, isLoading, error } = useMealByImage(imagePath);
+  const { imagePath, localUri } = useLocalSearchParams<{ imagePath: string; localUri: string }>();
+  const { meal, isLoading, error, status } = useMealByImage(imagePath);
   const insulinOnBoard = useIOB();
   const c = useColors();
   const insets = useSafeAreaInsets();
+
+  const targetStep = getStage(status).step;
+  const [visualStep, setVisualStep] = useState<StageStep>(0);
+  const [showProgressIndicator, setShowProgressIndicator] = useState(true);
+  const stageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastStepTimeRef = useRef(Date.now());
+
+  useEffect(() => {
+    if (stageTimerRef.current) {
+      clearTimeout(stageTimerRef.current);
+      stageTimerRef.current = null;
+    }
+    lastStepTimeRef.current = Date.now();
+    setVisualStep(0);
+    setShowProgressIndicator(true);
+  }, [imagePath]);
 
   const [adjustedCarbs, setAdjustedCarbs] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -93,8 +312,62 @@ export default function ResultsScreen() {
   const [timedOut, setTimedOut] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const isProcessing =
-    !meal || meal?.status === "pending" || meal?.status === "processing";
+  useEffect(() => {
+    if (stageTimerRef.current) {
+      clearTimeout(stageTimerRef.current);
+      stageTimerRef.current = null;
+    }
+
+    if (targetStep <= visualStep) {
+      if (targetStep !== visualStep) {
+        setVisualStep(targetStep);
+      }
+      return;
+    }
+
+    const advanceTo = (currentStep: StageStep) => {
+      const nextStep = (currentStep + 1) as StageStep;
+      const elapsed = Date.now() - lastStepTimeRef.current;
+      const delay = Math.max(0, MIN_STEP_MS - elapsed);
+
+      stageTimerRef.current = setTimeout(() => {
+        lastStepTimeRef.current = Date.now();
+        setVisualStep(nextStep);
+
+        if (nextStep < targetStep) {
+          advanceTo(nextStep);
+        }
+      }, delay);
+    };
+
+    advanceTo(visualStep);
+
+    return () => {
+      if (stageTimerRef.current) clearTimeout(stageTimerRef.current);
+    };
+  }, [targetStep, visualStep]);
+
+  const backendProcessing = !meal || status === 'pending' || status === 'processing';
+
+  useEffect(() => {
+    if (backendProcessing) {
+      setShowProgressIndicator(true);
+      return;
+    }
+
+    if (visualStep < 2) {
+      setShowProgressIndicator(true);
+      return;
+    }
+
+    const finalHoldTimer = setTimeout(() => {
+      setShowProgressIndicator(false);
+    }, MIN_STEP_MS);
+
+    return () => clearTimeout(finalHoldTimer);
+  }, [backendProcessing, visualStep]);
+
+  const isProcessing = backendProcessing || showProgressIndicator;
   const finalCarbs = adjustedCarbs ?? meal?.estimated_carbs_grams ?? 0;
   const recommendedDose = Math.max(0, finalCarbs / carbRatio - insulinOnBoard);
 
@@ -193,7 +466,7 @@ export default function ResultsScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header — HIG: back chevron left, title centered, spacer right */}
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => router.back()}
@@ -222,19 +495,15 @@ export default function ResultsScreen() {
           )}
         </View>
 
-        {/* Processing banner */}
+        {/* Multi-stage progress indicator — replaces static banner */}
         {isProcessing && (
-          <View
-            style={[
-              styles.processingBanner,
-              { backgroundColor: `${c.accent}18` },
-            ]}
-          >
-            <Ionicons name="time-outline" size={16} color={c.accent} />
-            <ThemedText style={[styles.processingText, { color: c.accent }]}>
-              Analyzing your photo...
-            </ThemedText>
-          </View>
+          <MultiStageProgressIndicator
+            step={visualStep}
+            accent={c.accent}
+            muted={c.muted}
+            trackBg={c.progressTrackBg}
+            onCancel={() => router.back()}
+          />
         )}
 
         <CarbEstimateDisplay
@@ -257,7 +526,7 @@ export default function ResultsScreen() {
         )}
       </ScrollView>
 
-      {/* Bottom action bar — mirrors camera controls bar styling */}
+      {/* Bottom action bar */}
       {!isProcessing && !isLoading && meal && (
         <View
           style={[
@@ -269,7 +538,6 @@ export default function ResultsScreen() {
             },
           ]}
         >
-          {/* Outline button — accent border/text */}
           <TouchableOpacity
             style={[styles.doseButton, { borderColor: c.accent }]}
             onPress={() => setShowDoseSheet(true)}
@@ -279,7 +547,6 @@ export default function ResultsScreen() {
             </ThemedText>
           </TouchableOpacity>
 
-          {/* Filled button — accent background, matches "Use Photo" feel */}
           <TouchableOpacity
             style={[
               styles.confirmButton,
@@ -321,22 +588,17 @@ const styles = StyleSheet.create({
     gap: spacing[4],
     paddingHorizontal: spacing[6],
   },
-
-  // ── Scroll content ──────────────────────────────────────────────────────────
   content: {
     paddingHorizontal: spacing[4], // 16pt — HIG recommended iPhone margin
     paddingTop: spacing[3],
     gap: spacing[4],
   },
-
-  // ── Header ──────────────────────────────────────────────────────────────────
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: spacing[1],
   },
-  // HIG: minimum 44×44pt touch target
   backButton: {
     width: 44,
     height: 44,
@@ -349,8 +611,6 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 44, // mirrors backButton width to keep title centered
   },
-
-  // ── Hero image ──────────────────────────────────────────────────────────────
   imageContainer: {
     width: width - spacing[8], // full width minus 2× HIG margin (16pt each side)
     height: (width - spacing[8]) * 0.75,
@@ -366,23 +626,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
-  // ── Processing banner ────────────────────────────────────────────────────────
-  processingBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing[2],
-    paddingHorizontal: spacing[4],
-    paddingVertical: spacing[3],
-    borderRadius: radius.lg,
-  },
-  processingText: {
-    ...textStyles.footnote,
-    fontWeight: "500",
-  },
-
-  // ── Bottom action bar ────────────────────────────────────────────────────────
-  // Matches camera screen controls bar: same surface token, same rounded top corners
   bottomBar: {
     flexDirection: "row",
     gap: spacing[3],
@@ -392,7 +635,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
   },
-  // Outline pill — secondary action
   doseButton: {
     flex: 1,
     height: 50, // HIG buttonHeightLg
@@ -404,7 +646,6 @@ const styles = StyleSheet.create({
   doseButtonText: {
     ...textStyles.calloutSemibold,
   },
-  // Filled pill — primary action, accent bg
   confirmButton: {
     flex: 1,
     height: 50,
@@ -419,8 +660,6 @@ const styles = StyleSheet.create({
   disabled: {
     opacity: 0.5,
   },
-
-  // ── Error state ──────────────────────────────────────────────────────────────
   errorText: {
     ...textStyles.calloutSemibold,
     textAlign: "center",
