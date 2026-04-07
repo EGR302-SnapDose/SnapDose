@@ -1,12 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
-import { ScrollView, StyleSheet, View, TouchableOpacity, Alert, Dimensions, ActivityIndicator } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Image } from 'expo-image';
-import { router, useLocalSearchParams } from 'expo-router';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { DoseConfirmationSheet } from '@/components/dosing/dose-confirmation-sheet';
 import { CarbEstimateDisplay } from '@/components/results/CarbEstimateDisplay';
 import { EditCarbsField } from '@/components/results/EditCarbsField';
 import { FoodsDetectedList } from '@/components/results/FoodsDetectedList';
@@ -25,6 +17,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
