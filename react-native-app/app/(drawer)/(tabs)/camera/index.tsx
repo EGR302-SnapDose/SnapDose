@@ -1,8 +1,9 @@
 import { CameraPermissionPrompt } from '@/components/camera/CameraPermissionPrompt';
-import { CameraControls } from '@/components/camera/CaptureButton';
+import { CameraControls, ZOOM_PRESETS } from '@/components/camera/CaptureButton';
 import { PhotoPreview } from '@/components/camera/PhotoPreview';
 import { ThemedView } from '@/components/themed-view';
 import { Toast } from '@/components/ui/Toast';
+import { Colors, colors, radius, spacing } from '@/constants/theme';
 import { useCameraPermission } from '@/hooks/use-camera-permissions';
 import { usePhotoStorage } from '@/hooks/use-photo-storage';
 import { useThemeColor } from '@/hooks/use-theme-color';
@@ -12,7 +13,9 @@ import { hapticError, hapticLight } from '@/utils/haptics';
 import { Camera, CameraType, CameraView } from 'expo-camera';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export type CapturedPhoto = {
   uri: string;
@@ -20,6 +23,14 @@ export type CapturedPhoto = {
   width: number;
   height: number;
 };
+
+// Clamp helper
+const clamp = (val: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, val));
+
+// Full allowed range for pinch (0 = ultrawide, 0.3 = 2x)
+const PINCH_MIN = 0;
+const PINCH_MAX = 0.3;
 
 export default function CameraScreen() {
   const cameraRef = useRef<CameraView>(null);
@@ -31,19 +42,39 @@ export default function CameraScreen() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('Photo uploaded!');
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // zoom is a plain number 0–0.5; default to 1x preset
+  const [zoom, setZoom] = useState<number>(ZOOM_PRESETS[1].value);
+  const pinchStartZoom = useRef<number>(ZOOM_PRESETS[1].value);
+
   const { askForPermission } = useCameraPermission();
   const { savePhoto, removePhoto } = usePhotoStorage();
-  const controlsBg = useThemeColor({ light: '#F2F2F2', dark: '#1e1e1e' }, 'background');
+
+  const controlsBg = useThemeColor(
+    { light: colors.surfaceSubtle, dark: Colors.dark.surface },
+    'surface'
+  );
 
   useEffect(() => {
     Camera.getCameraPermissionsAsync().then((permission) => {
       setGranted(permission.granted);
     });
-
     return () => {
       if (toastTimer.current) clearTimeout(toastTimer.current);
     };
   }, []);
+
+  // ── Pinch gesture ──────────────────────────────────────────────────────────
+  const pinchGesture = Gesture.Pinch()
+    .onBegin(() => {
+      pinchStartZoom.current = zoom;
+    })
+    .onUpdate((e) => {
+      // Additive delta with sensitivity factor so it feels natural
+      const next = pinchStartZoom.current + (e.scale - 1) * 0.25;
+      setZoom(clamp(next, PINCH_MIN, PINCH_MAX));
+    })
+    .runOnJS(true);
 
   const handleRequestPermission = async () => {
     const result = await askForPermission();
@@ -51,7 +82,7 @@ export default function CameraScreen() {
   };
 
   const toggleFacing = () => {
-    hapticLight();
+    setZoom(ZOOM_PRESETS[1].value); // reset to 1x on flip
     setFacing((prev) => (prev === 'back' ? 'front' : 'back'));
   };
 
@@ -133,23 +164,49 @@ export default function CameraScreen() {
   }
 
   return (
-    <ThemedView style={styles.container}>
-      <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
-      <View style={[styles.controls, { backgroundColor: controlsBg }]}>
-        <CameraControls
-          onCapture={handleCapture}
-          onFlip={toggleFacing}
-          onBack={() => router.push('/(drawer)/(tabs)' as any)}
-          isCapturing={isCapturing}
-        />
-      </View>
-      <Toast visible={showToast} message={toastMessage} />
-    </ThemedView>
+    <GestureHandlerRootView style={styles.container}>
+      <ThemedView style={styles.container}>
+        <GestureDetector gesture={pinchGesture}>
+          <CameraView
+            ref={cameraRef}
+            style={styles.camera}
+            facing={facing}
+            zoom={zoom}
+          />
+        </GestureDetector>
+
+        <SafeAreaView
+          style={[styles.controls, { backgroundColor: controlsBg }]}
+          edges={['bottom']}
+        >
+          <CameraControls
+            onCapture={handleCapture}
+            onFlip={toggleFacing}
+            onBack={() => router.push('/(drawer)/(tabs)' as any)}
+            isCapturing={isCapturing}
+            zoom={zoom}
+            onZoomChange={setZoom}
+          />
+        </SafeAreaView>
+
+        <Toast visible={showToast} message={toastMessage} />
+      </ThemedView>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  camera: { flex: 1 },
-  controls: { justifyContent: 'flex-end' },
+  container: {
+    flex: 1,
+  },
+  camera: {
+    flex: 1,
+  },
+  controls: {
+    justifyContent: 'flex-end',
+    paddingHorizontal: spacing[5],
+    paddingTop: spacing[4],
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+  },
 });

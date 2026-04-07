@@ -1,12 +1,3 @@
-import React, { useState, useEffect } from "react";
-import { View, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Dimensions } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Image } from "expo-image";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { getStorage, ref, getDownloadURL, deleteObject } from "firebase/storage";
-import { doc, onSnapshot, setDoc, collection, query, where, getDocs } from "firebase/firestore";
-import { ThemedView } from "@/components/themed-view";
-import { ThemedText } from "@/components/themed-text";
 import { DoseConfirmationSheet } from "@/components/dosing/dose-confirmation-sheet";
 import { app, auth, db } from "@/config/firebase";
 import { useAccentColor } from "@/context/accent-color";
@@ -14,6 +5,13 @@ import { useIOB } from "@/hooks/use-iob";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { deleteMealEntry, subscribeMeal } from "@/services/meal-service";
 import { MealCarbEstimate } from "@/types/meal";
+import { Image } from "expo-image";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { collection, doc, getDocs, onSnapshot, query, setDoc, where } from "firebase/firestore";
+import { deleteObject, getDownloadURL, getStorage, ref } from "firebase/storage";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 
