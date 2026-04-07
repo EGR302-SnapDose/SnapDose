@@ -13,7 +13,7 @@ export default function Step1Screen() {
   const [accentColor, setAccentColor] = useState('#EF4444');
   const router = useRouter();
 
-  const inputBackground = useThemeColor({ light: '#F0F0F0', dark: '#1A1A1A' }, 'background');
+  const inputBackground = useThemeColor({ light: '#FFFFFF', dark: '#1A1A1A' }, 'background');
   const inputColor = useThemeColor({ light: '#000000', dark: '#FFFFFF' }, 'text');
   const inputBorderColor = useThemeColor({ light: '#CCCCCC', dark: '#333333' }, 'icon');
   const placeholderColor = useThemeColor({ light: '#999999', dark: '#555555' }, 'icon');
