@@ -1,25 +1,17 @@
 import * as Haptics from "expo-haptics";
 
-export async function hapticSuccess(): Promise<void> {
-  try {
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  } catch {}
+export function hapticSuccess(): void {
+  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 }
 
-export async function hapticError(): Promise<void> {
-  try {
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-  } catch {}
+export function hapticError(): void {
+  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
 }
 
-export async function hapticLight(): Promise<void> {
-  try {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  } catch {}
+export function hapticLight(): void {
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 }
 
-export async function hapticHeavy(): Promise<void> {
-  try {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-  } catch {}
+export function hapticHeavy(): void {
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
 }

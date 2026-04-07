@@ -1,12 +1,7 @@
-import { Tabs } from "expo-router";
-import React from "react";
-import { Pressable } from "react-native";
-import { DrawerActions, useNavigation } from "@react-navigation/native";
 import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { colors } from "@/constants/theme";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import React from "react";
 import { Alert, TouchableOpacity, View } from "react-native";
@@ -41,28 +36,12 @@ function LogoutButton() {
 }
 
 export default function TabLayout() {
-    const navigation = useNavigation();
-
     return (
         <Tabs
             screenOptions={{
                 tabBarActiveTintColor: colors.tabActive,
                 headerShown: false,
                 tabBarButton: HapticTab,
-                headerLeft: () => (
-                    <Pressable
-                        onPress={() =>
-                            navigation.dispatch(DrawerActions.toggleDrawer())
-                        }
-                        style={{ marginLeft: 16 }}
-                    >
-                        <IconSymbol
-                            name="chevron.right"
-                            size={24}
-                            color={Colors[colorScheme ?? "light"].icon}
-                        />
-                    </Pressable>
-                ),
             }}
         >
             <Tabs.Screen

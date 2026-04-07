@@ -9,6 +9,7 @@ import {
     Alert,
 } from 'react-native';
 import { getAuth } from 'firebase/auth';
+import { hapticError, hapticSuccess } from '../../utils/haptics';
 import { getPumpStatus, testPumpConnection, PumpDevice } from '../../services/pump-service'
 
 export default function PumpPairingSection() {
@@ -33,6 +34,7 @@ export default function PumpPairingSection() {
         setTesting(true);
         const result = await testPumpConnection(userId);
         setTesting(false);
+        if (result.success) hapticSuccess(); else hapticError();
         Alert.alert(
             result.success ? 'Connection Successful' : 'Connection Failed',
             result.message

@@ -1,5 +1,4 @@
 import { ThemedText } from "@/components/themed-text";
-import { useAccentColor } from "@/context/accent-color";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { hapticError, hapticHeavy, hapticSuccess } from "@/utils/haptics";
 import { Ionicons } from "@expo/vector-icons";
@@ -41,7 +40,7 @@ export function DoseConfirmationSheet({
   onConfirm,
   onCancel,
 }: DoseConfirmationSheetProps) {
-  const accent = useAccentColor();
+  const accent = useThemeColor({}, "accent");
   const backgroundColor = useThemeColor(
     { light: "#FFFFFF", dark: "#1C1C1E" },
     "background",
