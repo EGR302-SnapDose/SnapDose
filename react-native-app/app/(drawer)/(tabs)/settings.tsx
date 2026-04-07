@@ -5,6 +5,7 @@ import { db } from "@/config/firebase";
 import { colors, Colors } from "@/constants/theme";
 import { useAccentColor } from "@/context/accent-color";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { hapticLight } from "@/utils/haptics";
 import { useFocusEffect } from "@react-navigation/native";
 import * as WebBrowser from "expo-web-browser";
 import { getAuth } from "firebase/auth";
@@ -102,6 +103,7 @@ export default function SettingsScreen() {
 
     const handleColorSelect = async (color: string) => {
         if (!userId) return;
+        hapticLight();
         setSelectedAccentColor(color);
         setSavingColor(true);
         try {
