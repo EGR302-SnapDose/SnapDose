@@ -27,9 +27,9 @@ export type CapturedPhoto = {
 const clamp = (val: number, min: number, max: number) =>
   Math.min(max, Math.max(min, val));
 
-// Full allowed range for pinch (0 = ultrawide, 0.5 = ~2x)
+// Full allowed range for pinch (0 = ultrawide, 0.3 = 2x)
 const PINCH_MIN = 0;
-const PINCH_MAX = 0.5;
+const PINCH_MAX = 0.3;
 
 export default function CameraScreen() {
   const cameraRef = useRef<CameraView>(null);
@@ -43,8 +43,8 @@ export default function CameraScreen() {
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // zoom is a plain number 0–0.5; default to 1x preset
-  const [zoom, setZoom] = useState(ZOOM_PRESETS[1].value);
-  const pinchStartZoom = useRef(ZOOM_PRESETS[1].value);
+  const [zoom, setZoom] = useState<number>(ZOOM_PRESETS[1].value);
+  const pinchStartZoom = useRef<number>(ZOOM_PRESETS[1].value);
 
   const { askForPermission } = useCameraPermission();
   const { savePhoto, removePhoto } = usePhotoStorage();

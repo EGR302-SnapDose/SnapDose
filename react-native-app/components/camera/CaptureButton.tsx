@@ -62,11 +62,14 @@ export function CameraControls({
                 style={[styles.zoomBtn, active && { backgroundColor: zoomActiveBg }]}
                 hitSlop={6}
               >
-                <Text style={[
-                  styles.zoomBtnText,
-                  { color: iconColor },
-                  active && styles.zoomBtnActive,
-                ]}>
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    styles.zoomBtnText,
+                    { color: iconColor },
+                    active && styles.zoomBtnActive,
+                  ]}
+                >
                   {preset.label}
                 </Text>
               </TouchableOpacity>
@@ -109,7 +112,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing[4],
   },
   sideSlot: {
-    width: 44,
+    width: 52,
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
@@ -123,6 +126,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[1],
     paddingVertical: 2,
     borderRadius: radius.xs,
+    minWidth: 40,
   },
   zoomBtnText: {
     ...textStyles.caption1,
