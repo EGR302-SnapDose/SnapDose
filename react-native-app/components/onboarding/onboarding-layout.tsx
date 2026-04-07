@@ -19,6 +19,7 @@ interface OnboardingLayoutProps {
   canProceed: boolean;
   nextButtonText?: string;
   accentColor: string;
+  backRoute?: string;
 }
 
 export default function OnboardingLayout({
@@ -32,6 +33,7 @@ export default function OnboardingLayout({
   canProceed,
   nextButtonText = 'Next',
   accentColor,
+  backRoute,
 }: OnboardingLayoutProps) {
   const router = useRouter();
   const backgroundColor = useThemeColor({ dark: '#000000' }, 'background');
@@ -43,7 +45,9 @@ export default function OnboardingLayout({
   const backButtonTextColor = useThemeColor({ light: '#000000', dark: '#FFFFFF' }, 'text');
 
   const handleBack = () => {
-    if (router.canGoBack()) {
+    if (backRoute) {
+      router.replace(backRoute);
+    } else if (router.canGoBack()) {
       router.back();
     }
   };

@@ -1,29 +1,35 @@
-import { ThemedView } from '@/components/themed-view';
-import { colors, layout, radius, shadows, spacing, textStyles } from '@/constants/theme';
-import { registerUser } from '@/services/auth-service';
-import { useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { ThemedView } from "@/components/themed-view";
 import {
-  ActivityIndicator,
-  Alert,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+    colors,
+    layout,
+    radius,
+    shadows,
+    spacing,
+    textStyles,
+} from "@/constants/theme";
+import { registerUser } from "@/services/auth-service";
+import { useRouter } from "expo-router";
+import { useRef, useState } from "react";
+import {
+    ActivityIndicator,
+    Alert,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
+} from "react-native";
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
@@ -33,23 +39,23 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert("Error", "Please fill in all fields");
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert("Error", "Passwords do not match");
       return;
     }
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      Alert.alert("Error", "Password must be at least 6 characters");
       return;
     }
     setLoading(true);
     try {
       await registerUser(email, password);
-      router.replace('/onboarding/step1');
+      router.replace("/onboarding/step1");
     } catch (error: any) {
-      Alert.alert('Registration Failed', error.message);
+      Alert.alert("Registration Failed", error.message);
     } finally {
       setLoading(false);
     }
@@ -59,8 +65,8 @@ export default function RegisterScreen() {
     <ThemedView style={styles.container}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView
@@ -145,12 +151,12 @@ export default function RegisterScreen() {
 
             {/* ── Login link ── */}
             <TouchableOpacity
-              onPress={() => router.back()}
+              onPress={() => router.replace("/auth/login")}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               style={styles.loginLink}
             >
               <Text style={styles.linkText}>
-                Already have an account?{' '}
+                Already have an account?{" "}
                 <Text style={styles.linkTextBold}>Sign in</Text>
               </Text>
             </TouchableOpacity>
@@ -171,14 +177,14 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: layout.screenHorizontalPadding,
     paddingVertical: layout.screenVerticalPadding,
   },
 
   // ── Brand ──────────────────────────────────────────────────────────────
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: spacing[8],
   },
   title: {
@@ -227,8 +233,8 @@ const styles = StyleSheet.create({
     height: layout.buttonHeightLg,
     backgroundColor: colors.buttonPrimary,
     borderRadius: radius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: spacing[1],
     ...shadows.sm,
   },
@@ -242,7 +248,7 @@ const styles = StyleSheet.create({
 
   // ── Login link ───────────────────────────────────────────────────────────
   loginLink: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: spacing[6],
   },
   linkText: {

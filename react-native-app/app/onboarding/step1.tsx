@@ -45,6 +45,7 @@ export default function Step1Screen() {
       onNext={handleNext}
       canProceed={name.trim().length > 0}
       accentColor={accentColor}
+      backRoute="/auth/register"
     >
       <ThemedView style={styles.container}>
         <View style={styles.inputContainer}>
