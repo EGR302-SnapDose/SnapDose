@@ -1,8 +1,6 @@
 import { db } from "@/config/firebase";
-import { colors, Colors } from "@/constants/theme";
 import { useAccentColor } from "@/context/accent-color";
 import { useThemeColor } from "@/hooks/use-theme-color";
-import { hapticLight } from "@/utils/haptics";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
@@ -50,6 +48,17 @@ function PumpSection() {
   const accent = useAccentColor();
   const userId = getAuth().currentUser?.uid ?? "";
   const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  const sectionBgColor = useThemeColor(
+    { light: "#f8f8f8", dark: "#1C1C1E" },
+    "background",
+  );
+  const labelColor = useThemeColor({ light: "#000", dark: "#fff" }, "text");
+  const statusColor = useThemeColor({ light: "#888", dark: "#aaa" }, "text");
+  const sectionTitleColor = useThemeColor(
+    { light: "#666", dark: "#999" },
+    "text",
+  );
 
   useEffect(() => {
     if (!userId) return;
@@ -139,8 +148,15 @@ function PumpSection() {
   if (loading) {
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Insulin Pump</Text>
-        <View style={[styles.row, { justifyContent: "center" }]}>
+        <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>
+          Insulin Pump
+        </Text>
+        <View
+          style={[
+            styles.row,
+            { backgroundColor: sectionBgColor, justifyContent: "center" },
+          ]}
+        >
           <ActivityIndicator size="small" color="#888" />
         </View>
       </View>
@@ -150,11 +166,15 @@ function PumpSection() {
   if (!pump) {
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Insulin Pump</Text>
-        <View style={styles.row}>
+        <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>
+          Insulin Pump
+        </Text>
+        <View style={[styles.row, { backgroundColor: sectionBgColor }]}>
           <View style={styles.rowText}>
-            <Text style={styles.label}>No pump paired</Text>
-            <Text style={styles.status}>
+            <Text style={[styles.label, { color: labelColor }]}>
+              No pump paired
+            </Text>
+            <Text style={[styles.status, { color: statusColor }]}>
               Pair a device to enable insulin delivery
             </Text>
           </View>
@@ -181,34 +201,42 @@ function PumpSection() {
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Insulin Pump</Text>
+      <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>
+        Insulin Pump
+      </Text>
 
-      <View style={styles.row}>
+      <View style={[styles.row, { backgroundColor: sectionBgColor }]}>
         <View style={styles.rowText}>
-          <Text style={styles.label}>Device</Text>
-          <Text style={styles.status}>{pump.model}</Text>
+          <Text style={[styles.label, { color: labelColor }]}>Device</Text>
+          <Text style={[styles.status, { color: statusColor }]}>
+            {pump.model}
+          </Text>
         </View>
       </View>
 
-      <View style={styles.row}>
+      <View style={[styles.row, { backgroundColor: sectionBgColor }]}>
         <View style={styles.rowText}>
-          <Text style={styles.label}>Serial</Text>
-          <Text style={styles.status}>{pump.serialNumber}</Text>
+          <Text style={[styles.label, { color: labelColor }]}>Serial</Text>
+          <Text style={[styles.status, { color: statusColor }]}>
+            {pump.serialNumber}
+          </Text>
         </View>
       </View>
 
       {pairedDate && (
-        <View style={styles.row}>
+        <View style={[styles.row, { backgroundColor: sectionBgColor }]}>
           <View style={styles.rowText}>
-            <Text style={styles.label}>Paired</Text>
-            <Text style={styles.status}>{pairedDate}</Text>
+            <Text style={[styles.label, { color: labelColor }]}>Paired</Text>
+            <Text style={[styles.status, { color: statusColor }]}>
+              {pairedDate}
+            </Text>
           </View>
         </View>
       )}
 
-      <View style={styles.row}>
+      <View style={[styles.row, { backgroundColor: sectionBgColor }]}>
         <View style={styles.rowText}>
-          <Text style={styles.label}>Status</Text>
+          <Text style={[styles.label, { color: labelColor }]}>Status</Text>
           <View style={styles.statusBadge}>
             <Animated.View
               style={[
@@ -264,6 +292,22 @@ export default function SettingsScreen() {
   const userId = getAuth().currentUser?.uid;
   const currentAccent = useAccentColor();
 
+  const backgroundColor = useThemeColor(
+    { light: "#fff", dark: "#000" },
+    "background",
+  );
+  const sectionBgColor = useThemeColor(
+    { light: "#f8f8f8", dark: "#1C1C1E" },
+    "background",
+  );
+  const titleColor = useThemeColor({ light: "#000", dark: "#fff" }, "text");
+  const sectionTitleColor = useThemeColor(
+    { light: "#666", dark: "#999" },
+    "text",
+  );
+  const labelColor = useThemeColor({ light: "#000", dark: "#fff" }, "text");
+  const statusColor = useThemeColor({ light: "#888", dark: "#aaa" }, "text");
+
   const checkDexcomStatus = async () => {
     if (!userId) return;
     try {
@@ -318,14 +362,16 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Settings</Text>
+    <ScrollView style={[styles.container, { backgroundColor }]}>
+      <Text style={[styles.title, { color: titleColor }]}>Settings</Text>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Integrations</Text>
+        <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>
+          Integrations
+        </Text>
 
-        <View style={styles.row}>
-          <Text style={styles.label}>Dexcom CGM</Text>
+        <View style={[styles.row, { backgroundColor: sectionBgColor }]}>
+          <Text style={[styles.label, { color: labelColor }]}>Dexcom CGM</Text>
           <View style={styles.rowRight}>
             <View style={styles.statusBadge}>
               <View
@@ -360,7 +406,9 @@ export default function SettingsScreen() {
               </Text>
             </View>
             {cgmLastSeen && (
-              <Text style={styles.lastSeen}>Last seen: {cgmLastSeen}</Text>
+              <Text style={[styles.lastSeen, { color: statusColor }]}>
+                Last seen: {cgmLastSeen}
+              </Text>
             )}
             {!loading && !dexcomConnected && (
               <Pressable
@@ -382,48 +430,68 @@ export default function SettingsScreen() {
       <PumpSection />
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Units</Text>
-        <View style={styles.row}>
+        <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>
+          Units
+        </Text>
+        <View style={[styles.row, { backgroundColor: sectionBgColor }]}>
           <View style={styles.rowText}>
-            <Text style={styles.label}>Blood Glucose</Text>
-            <Text style={styles.status}>mg/dL</Text>
+            <Text style={[styles.label, { color: labelColor }]}>
+              Blood Glucose
+            </Text>
+            <Text style={[styles.status, { color: statusColor }]}>mg/dL</Text>
           </View>
         </View>
-        <View style={styles.row}>
+        <View style={[styles.row, { backgroundColor: sectionBgColor }]}>
           <View style={styles.rowText}>
-            <Text style={styles.label}>Carbohydrates</Text>
-            <Text style={styles.status}>grams</Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Notifications</Text>
-        <View style={styles.row}>
-          <View style={styles.rowText}>
-            <Text style={styles.label}>High Glucose Alerts</Text>
-            <Text style={styles.status}>Enabled</Text>
-          </View>
-        </View>
-        <View style={styles.row}>
-          <View style={styles.rowText}>
-            <Text style={styles.label}>Low Glucose Alerts</Text>
-            <Text style={styles.status}>Enabled</Text>
-          </View>
-        </View>
-        <View style={styles.row}>
-          <View style={styles.rowText}>
-            <Text style={styles.label}>Meal Reminders</Text>
-            <Text style={styles.status}>Disabled</Text>
+            <Text style={[styles.label, { color: labelColor }]}>
+              Carbohydrates
+            </Text>
+            <Text style={[styles.status, { color: statusColor }]}>grams</Text>
           </View>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>App Preferences</Text>
+        <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>
+          Notifications
+        </Text>
+        <View style={[styles.row, { backgroundColor: sectionBgColor }]}>
+          <View style={styles.rowText}>
+            <Text style={[styles.label, { color: labelColor }]}>
+              High Glucose Alerts
+            </Text>
+            <Text style={[styles.status, { color: statusColor }]}>Enabled</Text>
+          </View>
+        </View>
+        <View style={[styles.row, { backgroundColor: sectionBgColor }]}>
+          <View style={styles.rowText}>
+            <Text style={[styles.label, { color: labelColor }]}>
+              Low Glucose Alerts
+            </Text>
+            <Text style={[styles.status, { color: statusColor }]}>Enabled</Text>
+          </View>
+        </View>
+        <View style={[styles.row, { backgroundColor: sectionBgColor }]}>
+          <View style={styles.rowText}>
+            <Text style={[styles.label, { color: labelColor }]}>
+              Meal Reminders
+            </Text>
+            <Text style={[styles.status, { color: statusColor }]}>
+              Disabled
+            </Text>
+          </View>
+        </View>
+      </View>
 
-        <View style={styles.colorSection}>
-          <Text style={styles.label}>Theme Color</Text>
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>
+          App Preferences
+        </Text>
+
+        <View
+          style={[styles.colorSection, { backgroundColor: sectionBgColor }]}
+        >
+          <Text style={[styles.label, { color: labelColor }]}>Theme Color</Text>
           <View style={styles.colorGrid}>
             {ACCENT_COLORS.map((color) => (
               <TouchableOpacity
@@ -447,22 +515,24 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        <View style={styles.row}>
+        <View style={[styles.row, { backgroundColor: sectionBgColor }]}>
           <View style={styles.rowText}>
-            <Text style={styles.label}>Theme</Text>
-            <Text style={styles.status}>Light</Text>
+            <Text style={[styles.label, { color: labelColor }]}>Theme</Text>
+            <Text style={[styles.status, { color: statusColor }]}>Light</Text>
           </View>
         </View>
-        <View style={styles.row}>
+        <View style={[styles.row, { backgroundColor: sectionBgColor }]}>
           <View style={styles.rowText}>
-            <Text style={styles.label}>Language</Text>
-            <Text style={styles.status}>English</Text>
+            <Text style={[styles.label, { color: labelColor }]}>Language</Text>
+            <Text style={[styles.status, { color: statusColor }]}>English</Text>
           </View>
         </View>
-        <View style={styles.row}>
+        <View style={[styles.row, { backgroundColor: sectionBgColor }]}>
           <View style={styles.rowText}>
-            <Text style={styles.label}>App Version</Text>
-            <Text style={styles.status}>1.0.0</Text>
+            <Text style={[styles.label, { color: labelColor }]}>
+              App Version
+            </Text>
+            <Text style={[styles.status, { color: statusColor }]}>1.0.0</Text>
           </View>
         </View>
       </View>
@@ -474,7 +544,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: "#fff",
   },
   title: {
     fontSize: 24,
@@ -487,7 +556,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#666",
     marginBottom: 12,
   },
   row: {
@@ -496,7 +564,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 14,
     paddingHorizontal: 16,
-    backgroundColor: "#f8f8f8",
     borderRadius: 10,
     marginBottom: 8,
   },
@@ -509,7 +576,6 @@ const styles = StyleSheet.create({
   },
   status: {
     fontSize: 13,
-    color: "#888",
     marginTop: 2,
   },
   rowRight: {
@@ -532,7 +598,6 @@ const styles = StyleSheet.create({
   },
   lastSeen: {
     fontSize: 11,
-    color: "#888",
   },
   connectButton: {
     backgroundColor: "#4CAF50",
@@ -576,7 +641,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   colorSection: {
-    backgroundColor: "#f8f8f8",
     borderRadius: 10,
     paddingVertical: 16,
     paddingHorizontal: 16,

@@ -4,13 +4,13 @@ import { hapticError, hapticHeavy, hapticSuccess } from "@/utils/haptics";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Animated,
-  Modal,
-  PanResponder,
-  Pressable,
-  StyleSheet,
-  View,
+    ActivityIndicator,
+    Animated,
+    Modal,
+    PanResponder,
+    Pressable,
+    StyleSheet,
+    View,
 } from "react-native";
 
 interface DoseConfirmationSheetProps {
@@ -25,6 +25,7 @@ interface DoseConfirmationSheetProps {
   insulinOnBoard: number;
   onConfirm: () => void;
   onCancel: () => void;
+  accentColor?: string;
 }
 
 export function DoseConfirmationSheet({
@@ -39,8 +40,10 @@ export function DoseConfirmationSheet({
   insulinOnBoard,
   onConfirm,
   onCancel,
+  accentColor,
 }: DoseConfirmationSheetProps) {
-  const accent = useThemeColor({}, "accent");
+  const themeAccent = useThemeColor({}, "accent");
+  const accent = accentColor || themeAccent;
   const backgroundColor = useThemeColor(
     { light: "#FFFFFF", dark: "#1C1C1E" },
     "background",
