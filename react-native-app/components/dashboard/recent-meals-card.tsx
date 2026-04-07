@@ -20,6 +20,7 @@ import {
 } from "react-native";
 
 import { app, db } from "@/config/firebase";
+import { colors, Colors } from "@/constants/theme";
 import { useAccentColor } from "@/context/accent-color";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { ThemedText } from "../themed-text";
@@ -58,11 +59,11 @@ function MealRow({ meal, isLast, dividerColor }: {
   dividerColor: string;
 }) {
   const imageBg = useThemeColor(
-    { light: "#E8E8E8", dark: "#2A2A2A" },
-    "background"
+    { light: colors.surfaceSubtle, dark: Colors.dark.surface },
+    "surface"
   );
   const subtleColor = useThemeColor(
-    { light: "#888888", dark: "#888888" },
+    { light: colors.textSecondary, dark: Colors.dark.icon },
     "icon"
   );
   const accent = useAccentColor();
@@ -129,13 +130,16 @@ function MealRow({ meal, isLast, dividerColor }: {
 }
  
 export function RecentMealsCard() {
-  const borderColor = useThemeColor({}, "icon");
+  const borderColor = useThemeColor(
+    { light: colors.border, dark: Colors.dark.border },
+    "border"
+  );
   const dividerColor = useThemeColor(
-    { light: "#E0E0E0", dark: "#333333" },
-    "icon"
+    { light: colors.border, dark: Colors.dark.border },
+    "border"
   );
   const subtleColor = useThemeColor(
-    { light: "#888888", dark: "#888888" },
+    { light: colors.textSecondary, dark: Colors.dark.icon },
     "icon"
   );
  

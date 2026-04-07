@@ -8,11 +8,11 @@ import { usePhotoStorage } from '@/hooks/use-photo-storage';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { uploadImageToGCS } from '@/services/gcs-upload-service';
 import { StoredPhoto } from '@/services/photo-storage';
+import { hapticError, hapticLight } from '@/utils/haptics';
 import { Camera, CameraType, CameraView } from 'expo-camera';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 
 export type CapturedPhoto = {
   uri: string;
@@ -51,6 +51,7 @@ export default function CameraScreen() {
   };
 
   const toggleFacing = () => {
+    hapticLight();
     setFacing((prev) => (prev === 'back' ? 'front' : 'back'));
   };
 
@@ -101,6 +102,7 @@ export default function CameraScreen() {
       }, 1500);
 
     } catch (error) {
+      hapticError();
       console.error('Failed to process photo:', error);
       setToastMessage('Upload failed, please try again.');
       setShowToast(true);
@@ -133,14 +135,14 @@ export default function CameraScreen() {
   return (
     <ThemedView style={styles.container}>
       <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
-      <SafeAreaView style={[styles.controls, { backgroundColor: controlsBg }]}>
+      <View style={[styles.controls, { backgroundColor: controlsBg }]}>
         <CameraControls
           onCapture={handleCapture}
           onFlip={toggleFacing}
           onBack={() => router.push('/(drawer)/(tabs)' as any)}
           isCapturing={isCapturing}
         />
-      </SafeAreaView>
+      </View>
       <Toast visible={showToast} message={toastMessage} />
     </ThemedView>
   );

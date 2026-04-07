@@ -1,20 +1,23 @@
-import { useState, useEffect, useRef } from 'react';
-import { ScrollView, StyleSheet, View, TouchableOpacity, Alert, Dimensions, ActivityIndicator } from 'react-native';
+import { DoseConfirmationSheet } from '@/components/dosing/dose-confirmation-sheet';
+import { CarbEstimateDisplay } from '@/components/results/CarbEstimateDisplay';
+import { EditCarbsField } from '@/components/results/EditCarbsField';
+import { FoodsDetectedList } from '@/components/results/FoodsDetectedList';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { auth, db } from '@/config/firebase';
+import { useAccentColor } from '@/context/accent-color';
+import { useIOB } from '@/hooks/use-iob';
+import { useMealByImage } from '@/hooks/use-meal-by-image';
+import { useThemeColor } from '@/hooks/use-theme-color';
+import { updateCarbEstimate } from '@/services/meal-service';
+import { hapticError, hapticSuccess } from '@/utils/haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
-import { useThemeColor } from '@/hooks/use-theme-color';
-import { CarbEstimateDisplay } from '@/components/results/CarbEstimateDisplay';
-import { FoodsDetectedList } from '@/components/results/FoodsDetectedList';
-import { EditCarbsField } from '@/components/results/EditCarbsField';
-import { DoseConfirmationSheet } from '@/components/dosing/dose-confirmation-sheet';
-import { useMealByImage } from '@/hooks/use-meal-by-image';
-import { useIOB } from '@/hooks/use-iob';
-import { updateCarbEstimate } from '@/services/meal-service';
-import { auth, db } from '@/config/firebase';
-import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
@@ -22,7 +25,7 @@ function useColors() {
   const background = useThemeColor({}, 'background');
   const controlsBg = useThemeColor({ light: '#F2F2F2', dark: '#1e1e1e' }, 'background');
   const imageBg = useThemeColor({ light: '#E0E0E0', dark: '#252525' }, 'background');
-  const accent = useThemeColor({ light: '#007AFF', dark: '#0A84FF' }, 'background');
+  const accent = useAccentColor();
   const muted = useThemeColor({ light: '#888888', dark: '#888888' }, 'icon');
   const border = useThemeColor({ light: '#CCCCCC', dark: '#333333' }, 'icon');
   const danger = useThemeColor({ light: '#FF3B30', dark: '#FF453A' }, 'icon');
@@ -34,6 +37,7 @@ export default function ResultsScreen() {
   const { meal, isLoading, error } = useMealByImage(imagePath);
   const insulinOnBoard = useIOB();
   const colors = useColors();
+  const insets = useSafeAreaInsets();
 
   const [adjustedCarbs, setAdjustedCarbs] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -69,8 +73,10 @@ export default function ResultsScreen() {
     setIsSaving(true);
     try {
       await updateCarbEstimate(meal.id, finalCarbs);
+      hapticSuccess();
       router.dismissAll();
     } catch (err) {
+      hapticError();
       Alert.alert('Error', 'Failed to save carb estimate. Please try again.');
       console.error(err);
     } finally {
@@ -94,6 +100,7 @@ export default function ResultsScreen() {
         mealId: meal.id,
       });
     } catch {
+      hapticError();
       Alert.alert('Error', 'Could not save dose. Please try again.');
     }
   };
@@ -117,7 +124,7 @@ export default function ResultsScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + 12 }]} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="chevron-back" size={24} color={colors.muted} />
@@ -171,7 +178,7 @@ export default function ResultsScreen() {
       </ScrollView>
 
       {!isProcessing && !isLoading && meal && (
-        <View style={[styles.bottomBar, { backgroundColor: colors.controlsBg, borderTopColor: colors.border }]}>
+        <View style={[styles.bottomBar, { backgroundColor: colors.controlsBg, borderTopColor: colors.border, paddingBottom: Math.max(32, insets.bottom + 16) }]}>
           <TouchableOpacity
             style={[styles.doseButton, { borderColor: colors.accent }]}
             onPress={() => setShowDoseSheet(true)}
@@ -207,7 +214,7 @@ export default function ResultsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 16 },
-  content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 32, gap: 16 },
+  content: { paddingHorizontal: 16, paddingBottom: 32, gap: 16 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
   backButton: { padding: 4 },
   title: { fontSize: 18, fontWeight: '700' },
@@ -216,7 +223,7 @@ const styles = StyleSheet.create({
   imagePlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   processingBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 10 },
   processingText: { fontSize: 14, fontWeight: '500' },
-  bottomBar: { padding: 16, paddingBottom: 32, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: 12 },
+  bottomBar: { padding: 16, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: 12 },
   doseButton: { flex: 1, height: 52, borderRadius: 14, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   doseButtonText: { fontSize: 15, fontWeight: '700' },
   confirmButton: { flex: 1, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
