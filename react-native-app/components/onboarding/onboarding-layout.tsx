@@ -34,8 +34,8 @@ export default function OnboardingLayout({
   accentColor,
 }: OnboardingLayoutProps) {
   const router = useRouter();
-  const backgroundColor = useThemeColor({ light: '#FFFFFF', dark: '#000000' }, 'background');
-  const iconContainerColor = useThemeColor({ light: '#F0F0F0', dark: '#1A1A1A' }, 'background');
+  const backgroundColor = useThemeColor({ dark: '#000000' }, 'background');
+  const iconContainerColor = useThemeColor({ dark: '#1A1A1A' }, 'background');
   const iconColor = useThemeColor({ light: '#000000', dark: '#FFFFFF' }, 'text');
   const titleColor = useThemeColor({ light: '#000000', dark: '#FFFFFF' }, 'text');
   const subtitleColor = useThemeColor({ light: '#555555', dark: '#888888' }, 'text');
