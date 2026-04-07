@@ -1,26 +1,27 @@
 package com.snapdose.api.model;
 
 public class DeviceRegisterRequest {
-    private String deviceId;
+
+    private String serialNumber;
+    private String model;
     private String firmwareVersion;
-    private Integer wifiSignalStrength;
-    private String batteryLevel;
 
     public DeviceRegisterRequest() {}
 
-    public DeviceRegisterRequest(String deviceId, String firmwareVersion, Integer wifiSignalStrength, String batteryLevel) {
-        this.deviceId = deviceId;
-        this.firmwareVersion = firmwareVersion;
-        this.wifiSignalStrength = wifiSignalStrength;
-        this.batteryLevel = batteryLevel;
+    public String getSerialNumber() {
+        return serialNumber;
     }
 
-    public String getDeviceId() {
-        return deviceId;
+    public void setSerialNumber(String serialNumber) {
+        this.serialNumber = serialNumber;
     }
 
-    public void setDeviceId(String deviceId) {
-        this.deviceId = deviceId;
+    public String getModel() {
+        return model;
+    }
+
+    public void setModel(String model) {
+        this.model = model;
     }
 
     public String getFirmwareVersion() {
@@ -29,21 +30,5 @@ public class DeviceRegisterRequest {
 
     public void setFirmwareVersion(String firmwareVersion) {
         this.firmwareVersion = firmwareVersion;
-    }
-
-    public Integer getWifiSignalStrength() {
-        return wifiSignalStrength;
-    }
-
-    public void setWifiSignalStrength(Integer wifiSignalStrength) {
-        this.wifiSignalStrength = wifiSignalStrength;
-    }
-
-    public String getBatteryLevel() {
-        return batteryLevel;
-    }
-
-    public void setBatteryLevel(String batteryLevel) {
-        this.batteryLevel = batteryLevel;
     }
 }

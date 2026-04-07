@@ -11,6 +11,7 @@ import { useIOB } from '@/hooks/use-iob';
 import { useMealByImage } from '@/hooks/use-meal-by-image';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { updateCarbEstimate } from '@/services/meal-service';
+import { hapticError, hapticSuccess } from '@/utils/haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -93,8 +94,10 @@ export default function ResultsScreen() {
     setIsSaving(true);
     try {
       await updateCarbEstimate(meal.id, finalCarbs);
+      hapticSuccess();
       router.dismissAll();
     } catch (err) {
+      hapticError();
       Alert.alert('Error', 'Failed to save carb estimate. Please try again.');
       console.error(err);
     } finally {
@@ -118,6 +121,7 @@ export default function ResultsScreen() {
         mealId: meal.id,
       });
     } catch {
+      hapticError();
       Alert.alert('Error', 'Could not save dose. Please try again.');
     }
   };

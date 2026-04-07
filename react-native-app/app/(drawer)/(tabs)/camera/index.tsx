@@ -9,6 +9,7 @@ import { usePhotoStorage } from '@/hooks/use-photo-storage';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { uploadImageToGCS } from '@/services/gcs-upload-service';
 import { StoredPhoto } from '@/services/photo-storage';
+import { hapticError, hapticLight } from '@/utils/haptics';
 import { Camera, CameraType, CameraView } from 'expo-camera';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -132,6 +133,7 @@ export default function CameraScreen() {
       }, 1500);
 
     } catch (error) {
+      hapticError();
       console.error('Failed to process photo:', error);
       setToastMessage('Upload failed, please try again.');
       setShowToast(true);

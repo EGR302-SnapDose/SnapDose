@@ -15,7 +15,13 @@ import {
     StyleSheet,
     View,
 } from "react-native";
-import Svg, { Circle, Line, Polyline, Rect, Text as SvgText } from "react-native-svg";
+import Svg, {
+  Circle,
+  Line,
+  Polyline,
+  Rect,
+  Text as SvgText,
+} from "react-native-svg";
 import { ThemedText } from "../themed-text";
 import { ThemedView } from "../themed-view";
 
@@ -56,14 +62,22 @@ function renderTrendIcon(trend: string, color: string) {
 
 function getTrendLabel(trend: string) {
   switch (trend) {
-    case "doubleUp": return "Rising fast";
-    case "singleUp": return "Rising";
-    case "fortyFiveUp": return "Rising slightly";
-    case "flat": return "Stable";
-    case "fortyFiveDown": return "Falling slightly";
-    case "singleDown": return "Falling";
-    case "doubleDown": return "Falling fast";
-    default: return "";
+    case "doubleUp":
+      return "Rising fast";
+    case "singleUp":
+      return "Rising";
+    case "fortyFiveUp":
+      return "Rising slightly";
+    case "flat":
+      return "Stable";
+    case "fortyFiveDown":
+      return "Falling slightly";
+    case "singleDown":
+      return "Falling";
+    case "doubleDown":
+      return "Falling fast";
+    default:
+      return "";
   }
 }
 
@@ -109,7 +123,6 @@ type LastBolus = {
   type: string;
 } | null;
 
-/** Compute time-in-range for today's records (70–180 mg/dL) */
 function computeTimeInRange(records: EgvRecord[]): number | null {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -123,7 +136,7 @@ function computeTimeInRange(records: EgvRecord[]): number | null {
   if (todayRecords.length === 0) return null;
 
   const inRange = todayRecords.filter(
-    (r) => r.value! >= LOW_THRESHOLD && r.value! <= HIGH_THRESHOLD
+    (r) => r.value! >= LOW_THRESHOLD && r.value! <= HIGH_THRESHOLD,
   );
 
   return Math.round((inRange.length / todayRecords.length) * 100);
@@ -177,7 +190,7 @@ function GlucoseGraph({ records, accent, borderColor, textColor, timeFrameHours 
 
   const points = validRecords
     .map(
-      (r) => `${scaleX(new Date(r.systemTime).getTime())},${scaleY(r.value!)}`
+      (r) => `${scaleX(new Date(r.systemTime).getTime())},${scaleY(r.value!)}`,
     )
     .join(" ");
 
@@ -283,8 +296,6 @@ function GlucoseGraph({ records, accent, borderColor, textColor, timeFrameHours 
   );
 }
 
-// ─── Info Cards ───────────────────────────────────────────────────────────────
-
 function InfoCard({
   label,
   value,
@@ -304,7 +315,11 @@ function InfoCard({
     <View style={[infoStyles.card, { backgroundColor: cardBg }]}>
       <ThemedText style={infoStyles.label}>{label}</ThemedText>
       {isLoading ? (
-        <ActivityIndicator size="small" color={accent} style={{ marginTop: 4 }} />
+        <ActivityIndicator
+          size="small"
+          color={accent}
+          style={{ marginTop: 4 }}
+        />
       ) : (
         <>
           <ThemedText style={infoStyles.value}>
@@ -351,11 +366,14 @@ function TirRingCard({
     <View style={[infoStyles.card, { backgroundColor: cardBg }]}>
       <ThemedText style={infoStyles.label}>Time in Range</ThemedText>
       {isLoading ? (
-        <ActivityIndicator size="small" color={accent} style={{ marginTop: 4 }} />
+        <ActivityIndicator
+          size="small"
+          color={accent}
+          style={{ marginTop: 4 }}
+        />
       ) : (
         <View style={infoStyles.tirRow}>
           <Svg width={size} height={size}>
-            {/* Track */}
             <Circle
               cx={size / 2}
               cy={size / 2}
@@ -364,7 +382,6 @@ function TirRingCard({
               strokeWidth={stroke}
               fill="none"
             />
-            {/* Fill */}
             {percent !== null && (
               <Circle
                 cx={size / 2}
@@ -390,8 +407,6 @@ function TirRingCard({
     </View>
   );
 }
-
-// ─── Main export ─────────────────────────────────────────────────────────────
 
 export function GlucoseCard() {
   const borderColor = useThemeColor({light: colors.border, dark: Colors.dark.border}, "border");
@@ -429,7 +444,6 @@ export function GlucoseCard() {
   const [bolusLoading, setBolusLoading] = useState(true);
   const [timeFrame, setTimeFrame] = useState<2 | 6 | 12>(2);
 
-  // ── Fetch last bolus from Firestore ──────────────────────────────────────
   const fetchLastBolus = useCallback(async () => {
     const uid = auth.currentUser?.uid;
     if (!uid) {
@@ -437,15 +451,23 @@ export function GlucoseCard() {
       return;
     }
     try {
-      const dosesRef = collection(db, "users", uid, "doses");
-      const q = query(dosesRef, orderBy("timestamp", "desc"), limit(1));
+      const q = query(
+        collection(db, "users", uid, "boluses"),
+        orderBy("createdAt", "desc"),
+        limit(1),
+      );
       const snap = await getDocs(q);
       if (!snap.empty) {
         const data = snap.docs[0].data();
+        const createdAt = data.createdAt as number;
         setLastBolus({
-          amount: data.amount ?? 0,
-          time: data.time ?? "",
-          type: data.type ?? "Dose",
+          amount: data.unitsRequested ?? 0,
+          time: new Date(createdAt).toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+          }),
+          type: (data.carbsG ?? 0) > 0 ? "Meal" : "Correction",
         });
       } else {
         setLastBolus(null);
@@ -458,7 +480,6 @@ export function GlucoseCard() {
     }
   }, []);
 
-  // ── Fetch glucose data ────────────────────────────────────────────────────
   const fetchGlucose = async (isRefresh = false) => {
     const userId = getAuth().currentUser?.uid;
     if (!userId) {
@@ -518,18 +539,15 @@ export function GlucoseCard() {
       fetchLastBolus();
       const interval = setInterval(fetchGlucose, 5 * 60 * 1000);
       return () => clearInterval(interval);
-    }, [fetchLastBolus])
+    }, [fetchLastBolus]),
   );
 
-  // Re-fetch bolus when IOB changes (new dose just logged)
   useEffect(() => {
     if (!bolusLoading) fetchLastBolus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [iob]);
 
   const timeInRange = computeTimeInRange(records);
 
-  // ── Loading state ─────────────────────────────────────────────────────────
   if (loading) {
     return (
       <ThemedView style={[styles.card, { borderColor }]}>
@@ -544,7 +562,6 @@ export function GlucoseCard() {
     );
   }
 
-  // ── Error state ───────────────────────────────────────────────────────────
   if (error || !reading) {
     return (
       <ThemedView style={[styles.card, { borderColor }]}>
@@ -571,10 +588,8 @@ export function GlucoseCard() {
     );
   }
 
-  // ── Main render ───────────────────────────────────────────────────────────
   return (
     <ThemedView style={[styles.card, { borderColor }]}>
-      {/* Header */}
       <View style={styles.headerRow}>
         <ThemedText type="subtitle">Glucose</ThemedText>
         <Pressable
@@ -590,7 +605,6 @@ export function GlucoseCard() {
         </Pressable>
       </View>
 
-      {/* Current reading */}
       <View style={styles.readingRow}>
         <ThemedText
           style={[
@@ -616,14 +630,9 @@ export function GlucoseCard() {
 
       {/* ── Info Cards ── */}
       <View style={infoStyles.row}>
-        {/* Last Bolus */}
         <InfoCard
           label="Last Bolus"
-          value={
-            lastBolus
-              ? `${lastBolus.amount.toFixed(1)}u`
-              : "—"
-          }
+          value={lastBolus ? `${lastBolus.amount.toFixed(1)}u` : "—"}
           subValue={
             lastBolus
               ? `${lastBolus.type} · ${lastBolus.time}`
@@ -634,7 +643,6 @@ export function GlucoseCard() {
           isLoading={bolusLoading}
         />
 
-        {/* Active IOB */}
         <InfoCard
           label="Active IOB"
           value={`${iob.toFixed(1)}u`}
@@ -643,7 +651,6 @@ export function GlucoseCard() {
           cardBg={cardBg}
         />
 
-        {/* Time in Range */}
         <TirRingCard
           percent={timeInRange}
           accent={accent}
@@ -683,8 +690,6 @@ export function GlucoseCard() {
     </ThemedView>
   );
 }
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   card: {
@@ -813,7 +818,6 @@ const infoStyles = StyleSheet.create({
     opacity: 0.5,
     marginTop: 1,
   },
-  // TIR ring card
   tirRow: {
     flexDirection: "row",
     alignItems: "center",

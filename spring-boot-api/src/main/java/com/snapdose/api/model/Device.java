@@ -1,35 +1,40 @@
 package com.snapdose.api.model;
 
-import com.google.cloud.firestore.annotation.DocumentId;
+import com.snapdose.api.model.enums.DeviceStatus;
 
 public class Device {
-    @DocumentId
-    private String deviceId;
-    
+
+    private String serialNumber;
+    private String model;
     private String firmwareVersion;
-    private Integer wifiSignalStrength;  // RSSI in dBm
-    private String batteryLevel;          // "85%" or similar
-    private Long lastHeartbeat;           // timestamp in milliseconds
+    private Long registeredAt;
+    private Long lastHeartbeat;
     private boolean online;
+
+    private DeviceStatus status;
+    private String boundToUid;
+    private Long pairedAt;
+
+    private String pairingToken;
+    private String pairingCode;
+    private Long tokenExpiresAt;
 
     public Device() {}
 
-    public Device(String deviceId, String firmwareVersion, Integer wifiSignalStrength, String batteryLevel) {
-        this.deviceId = deviceId;
-        this.firmwareVersion = firmwareVersion;
-        this.wifiSignalStrength = wifiSignalStrength;
-        this.batteryLevel = batteryLevel;
-        this.lastHeartbeat = System.currentTimeMillis();
-        this.online = true;
+    public String getSerialNumber() {
+        return serialNumber;
     }
 
-    // Getters and Setters
-    public String getDeviceId() {
-        return deviceId;
+    public void setSerialNumber(String serialNumber) {
+        this.serialNumber = serialNumber;
     }
 
-    public void setDeviceId(String deviceId) {
-        this.deviceId = deviceId;
+    public String getModel() {
+        return model;
+    }
+
+    public void setModel(String model) {
+        this.model = model;
     }
 
     public String getFirmwareVersion() {
@@ -40,20 +45,12 @@ public class Device {
         this.firmwareVersion = firmwareVersion;
     }
 
-    public Integer getWifiSignalStrength() {
-        return wifiSignalStrength;
+    public Long getRegisteredAt() {
+        return registeredAt;
     }
 
-    public void setWifiSignalStrength(Integer wifiSignalStrength) {
-        this.wifiSignalStrength = wifiSignalStrength;
-    }
-
-    public String getBatteryLevel() {
-        return batteryLevel;
-    }
-
-    public void setBatteryLevel(String batteryLevel) {
-        this.batteryLevel = batteryLevel;
+    public void setRegisteredAt(Long registeredAt) {
+        this.registeredAt = registeredAt;
     }
 
     public Long getLastHeartbeat() {
@@ -70,5 +67,53 @@ public class Device {
 
     public void setOnline(boolean online) {
         this.online = online;
+    }
+
+    public DeviceStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(DeviceStatus status) {
+        this.status = status;
+    }
+
+    public String getBoundToUid() {
+        return boundToUid;
+    }
+
+    public void setBoundToUid(String boundToUid) {
+        this.boundToUid = boundToUid;
+    }
+
+    public Long getPairedAt() {
+        return pairedAt;
+    }
+
+    public void setPairedAt(Long pairedAt) {
+        this.pairedAt = pairedAt;
+    }
+
+    public String getPairingToken() {
+        return pairingToken;
+    }
+
+    public void setPairingToken(String pairingToken) {
+        this.pairingToken = pairingToken;
+    }
+
+    public String getPairingCode() {
+        return pairingCode;
+    }
+
+    public void setPairingCode(String pairingCode) {
+        this.pairingCode = pairingCode;
+    }
+
+    public Long getTokenExpiresAt() {
+        return tokenExpiresAt;
+    }
+
+    public void setTokenExpiresAt(Long tokenExpiresAt) {
+        this.tokenExpiresAt = tokenExpiresAt;
     }
 }

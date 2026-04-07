@@ -1,97 +1,47 @@
+import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { colors } from "@/constants/theme";
-import { useAccentColor } from "@/context/accent-color";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
 import { Tabs } from "expo-router";
 import React from "react";
-import { Alert, TouchableOpacity, View } from "react-native";
-import { logout } from "../../../services/logout-service";
-
-function LogoutButton() {
-    const handleLogout = () => {
-        Alert.alert("Logout", "Are you sure you want to log out?", [
-            { text: "Cancel", style: "cancel" },
-            {
-                text: "Logout",
-                style: "destructive",
-                onPress: async () => await logout(),
-            },
-        ]);
-    };
-
-    return (
-        <View style={{ marginRight: 12 }}>
-            <TouchableOpacity
-                onPress={handleLogout}
-                style={{
-                    backgroundColor: colors.danger,
-                    borderRadius: 8,
-                    padding: 6,
-                }}
-            >
-                <Ionicons name="log-out-outline" size={22} color={colors.textInverse} />
-            </TouchableOpacity>
-        </View>
-    );
-}
 
 export default function TabLayout() {
-    const navigation = useNavigation();
-    const accent = useAccentColor();
-
-    return (
-        <Tabs
-            screenOptions={{
-                tabBarActiveTintColor: accent,
-                headerShown: false,
-            }}
-        >
-            <Tabs.Screen
-                name="camera"
-                options={{
-                    title: "Snap",
-                    tabBarIcon: ({ color }) => (
-                        <IconSymbol
-                            size={28}
-                            name="camera.fill"
-                            color={color}
-                        />
-                    ),
-                }}
-            />
-            <Tabs.Screen
-                name="index"
-                options={{
-                    title: "SnapDose",
-                    tabBarIcon: ({ color }) => (
-                        <IconSymbol size={28} name="house.fill" color={color} />
-                    ),
-                }}
-            />
-            <Tabs.Screen
-                name="dose"
-                options={{
-                    title: "Dose Insulin",
-                    tabBarIcon: ({ color }) => (
-                        <MaterialCommunityIcons name="pill" size={28} color={color} />
-                    ),
-                }}
-            />
-            <Tabs.Screen
-                name="settings"
-                options={{
-                    title: "Settings",
-                    href: null,
-                }}
-            />
-            <Tabs.Screen
-                name="food-gallery"
-                options={{
-                    title: "Food Gallery",
-                    href: null,
-                }}
-            />
-        </Tabs>
-    );
+  return (
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: colors.tabActive,
+        headerShown: false,
+        tabBarButton: HapticTab,
+      }}
+    >
+      <Tabs.Screen
+        name="camera"
+        options={{
+          title: "Snap",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="camera.fill" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "SnapDose",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="house.fill" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="dose"
+        options={{
+          title: "Dose Insulin",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="pill.fill" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen name="settings" options={{ href: null }} />
+      <Tabs.Screen name="food-gallery" options={{ href: null }} />
+    </Tabs>
+  );
 }
