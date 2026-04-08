@@ -1,6 +1,9 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { colors, Colors, layout, radius, spacing, textStyles } from "@/constants/theme";
 import { useAccentColor } from "@/context/accent-color";
+import { useThemeColor } from "@/hooks/use-theme-color";
+import { hapticHeavy } from "@/utils/haptics";
 import { Ionicons } from "@expo/vector-icons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -30,13 +33,51 @@ export function DoseCalculation({
 }: DoseCalculationProps) {
   const accent = useAccentColor();
 
+  const breakdownBg = useThemeColor(
+    { light: accent + "10", dark: Colors.dark.surface },
+    "surface"
+  );
+  const breakdownBorder = useThemeColor(
+    { light: colors.border, dark: Colors.dark.border },
+    "border"
+  );
+  const dividerColor = useThemeColor(
+    { light: colors.border, dark: Colors.dark.border },
+    "border"
+  );
+  const labelColor = useThemeColor(
+    { light: colors.textSecondary, dark: '#B0B0B0' },
+    "text"
+  );
+  const valueColor = useThemeColor(
+    { light: colors.textPrimary, dark: Colors.dark.text },
+    "text"
+  );
+  const recommendedLabelColor = useThemeColor(
+    { light: colors.textSecondary, dark: '#B0B0B0' },
+    "text"
+  );
+  const buttonTextColor = useThemeColor(
+    { light: colors.textInverse, dark: colors.textInverse },
+    "text"
+  );
+  const iobColor = useThemeColor(
+    { light: colors.warning, dark: colors.warning },
+    "icon"
+  );
+
+  const handleCalculate = () => {
+    hapticHeavy();
+    onCalculate();
+  };
+
   return (
     <ThemedView style={styles.container}>
-      <View style={[styles.breakdown, { backgroundColor: accent + "10" }]}>
+      <View style={[styles.breakdown, { backgroundColor: breakdownBg, borderColor: breakdownBorder }]}>
         <View style={styles.recommendedHeader}>
           <View style={styles.recommendedLabelRow}>
             <Ionicons name="calculator-outline" size={20} color={accent} />
-            <ThemedText style={styles.recommendedLabel}>
+            <ThemedText style={[styles.recommendedLabel, { color: recommendedLabelColor }]}>
               Recommended Dose
             </ThemedText>
           </View>
@@ -45,29 +86,29 @@ export function DoseCalculation({
           </ThemedText>
         </View>
 
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
         {mode === "meal" ? (
           <>
             <View style={styles.breakdownRow}>
-              <ThemedText style={styles.label}>Carbs entered:</ThemedText>
-              <ThemedText style={styles.value}>{carbs || 0}g</ThemedText>
+              <ThemedText style={[styles.label, { color: labelColor }]}>Carbs entered:</ThemedText>
+              <ThemedText style={[styles.value, { color: valueColor }]}>{carbs || 0}g</ThemedText>
             </View>
 
             <View style={styles.breakdownRow}>
-              <ThemedText style={styles.label}>
+              <ThemedText style={[styles.label, { color: labelColor }]}>
                 Base dose (1:{baseDose}):
               </ThemedText>
-              <ThemedText style={styles.value}>
+              <ThemedText style={[styles.value, { color: valueColor }]}>
                 {((carbs || 0) / (baseDose || 1)).toFixed(1)}u
               </ThemedText>
             </View>
 
             <View style={styles.breakdownRow}>
-              <ThemedText style={styles.label}>
+              <ThemedText style={[styles.label, { color: labelColor }]}>
                 Correction ({correctionFactor}):
               </ThemedText>
-              <ThemedText style={styles.value}>
+              <ThemedText style={[styles.value, { color: valueColor }]}>
                 {correctionDose !== undefined && correctionDose !== 0
                   ? `${correctionDose > 0 ? "+" : ""}${correctionDose.toFixed(1)}u`
                   : "0.0u"}
@@ -75,11 +116,11 @@ export function DoseCalculation({
             </View>
 
             <View style={styles.breakdownRow}>
-              <ThemedText style={styles.label}>Insulin on board:</ThemedText>
+              <ThemedText style={[styles.label, { color: labelColor }]}>Insulin on board:</ThemedText>
               <ThemedText
                 style={[
                   styles.value,
-                  { color: insulinOnBoard > 0 ? accent : "inherit" },
+                  { color: insulinOnBoard > 0 ? iobColor : valueColor },
                 ]}
               >
                 {insulinOnBoard > 0 ? "-" : ""}
@@ -88,7 +129,7 @@ export function DoseCalculation({
             </View>
 
             <View style={[styles.breakdownRow, styles.totalRow]}>
-              <ThemedText style={styles.totalLabel}>Adjusted dose:</ThemedText>
+              <ThemedText style={[styles.totalLabel, { color: valueColor }]}>Adjusted dose:</ThemedText>
               <ThemedText style={[styles.totalValue, { color: accent }]}>
                 {recommendedDose.toFixed(1)}u
               </ThemedText>
@@ -97,18 +138,18 @@ export function DoseCalculation({
         ) : (
           <>
             <View style={styles.breakdownRow}>
-              <ThemedText style={styles.label}>Correction insulin:</ThemedText>
-              <ThemedText style={styles.value}>
+              <ThemedText style={[styles.label, { color: labelColor }]}>Correction insulin:</ThemedText>
+              <ThemedText style={[styles.value, { color: valueColor }]}>
                 {(correctionInsulin || 0).toFixed(1)}u
               </ThemedText>
             </View>
 
             <View style={styles.breakdownRow}>
-              <ThemedText style={styles.label}>Insulin on board:</ThemedText>
+              <ThemedText style={[styles.label, { color: labelColor }]}>Insulin on board:</ThemedText>
               <ThemedText
                 style={[
                   styles.value,
-                  { color: insulinOnBoard > 0 ? accent : "inherit" },
+                  { color: insulinOnBoard > 0 ? iobColor : valueColor },
                 ]}
               >
                 {insulinOnBoard > 0 ? "-" : ""}
@@ -117,7 +158,7 @@ export function DoseCalculation({
             </View>
 
             <View style={[styles.breakdownRow, styles.totalRow]}>
-              <ThemedText style={styles.totalLabel}>Net dose:</ThemedText>
+              <ThemedText style={[styles.totalLabel, { color: valueColor }]}>Net dose:</ThemedText>
               <ThemedText style={[styles.totalValue, { color: accent }]}>
                 {recommendedDose.toFixed(1)}u
               </ThemedText>
@@ -132,12 +173,16 @@ export function DoseCalculation({
           { backgroundColor: accent },
           recommendedDose === 0 && styles.disabledButton,
         ]}
-        onPress={onCalculate}
+        onPress={handleCalculate}
         disabled={recommendedDose === 0}
       >
         <View style={styles.buttonContent}>
-          <MaterialCommunityIcons name="pill" size={24} color="#FFFFFF" />
-          <ThemedText style={styles.calculateButtonText}>
+          <MaterialCommunityIcons
+            name="pill"
+            size={24}
+            color={buttonTextColor}
+          />
+          <ThemedText style={[styles.calculateButtonText, { color: buttonTextColor }]}>
             Confirm & Log Dose
           </ThemedText>
         </View>
@@ -148,68 +193,63 @@ export function DoseCalculation({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 20,
+    marginBottom: spacing[5],
   },
   breakdown: {
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    marginBottom: 12,
+    borderRadius: radius.lg,
+    paddingVertical: spacing[4],
+    paddingHorizontal: spacing[4],
+    marginBottom: spacing[3],
+    borderWidth: 1,
   },
   recommendedHeader: {
-    marginBottom: 12,
+    marginBottom: spacing[3],
   },
   recommendedLabelRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
+    gap: spacing[2],
+    marginBottom: spacing[2],
   },
   recommendedLabel: {
-    fontSize: 14,
-    opacity: 0.7,
+    ...textStyles.footnote,
   },
   recommendedDose: {
-    fontSize: 48,
-    fontWeight: "700",
-    lineHeight: 56,
+    ...textStyles.glucoseDisplay,
     textAlign: "center",
   },
   divider: {
     height: 1,
-    backgroundColor: "#E5E5E5",
-    marginVertical: 12,
+    marginVertical: spacing[3],
   },
   breakdownRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 8,
+    paddingVertical: spacing[2],
   },
   totalRow: {
     borderTopWidth: 1,
-    borderTopColor: "#E5E5E5",
-    paddingTop: 12,
-    marginTop: 8,
+    borderTopColor: colors.border,
+    paddingTop: spacing[3],
+    marginTop: spacing[2],
   },
   label: {
-    fontSize: 14,
-    opacity: 0.7,
+    ...textStyles.footnote,
   },
   totalLabel: {
-    fontSize: 14,
-    fontWeight: "600",
+    ...textStyles.footnoteSemibold,
   },
   value: {
-    fontSize: 14,
+    ...textStyles.callout,
     fontWeight: "500",
   },
   totalValue: {
-    fontSize: 16,
+    ...textStyles.headline,
     fontWeight: "700",
   },
   calculateButton: {
-    paddingVertical: 14,
-    borderRadius: 30,
+    height: layout.buttonHeightMd,
+    borderRadius: radius.full,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -219,11 +259,9 @@ const styles = StyleSheet.create({
   buttonContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: spacing[2],
   },
   calculateButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
+    ...textStyles.headline,
   },
 });

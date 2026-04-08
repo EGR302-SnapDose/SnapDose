@@ -1,6 +1,8 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { colors, Colors, radius, spacing, textStyles } from "@/constants/theme";
 import { useAccentColor } from "@/context/accent-color";
+import { useThemeColor } from "@/hooks/use-theme-color";
 import { StyleSheet, View } from "react-native";
 
 interface Dose {
@@ -18,16 +20,47 @@ interface TodayDosesListProps {
 export function TodayDosesList({ doses, totalDoses }: TodayDosesListProps) {
   const accent = useAccentColor();
 
+  const titleColor = useThemeColor(
+    { light: colors.textPrimary, dark: Colors.dark.text },
+    "text"
+  );
+  const containerBorder = useThemeColor(
+    { light: colors.border, dark: Colors.dark.border },
+    "border"
+  );
+  const rowBorder = useThemeColor(
+    { light: colors.border, dark: Colors.dark.border },
+    "border"
+  );
+  const timeColor = useThemeColor(
+    { light: colors.textPrimary, dark: Colors.dark.text },
+    "text"
+  );
+  const typeColor = useThemeColor(
+    { light: colors.textSecondary, dark: '#B0B0B0' },
+    "text"
+  );
+  const totalLabelColor = useThemeColor(
+    { light: colors.textPrimary, dark: Colors.dark.text },
+    "text"
+  );
+
   return (
     <ThemedView style={styles.container}>
-      <ThemedText style={styles.title}>Today's Doses</ThemedText>
+      <ThemedText style={[styles.title, { color: titleColor }]}>Today's Doses</ThemedText>
 
-      <View style={[styles.listContainer, { borderColor: accent + "30" }]}>
+      <View style={[styles.listContainer, { borderColor: containerBorder }]}>
         {doses.map((dose, index) => (
-          <View key={dose.id} style={[styles.doseRow, index !== doses.length - 1 && styles.doseRowBorder]}>
+          <View
+            key={dose.id}
+            style={[
+              styles.doseRow,
+              index !== doses.length - 1 && [styles.doseRowBorder, { borderBottomColor: rowBorder }],
+            ]}
+          >
             <View>
-              <ThemedText style={styles.time}>{dose.time}</ThemedText>
-              <ThemedText style={styles.doseType}>{dose.type}</ThemedText>
+              <ThemedText style={[styles.time, { color: timeColor }]}>{dose.time}</ThemedText>
+              <ThemedText style={[styles.doseType, { color: typeColor }]}>{dose.type}</ThemedText>
             </View>
             <ThemedText style={[styles.amount, { color: accent }]}>
               {dose.amount.toFixed(1)}u
@@ -37,7 +70,7 @@ export function TodayDosesList({ doses, totalDoses }: TodayDosesListProps) {
       </View>
 
       <View style={styles.totalContainer}>
-        <ThemedText style={styles.totalLabel}>Total Today:</ThemedText>
+        <ThemedText style={[styles.totalLabel, { color: totalLabelColor }]}>Total Today:</ThemedText>
         <ThemedText style={[styles.totalAmount, { color: accent }]}>
           {totalDoses.toFixed(1)}u
         </ThemedText>
@@ -48,15 +81,14 @@ export function TodayDosesList({ doses, totalDoses }: TodayDosesListProps) {
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 20,
+    marginBottom: spacing[5],
   },
   title: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 12,
+    ...textStyles.calloutSemibold,
+    marginBottom: spacing[3],
   },
   listContainer: {
-    borderRadius: 12,
+    borderRadius: radius.lg,
     overflow: "hidden",
     borderWidth: 1,
   },
@@ -64,38 +96,32 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[4],
   },
   doseRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E5E5",
   },
   time: {
-    fontSize: 15,
-    fontWeight: "600",
+    ...textStyles.calloutSemibold,
   },
   doseType: {
-    fontSize: 12,
-    opacity: 0.6,
-    marginTop: 4,
+    ...textStyles.footnote,
+    marginTop: spacing[1],
   },
   amount: {
-    fontSize: 15,
-    fontWeight: "700",
+    ...textStyles.calloutSemibold,
   },
   totalContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[4],
   },
   totalLabel: {
-    fontSize: 15,
-    fontWeight: "600",
+    ...textStyles.calloutSemibold,
   },
   totalAmount: {
-    fontSize: 16,
-    fontWeight: "700",
+    ...textStyles.headline,
   },
 });

@@ -1,6 +1,9 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { colors, Colors, layout, radius, spacing, textStyles } from "@/constants/theme";
 import { useAccentColor } from "@/context/accent-color";
+import { useThemeColor } from "@/hooks/use-theme-color";
+import { hapticLight } from "@/utils/haptics";
 import { useRef, useState } from "react";
 import {
     Keyboard,
@@ -16,13 +19,50 @@ interface CorrectionInputProps {
   onValueChange: (value: number) => void;
 }
 
-export function CorrectionInput({ value, onValueChange }: CorrectionInputProps) {
+export function CorrectionInput({
+  value,
+  onValueChange,
+}: CorrectionInputProps) {
   const accent = useAccentColor();
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState(value.toFixed(1));
   const inputRef = useRef<TextInput>(null);
 
+  const cardBg = useThemeColor(
+    { light: colors.surfaceSubtle, dark: Colors.dark.surface },
+    "surface"
+  );
+  const cardBorder = useThemeColor(
+    { light: colors.border, dark: Colors.dark.border },
+    "border"
+  );
+  const buttonBg = useThemeColor(
+    { light: colors.buttonSecondary, dark: Colors.dark.border },
+    "background"
+  );
+  const inputBg = useThemeColor(
+    { light: colors.inputBackground, dark: Colors.dark.surface },
+    "surface"
+  );
+  const inputBorder = useThemeColor(
+    { light: colors.inputBorder, dark: Colors.dark.border },
+    "border"
+  );
+  const titleColor = useThemeColor(
+    { light: colors.textPrimary, dark: Colors.dark.text },
+    "text"
+  );
+  const unitColor = useThemeColor(
+    { light: colors.textSecondary, dark: '#B0B0B0' },
+    "text"
+  );
+  const buttonTextColor = useThemeColor(
+    { light: colors.textPrimary, dark: Colors.dark.text },
+    "text"
+  );
+
   const quickAdd = (amount: number) => {
+    hapticLight();
     const newValue = Math.max(0, value + amount);
     onValueChange(Math.round(newValue * 10) / 10);
   };
@@ -37,6 +77,7 @@ export function CorrectionInput({ value, onValueChange }: CorrectionInputProps) 
     if (isNaN(numValue) || numValue < 0) {
       setInputValue(value.toFixed(1));
     } else {
+      hapticLight();
       const roundedValue = Math.round(numValue * 10) / 10;
       onValueChange(roundedValue);
       setInputValue(roundedValue.toFixed(1));
@@ -52,60 +93,64 @@ export function CorrectionInput({ value, onValueChange }: CorrectionInputProps) 
 
   return (
     <ThemedView style={styles.container}>
-      <ThemedText style={styles.title}>Correction Insulin</ThemedText>
+      <ThemedText style={[styles.title, { color: titleColor }]}>Correction Insulin</ThemedText>
 
-      <View style={styles.inputSection}>
-        <TouchableOpacity
-          onPress={() => quickAdd(-0.1)}
-          style={styles.buttonWrapper}
-        >
-          <ThemedText style={styles.minusButton}>−</ThemedText>
-        </TouchableOpacity>
+      <View style={[styles.card, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+        <View style={styles.inputSection}>
+          <TouchableOpacity
+            onPress={() => quickAdd(-0.1)}
+            style={[styles.button, { backgroundColor: buttonBg }]}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <ThemedText style={[styles.minusButton, { color: buttonTextColor }]}>−</ThemedText>
+          </TouchableOpacity>
 
-        <View style={styles.valueBox}>
-          {isEditing ? (
-            <TextInput
-              ref={inputRef}
-              style={[styles.input, { color: accent }]}
-              value={inputValue}
-              onChangeText={handleTextChange}
-              onBlur={handleBlur}
-              onSubmitEditing={handleBlur}
-              keyboardType="decimal-pad"
-              returnKeyType="done"
-              maxLength={5}
-              autoFocus
-            />
-          ) : (
-            <TouchableOpacity onPress={handleFocus}>
-              <ThemedText style={[styles.valueText, { color: accent }]}>
-                {value.toFixed(1)}
-              </ThemedText>
-            </TouchableOpacity>
-          )}
-          {!isEditing && <ThemedText style={styles.unitText}>u</ThemedText>}
+          <View style={styles.valueBox}>
+            {isEditing ? (
+              <TextInput
+                ref={inputRef}
+                style={[styles.input, { color: accent, borderColor: accent, backgroundColor: inputBg }]}
+                value={inputValue}
+                onChangeText={handleTextChange}
+                onBlur={handleBlur}
+                onSubmitEditing={handleBlur}
+                keyboardType="decimal-pad"
+                returnKeyType="done"
+                maxLength={5}
+                autoFocus
+              />
+            ) : (
+              <TouchableOpacity onPress={handleFocus}>
+                <ThemedText style={[styles.valueText, { color: accent }]}>
+                  {value.toFixed(1)}
+                </ThemedText>
+              </TouchableOpacity>
+            )}
+            {!isEditing && <ThemedText style={[styles.unitText, { color: unitColor }]}>u</ThemedText>}
+          </View>
+
+          <TouchableOpacity
+            onPress={() => quickAdd(0.1)}
+            style={[styles.button, { backgroundColor: buttonBg }]}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <ThemedText style={[styles.plusButton, { color: buttonTextColor }]}>+</ThemedText>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          onPress={() => quickAdd(0.1)}
-          style={styles.buttonWrapper}
-        >
-          <ThemedText style={styles.plusButton}>+</ThemedText>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.quickAddContainer}>
-        {[-1, -0.5, 0.5, 1].map((amount) => (
-          <Pressable
-            key={amount}
-            style={[styles.quickAddButton, { borderColor: accent }]}
-            onPress={() => quickAdd(amount)}
-          >
-            <ThemedText style={[styles.quickAddText, { color: accent }]}>
-              {amount > 0 ? `+${amount}` : `${amount}`}
-            </ThemedText>
-          </Pressable>
-        ))}
+        <View style={styles.quickAddContainer}>
+          {[-1, -0.5, 0.5, 1].map((amount) => (
+            <Pressable
+              key={amount}
+              style={[styles.quickAddButton, { borderColor: accent, backgroundColor: cardBg }]}
+              onPress={() => quickAdd(amount)}
+            >
+              <ThemedText style={[styles.quickAddText, { color: accent }]}>
+                {amount > 0 ? `+${amount}` : `${amount}`}
+              </ThemedText>
+            </Pressable>
+          ))}
+        </View>
       </View>
     </ThemedView>
   );
@@ -113,35 +158,39 @@ export function CorrectionInput({ value, onValueChange }: CorrectionInputProps) 
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 20,
+    marginBottom: spacing[5],
   },
   title: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 16,
+    ...textStyles.calloutSemibold,
+    marginBottom: spacing[3],
+  },
+  card: {
+    borderRadius: radius.lg,
+    padding: spacing[4],
+    borderWidth: 1,
   },
   inputSection: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 20,
-    marginBottom: 20,
+    gap: spacing[5],
+    marginBottom: spacing[4],
   },
-  buttonWrapper: {
-    paddingBottom: 35,
+  button: {
+    width: layout.minTouchTarget,
+    height: layout.minTouchTarget,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: radius.md,
   },
   minusButton: {
-    fontSize: 32,
-    fontWeight: "400",
+    ...textStyles.title2,
     lineHeight: 32,
-    width: 32,
     textAlign: "center",
   },
   plusButton: {
-    fontSize: 32,
-    fontWeight: "400",
+    ...textStyles.title2,
     lineHeight: 32,
-    width: 32,
     textAlign: "center",
   },
   valueBox: {
@@ -150,40 +199,36 @@ const styles = StyleSheet.create({
     minWidth: 80,
   },
   input: {
-    fontSize: 48,
-    fontWeight: "700",
+    ...textStyles.glucoseDisplay,
     textAlign: "center",
     minWidth: 80,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
     borderWidth: 2,
-    borderRadius: 8,
-    borderColor: "#444",
+    borderRadius: radius.md,
   },
   valueText: {
-    fontSize: 48,
-    fontWeight: "700",
-    lineHeight: 56,
+    ...textStyles.glucoseDisplay,
+    lineHeight: 60,
   },
   unitText: {
-    fontSize: 14,
-    opacity: 0.6,
-    marginTop: 4,
+    ...textStyles.footnote,
+    marginTop: spacing[1],
   },
   quickAddContainer: {
     flexDirection: "row",
-    gap: 8,
+    gap: spacing[2],
   },
   quickAddButton: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[2],
+    borderRadius: radius.md,
     borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
   },
   quickAddText: {
-    fontSize: 14,
-    fontWeight: "600",
+    ...textStyles.calloutSemibold,
   },
 });

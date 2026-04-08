@@ -15,39 +15,39 @@
 // All consumer code uses `colors.*` semantic tokens below.
 // ---------------------------------------------------------------------------
 const palette = {
-  blue50: '#EFF6FF',
-  blue500: '#3B82F6',
-  blue600: '#2563EB',
-  blue700: '#1D4ED8',
-  blue900: '#1E3A5F',
+  blue50: "#EFF6FF",
+  blue500: "#3B82F6",
+  blue600: "#2563EB",
+  blue700: "#1D4ED8",
+  blue900: "#1E3A5F",
 
-  teal400: '#2DD4BF',
-  teal500: '#14B8A6',
-  teal600: '#0D9488',
+  teal400: "#2DD4BF",
+  teal500: "#14B8A6",
+  teal600: "#0D9488",
 
-  green500: '#22C55E',
-  green600: '#16A34A',
-  orange500: '#F97316',
-  red500: '#EF4444',
-  red600: '#DC2626',
-  yellow500: '#EAB308',
+  green500: "#22C55E",
+  green600: "#16A34A",
+  orange500: "#F97316",
+  red500: "#EF4444",
+  red600: "#DC2626",
+  yellow500: "#EAB308",
 
   // iOS semantic neutral equivalents
-  gray50: '#F9FAFB',
-  gray100: '#F3F4F6',   // ~secondarySystemBackground
-  gray200: '#E5E7EB',   // ~separator
-  gray300: '#D1D5DB',
-  gray400: '#9CA3AF',   // ~tertiaryLabel
-  gray500: '#6B7280',   // ~secondaryLabel
-  gray600: '#4B5563',
-  gray700: '#374151',
-  gray800: '#1F2937',
-  gray900: '#111827',   // ~label
-  gray950: '#0F172A',
+  gray50: "#F9FAFB",
+  gray100: "#F3F4F6", // ~secondarySystemBackground
+  gray200: "#E5E7EB", // ~separator
+  gray300: "#D1D5DB",
+  gray400: "#9CA3AF", // ~tertiaryLabel
+  gray500: "#6B7280", // ~secondaryLabel
+  gray600: "#4B5563",
+  gray700: "#374151",
+  gray800: "#1F2937",
+  gray900: "#111827", // ~label
+  gray950: "#0F172A",
 
-  white: '#FFFFFF',
-  black: '#000000',
-  transparent: 'transparent',
+  white: "#FFFFFF",
+  black: "#000000",
+  transparent: "transparent",
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -70,20 +70,20 @@ export const colors = {
   glucoseVeryHigh: palette.red600,
 
   success: palette.green500,
-  successSurface: '#F0FDF4',
+  successSurface: "#F0FDF4",
   warning: palette.yellow500,
-  warningSurface: '#FEFCE8',
+  warningSurface: "#FEFCE8",
   danger: palette.red500,
-  dangerSurface: '#FEF2F2',
+  dangerSurface: "#FEF2F2",
   info: palette.blue500,
   infoSurface: palette.blue50,
 
   // Surfaces — mirrors iOS systemGroupedBackground / systemBackground
-  background: '#F2F2F7',
+  background: "#F2F2F7",
   surface: palette.white,
   surfaceElevated: palette.white,
   surfaceSubtle: palette.gray100,
-  overlay: 'rgba(0,0,0,0.4)',
+  overlay: "rgba(0,0,0,0.4)",
 
   // Borders — mirrors iOS separator
   border: palette.gray200,
@@ -144,11 +144,11 @@ export const radius = {
   none: 0,
   xs: 4,
   sm: 8,
-  md: 10,   // HIG default button corner radius
+  md: 10, // HIG default button corner radius
   lg: 12,
-  xl: 16,   // HIG card / modal sheet radius
-  '2xl': 20,
-  '3xl': 28,
+  xl: 16, // HIG card / modal sheet radius
+  "2xl": 20,
+  "3xl": 28,
   full: 9999,
 } as const;
 
@@ -169,11 +169,11 @@ export const radius = {
 // ---------------------------------------------------------------------------
 export const typography = {
   fonts: {
-    regular: 'System',
-    medium: 'System',
-    semiBold: 'System',
-    bold: 'System',
-    mono: 'Courier New',
+    regular: "System",
+    medium: "System",
+    semiBold: "System",
+    bold: "System",
+    mono: "Courier New",
   },
 
   sizes: {
@@ -191,11 +191,11 @@ export const typography = {
   },
 
   weights: {
-    regular: '400' as const,
-    medium: '500' as const,
-    semiBold: '600' as const,
-    bold: '700' as const,
-    heavy: '800' as const,
+    regular: "400" as const,
+    medium: "500" as const,
+    semiBold: "600" as const,
+    bold: "700" as const,
+    heavy: "800" as const,
   },
 
   tracking: {
@@ -221,81 +221,156 @@ export const typography = {
 // ---------------------------------------------------------------------------
 export const textStyles = {
   largeTitle: {
-    fontSize: 34, fontWeight: '400' as const, letterSpacing: 0.37, lineHeight: 41,
+    fontSize: 34,
+    fontWeight: "400" as const,
+    letterSpacing: 0.37,
+    lineHeight: 41,
   },
   largeTitleBold: {
-    fontSize: 34, fontWeight: '700' as const, letterSpacing: 0.37, lineHeight: 41,
+    fontSize: 34,
+    fontWeight: "700" as const,
+    letterSpacing: 0.37,
+    lineHeight: 41,
   },
   title1: {
-    fontSize: 28, fontWeight: '400' as const, letterSpacing: 0.36, lineHeight: 34,
+    fontSize: 28,
+    fontWeight: "400" as const,
+    letterSpacing: 0.36,
+    lineHeight: 34,
   },
   title1Bold: {
-    fontSize: 28, fontWeight: '700' as const, letterSpacing: 0.36, lineHeight: 34,
+    fontSize: 28,
+    fontWeight: "700" as const,
+    letterSpacing: 0.36,
+    lineHeight: 34,
   },
   title2: {
-    fontSize: 22, fontWeight: '400' as const, letterSpacing: 0.35, lineHeight: 28,
+    fontSize: 22,
+    fontWeight: "400" as const,
+    letterSpacing: 0.35,
+    lineHeight: 28,
   },
   title2Bold: {
-    fontSize: 22, fontWeight: '700' as const, letterSpacing: 0.35, lineHeight: 28,
+    fontSize: 22,
+    fontWeight: "700" as const,
+    letterSpacing: 0.35,
+    lineHeight: 28,
   },
   title3: {
-    fontSize: 20, fontWeight: '400' as const, letterSpacing: 0.38, lineHeight: 25,
+    fontSize: 20,
+    fontWeight: "400" as const,
+    letterSpacing: 0.38,
+    lineHeight: 25,
   },
   title3Semibold: {
-    fontSize: 20, fontWeight: '600' as const, letterSpacing: 0.38, lineHeight: 25,
+    fontSize: 20,
+    fontWeight: "600" as const,
+    letterSpacing: 0.38,
+    lineHeight: 25,
   },
   headline: {
-    fontSize: 17, fontWeight: '600' as const, letterSpacing: -0.43, lineHeight: 22,
+    fontSize: 17,
+    fontWeight: "600" as const,
+    letterSpacing: -0.43,
+    lineHeight: 22,
   },
   body: {
-    fontSize: 17, fontWeight: '400' as const, letterSpacing: -0.43, lineHeight: 22,
+    fontSize: 17,
+    fontWeight: "400" as const,
+    letterSpacing: -0.43,
+    lineHeight: 22,
   },
   bodyBold: {
-    fontSize: 17, fontWeight: '700' as const, letterSpacing: -0.43, lineHeight: 22,
+    fontSize: 17,
+    fontWeight: "700" as const,
+    letterSpacing: -0.43,
+    lineHeight: 22,
   },
   callout: {
-    fontSize: 16, fontWeight: '400' as const, letterSpacing: -0.31, lineHeight: 21,
+    fontSize: 16,
+    fontWeight: "400" as const,
+    letterSpacing: -0.31,
+    lineHeight: 21,
   },
   calloutSemibold: {
-    fontSize: 16, fontWeight: '600' as const, letterSpacing: -0.31, lineHeight: 21,
+    fontSize: 16,
+    fontWeight: "600" as const,
+    letterSpacing: -0.31,
+    lineHeight: 21,
   },
   subheadline: {
-    fontSize: 15, fontWeight: '400' as const, letterSpacing: -0.23, lineHeight: 20,
+    fontSize: 15,
+    fontWeight: "400" as const,
+    letterSpacing: -0.23,
+    lineHeight: 20,
   },
   subheadlineSemibold: {
-    fontSize: 15, fontWeight: '600' as const, letterSpacing: -0.23, lineHeight: 20,
+    fontSize: 15,
+    fontWeight: "600" as const,
+    letterSpacing: -0.23,
+    lineHeight: 20,
   },
   footnote: {
-    fontSize: 13, fontWeight: '400' as const, letterSpacing: -0.08, lineHeight: 18,
+    fontSize: 13,
+    fontWeight: "400" as const,
+    letterSpacing: -0.08,
+    lineHeight: 18,
   },
   footnoteSemibold: {
-    fontSize: 13, fontWeight: '600' as const, letterSpacing: -0.08, lineHeight: 18,
+    fontSize: 13,
+    fontWeight: "600" as const,
+    letterSpacing: -0.08,
+    lineHeight: 18,
   },
   caption1: {
-    fontSize: 12, fontWeight: '400' as const, letterSpacing: 0, lineHeight: 16,
+    fontSize: 12,
+    fontWeight: "400" as const,
+    letterSpacing: 0,
+    lineHeight: 16,
   },
   caption1Medium: {
-    fontSize: 12, fontWeight: '500' as const, letterSpacing: 0, lineHeight: 16,
+    fontSize: 12,
+    fontWeight: "500" as const,
+    letterSpacing: 0,
+    lineHeight: 16,
   },
   caption2: {
-    fontSize: 11, fontWeight: '400' as const, letterSpacing: 0.07, lineHeight: 13,
+    fontSize: 11,
+    fontWeight: "400" as const,
+    letterSpacing: 0.07,
+    lineHeight: 13,
   },
   caption2Semibold: {
-    fontSize: 11, fontWeight: '600' as const, letterSpacing: 0.07, lineHeight: 13,
+    fontSize: 11,
+    fontWeight: "600" as const,
+    letterSpacing: 0.07,
+    lineHeight: 13,
   },
   tabBar: {
-    fontSize: 10, fontWeight: '500' as const, letterSpacing: 0.12, lineHeight: 12,
+    fontSize: 10,
+    fontWeight: "500" as const,
+    letterSpacing: 0.12,
+    lineHeight: 12,
   },
 
   // SnapDose-specific: glucose reading, dose display
   glucoseDisplay: {
-    fontSize: 56, fontWeight: '700' as const, letterSpacing: -1, lineHeight: 60,
+    fontSize: 56,
+    fontWeight: "700" as const,
+    letterSpacing: -1,
+    lineHeight: 60,
   },
   glucoseUnit: {
-    fontSize: 17, fontWeight: '500' as const, letterSpacing: -0.43, lineHeight: 22,
+    fontSize: 17,
+    fontWeight: "500" as const,
+    letterSpacing: -0.43,
+    lineHeight: 22,
   },
   doseDisplay: {
-    fontSize: 28, fontWeight: '700' as const, letterSpacing: 0.36, lineHeight: 34,
+    fontSize: 28,
+    fontWeight: "700" as const,
+    letterSpacing: 0.36,
+    lineHeight: 34,
   },
 } as const;
 
@@ -304,7 +379,7 @@ export const textStyles = {
 // ---------------------------------------------------------------------------
 export const shadows = {
   none: {
-    shadowColor: 'transparent',
+    shadowColor: "transparent",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0,
     shadowRadius: 0,
@@ -352,23 +427,23 @@ export const shadows = {
 // HIG: 16-20pt horizontal margins on iPhone; 44pt minimum touch targets.
 // ---------------------------------------------------------------------------
 export const layout = {
-  screenHorizontalPadding: spacing[4],  // 16pt — HIG recommended iPhone margin
-  screenVerticalPadding: spacing[6],    // 24pt
-  cardPadding: spacing[4],              // 16pt
-  sectionSpacing: spacing[6],           // 24pt between major sections
-  itemSpacing: spacing[2],              // 8pt between list items
+  screenHorizontalPadding: spacing[4], // 16pt — HIG recommended iPhone margin
+  screenVerticalPadding: spacing[6], // 24pt
+  cardPadding: spacing[4], // 16pt
+  sectionSpacing: spacing[6], // 24pt between major sections
+  itemSpacing: spacing[2], // 8pt between list items
 
   // HIG minimum touch target (Accessibility > Buttons)
   minTouchTarget: 44,
 
   // Standard component heights
   buttonHeightSm: 32,
-  buttonHeightMd: 44,            // = minTouchTarget
+  buttonHeightMd: 44, // = minTouchTarget
   buttonHeightLg: 50,
-  inputHeight: 44,               // = minTouchTarget
+  inputHeight: 44, // = minTouchTarget
   navBarHeight: 44,
-  tabBarContentHeight: 49,       // HIG standard tab bar content height
-  tabBarHeight: 83,              // 49 + approx safe area
+  tabBarContentHeight: 49, // HIG standard tab bar content height
+  tabBarHeight: 83, // 49 + approx safe area
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -406,11 +481,11 @@ export const glucoseRange = {
     return colors.glucoseVeryHigh;
   },
 
-  getLabel(value: number): 'Low' | 'In Range' | 'High' | 'Very High' {
-    if (value < this.LOW) return 'Low';
-    if (value <= this.HIGH) return 'In Range';
-    if (value <= this.VERY_HIGH) return 'High';
-    return 'Very High';
+  getLabel(value: number): "Low" | "In Range" | "High" | "Very High" {
+    if (value < this.LOW) return "Low";
+    if (value <= this.HIGH) return "In Range";
+    if (value <= this.VERY_HIGH) return "High";
+    return "Very High";
   },
 
   isUrgent(value: number): boolean {
@@ -437,16 +512,16 @@ export const Colors = {
     primary: colors.primary,
   },
   dark: {
-    text: palette.gray50,              // Light text for dark bg
-    background: palette.black,          // Pure black background
-    tint: palette.blue500,             // Lighter blue for visibility
-    icon: palette.gray400,             // Muted gray icons
-    tabIconDefault: palette.gray500,   // Inactive tab icons
-    tabIconSelected: palette.blue500,  // Active tab (lighter blue)
-    accent: '#34D399',                 // Brighter emerald for dark mode
-    surface: '#1A1A1A',                // Slightly elevated surface
-    border: palette.gray700,           // Visible borders on dark (#374151)
-    primary: palette.blue500,          // Primary action color
+    text: palette.gray50, // Light text for dark bg
+    background: palette.black, // Pure black background
+    tint: palette.blue500, // Lighter blue for visibility
+    icon: palette.gray400, // Muted gray icons
+    tabIconDefault: palette.gray500, // Inactive tab icons
+    tabIconSelected: palette.blue500, // Active tab (lighter blue)
+    accent: "#34D399", // Brighter emerald for dark mode
+    surface: "#1A1A1A", // Slightly elevated surface
+    border: palette.gray700, // Visible borders on dark (#374151)
+    primary: palette.blue500, // Primary action color
   },
 } as const;
 

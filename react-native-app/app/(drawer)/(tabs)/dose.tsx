@@ -11,8 +11,10 @@ import { InsulinOnBoardCard } from "@/components/dosing/insulin-on-board-card";
 import { TodayDosesList } from "@/components/dosing/today-doses-list";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { colors, Colors, layout, spacing, textStyles } from "@/constants/theme";
 import { auth, db } from "@/config/firebase";
 import { useAccentColor } from "@/context/accent-color";
+import { useThemeColor } from "@/hooks/use-theme-color";
 import { useGlucose } from "@/hooks/use-glucose";
 import { refreshIOB, useIOB } from "@/hooks/use-iob";
 import { calculateDose } from "@/utils/dose-calculator";
@@ -37,6 +39,14 @@ interface Dose {
 export default function DoseScreen() {
   const insets = useSafeAreaInsets();
   const accent = useAccentColor();
+  const headerTitleColor = useThemeColor(
+    { light: colors.textPrimary, dark: Colors.dark.text },
+    "text"
+  );
+  const headerSubtitleColor = useThemeColor(
+    { light: colors.textSecondary, dark: '#B0B0B0' },
+    "text"
+  );
 
   const [mode, setMode] = useState<"meal" | "correction">("meal");
   const [carbs, setCarbs] = useState(0);
@@ -195,7 +205,7 @@ export default function DoseScreen() {
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + spacing[8] }]}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -205,10 +215,10 @@ export default function DoseScreen() {
         }
       >
         <View style={styles.header}>
-          <ThemedText type="title" style={styles.headerTitle}>
+          <ThemedText type="title" style={[styles.headerTitle, { color: headerTitleColor }]}>
             Insulin Dosing
           </ThemedText>
-          <ThemedText style={styles.subtitle}>
+          <ThemedText style={[styles.subtitle, { color: headerSubtitleColor }]}>
             Calculate and log your insulin dose
           </ThemedText>
         </View>
@@ -262,11 +272,16 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollView: { flex: 1 },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 32,
+    paddingHorizontal: layout.screenHorizontalPadding,
+    paddingTop: spacing[4],
+    paddingBottom: spacing[8],
   },
-  header: { marginBottom: 24 },
-  headerTitle: { fontSize: 28, fontWeight: "700", marginBottom: 4 },
-  subtitle: { fontSize: 14, opacity: 0.6 },
+  header: { marginBottom: spacing[6] },
+  headerTitle: {
+    ...textStyles.title1Bold,
+    marginBottom: spacing[1],
+  },
+  subtitle: {
+    ...textStyles.callout,
+  },
 });

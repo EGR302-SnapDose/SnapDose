@@ -1,4 +1,5 @@
 import { ThemedText } from "@/components/themed-text";
+import { colors, Colors, radius, spacing, textStyles } from "@/constants/theme";
 import { useAccentColor } from "@/context/accent-color";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -17,9 +18,9 @@ export function DoseModeSelector({
     { light: "#F5F5F5", dark: "#1E2022" },
     "background",
   );
-  const borderColor = useThemeColor(
-    { light: "#E5E5E5", dark: "#2A2A2A" },
-    "icon",
+  const unselectedTextColor = useThemeColor(
+    { light: colors.textPrimary, dark: Colors.dark.text },
+    "text",
   );
 
   return (
@@ -27,13 +28,17 @@ export function DoseModeSelector({
       <Pressable
         style={[
           styles.button,
-          { backgroundColor: buttonBg, borderColor: borderColor },
+          { backgroundColor: buttonBg, borderColor: colors.border },
           mode === "meal" && { backgroundColor: accent },
         ]}
         onPress={() => onModeChange("meal")}
       >
         <ThemedText
-          style={[styles.buttonText, mode === "meal" && { color: "#FFFFFF" }]}
+          style={[
+            styles.buttonText,
+            { color: unselectedTextColor },
+            mode === "meal" && { color: colors.textInverse },
+          ]}
         >
           Meal Dose
         </ThemedText>
@@ -42,7 +47,7 @@ export function DoseModeSelector({
       <Pressable
         style={[
           styles.button,
-          { backgroundColor: buttonBg, borderColor: borderColor },
+          { backgroundColor: buttonBg, borderColor: colors.border },
           mode === "correction" && { backgroundColor: accent },
         ]}
         onPress={() => onModeChange("correction")}
@@ -50,7 +55,8 @@ export function DoseModeSelector({
         <ThemedText
           style={[
             styles.buttonText,
-            mode === "correction" && { color: "#FFFFFF" },
+            { color: unselectedTextColor },
+            mode === "correction" && { color: colors.textInverse },
           ]}
         >
           Correction Dose
@@ -63,18 +69,17 @@ export function DoseModeSelector({
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    gap: 12,
-    marginBottom: 20,
+    gap: spacing[3],
+    marginBottom: spacing[5],
   },
   button: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingVertical: spacing[3],
+    borderRadius: radius.md,
     alignItems: "center",
     borderWidth: 1,
   },
   buttonText: {
-    fontSize: 15,
-    fontWeight: "600",
+    ...textStyles.calloutSemibold,
   },
 });
