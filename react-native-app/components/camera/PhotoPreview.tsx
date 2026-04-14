@@ -31,17 +31,29 @@ interface PhotoPreviewProps {
   photo: StoredPhoto;
   onRetake: () => void;
   onUsePhoto: (photo: StoredPhoto, notes?: string) => void;
+  onCancel?: () => void;
   isProcessing?: boolean;
+  /** 0–1 real upload progress from GCS state_changed events */
+  uploadProgress?: number;
 }
 
-export function PhotoPreview({ photo, onRetake, onUsePhoto, isProcessing }: PhotoPreviewProps) {
+export function PhotoPreview({
+  photo,
+  onRetake,
+  onUsePhoto,
+  onCancel,
+  isProcessing,
+  uploadProgress = 0,
+}: PhotoPreviewProps) {
   const [notes, setNotes] = useState('');
   const [showNotesInput, setShowNotesInput] = useState(false);
 
   // sheetAnim: slides the sheet in/out (0 = visible, SHEET_HEIGHT = hidden below)
   const sheetAnim = useRef(new Animated.Value(SHEET_HEIGHT)).current;
-  // keyboardOffset: lifts the sheet up with the keyboard (0 = no keyboard, N = keyboard height)
+  // keyboardOffset: lifts the sheet up with the keyboard
   const keyboardOffset = useRef(new Animated.Value(0)).current;
+  // Animated progress bar width (0→1)
+  const progressAnim = useRef(new Animated.Value(0)).current;
 
   const barBg = useThemeColor({ light: '#F2F2F2', dark: '#1e1e1e' }, 'background');
   const iconColor = useThemeColor({ light: '#000', dark: '#fff' }, 'background');
@@ -49,6 +61,17 @@ export function PhotoPreview({ photo, onRetake, onUsePhoto, isProcessing }: Phot
   const useButtonBg = useThemeColor({ light: '#007AFF', dark: '#0A84FF' }, 'background');
   const inputBg = useThemeColor({ light: '#fff', dark: '#2c2c2c' }, 'background');
   const textColor = useThemeColor({ light: '#000', dark: '#fff' }, 'text');
+  const progressTrackBg = useThemeColor({ light: '#E5E5EA', dark: '#3A3A3C' }, 'background');
+
+  // Animate progress bar whenever uploadProgress changes
+  useEffect(() => {
+    Animated.timing(progressAnim, {
+      toValue: uploadProgress,
+      duration: 120,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: false, // width animation can't use native driver
+    }).start();
+  }, [uploadProgress]);
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -63,13 +86,8 @@ export function PhotoPreview({ photo, onRetake, onUsePhoto, isProcessing }: Phot
       }).start();
     };
 
-    const showSub = Keyboard.addListener(showEvent, (e) => {
-      animateOffset(e.endCoordinates.height, e);
-    });
-
-    const hideSub = Keyboard.addListener(hideEvent, (e) => {
-      animateOffset(0, e);
-    });
+    const showSub = Keyboard.addListener(showEvent, (e) => animateOffset(e.endCoordinates.height, e));
+    const hideSub = Keyboard.addListener(hideEvent, (e) => animateOffset(0, e));
 
     return () => {
       showSub.remove();
@@ -101,8 +119,14 @@ export function PhotoPreview({ photo, onRetake, onUsePhoto, isProcessing }: Phot
     onUsePhoto(photo, notes.trim() || undefined);
   };
 
-  // Sheet slides up from below AND lifts with the keyboard simultaneously
   const translateY = Animated.add(sheetAnim, Animated.multiply(keyboardOffset, -1));
+
+  // Derive upload stage label for accessibility + UX copy
+  const uploadLabel = (() => {
+    if (!isProcessing) return 'Use Photo';
+    if (uploadProgress < 1) return `Uploading… ${Math.round(uploadProgress * 100)}%`;
+    return 'Processing…';
+  })();
 
   return (
     <ThemedView style={styles.container}>
@@ -124,9 +148,7 @@ export function PhotoPreview({ photo, onRetake, onUsePhoto, isProcessing }: Phot
             <View style={styles.notesHeader}>
               <ThemedText style={styles.notesTitle}>Notes for AI</ThemedText>
               <TouchableOpacity onPress={closeSheet}>
-                <ThemedText style={[styles.doneButton, { color: useButtonBg }]}>
-                  Save
-                </ThemedText>
+                <ThemedText style={[styles.doneButton, { color: useButtonBg }]}>Save</ThemedText>
               </TouchableOpacity>
             </View>
             <TextInput
@@ -143,26 +165,60 @@ export function PhotoPreview({ photo, onRetake, onUsePhoto, isProcessing }: Phot
       )}
 
       <View style={[styles.bottomBar, { backgroundColor: barBg }]}>
-        <TouchableOpacity style={styles.sideButton} onPress={onRetake} disabled={isProcessing}>
+        {/* Retake / Cancel — swap label while uploading */}
+        <TouchableOpacity
+          style={styles.sideButton}
+          onPress={isProcessing ? onCancel : onRetake}
+          disabled={isProcessing && !onCancel}
+        >
           <Ionicons
-            name="refresh-outline"
+            name={isProcessing ? 'close-outline' : 'refresh-outline'}
             size={24}
-            color={isProcessing ? mutedColor : iconColor}
+            color={isProcessing ? (onCancel ? '#FF3B30' : mutedColor) : iconColor}
           />
-          <ThemedText style={[styles.buttonLabel, isProcessing && { color: mutedColor }]}>
-            Retake
+          <ThemedText
+            style={[
+              styles.buttonLabel,
+              isProcessing && onCancel && { color: '#FF3B30' },
+              isProcessing && !onCancel && { color: mutedColor },
+            ]}
+          >
+            {isProcessing ? 'Cancel' : 'Retake'}
           </ThemedText>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.useButton, { backgroundColor: useButtonBg }, isProcessing && styles.disabled]}
-          onPress={handleUsePhoto}
-          disabled={isProcessing}
-        >
-          <ThemedText style={styles.useButtonText}>
-            {isProcessing ? 'Analyzing...' : 'Use Photo'}
-          </ThemedText>
-        </TouchableOpacity>
+        {/* Use Photo button with progress bar underneath */}
+        <View style={styles.useButtonWrapper}>
+          <TouchableOpacity
+            style={[
+              styles.useButton,
+              { backgroundColor: useButtonBg },
+              isProcessing && styles.disabled,
+            ]}
+            onPress={handleUsePhoto}
+            disabled={isProcessing}
+          >
+            <ThemedText style={styles.useButtonText}>{uploadLabel}</ThemedText>
+          </TouchableOpacity>
+
+          {/* Progress track — only visible while uploading */}
+          {isProcessing && (
+            <View style={[styles.progressTrack, { backgroundColor: progressTrackBg }]}>
+              <Animated.View
+                style={[
+                  styles.progressFill,
+                  { backgroundColor: useButtonBg },
+                  {
+                    width: progressAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0%', '100%'],
+                    }),
+                  },
+                ]}
+              />
+            </View>
+          )}
+        </View>
 
         <TouchableOpacity style={styles.notesButton} onPress={openSheet} disabled={isProcessing}>
           <Ionicons
@@ -174,7 +230,7 @@ export function PhotoPreview({ photo, onRetake, onUsePhoto, isProcessing }: Phot
             style={[
               styles.buttonLabel,
               isProcessing && { color: mutedColor },
-              notes && { color: useButtonBg },
+              notes && !isProcessing && { color: useButtonBg },
             ]}
           >
             {notes ? 'Edit' : 'Notes for AI'}
@@ -214,19 +270,38 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
   },
+  // Wrapper holds the button + progress track as a column
+  useButtonWrapper: {
+    alignItems: 'center',
+    gap: 8,
+  },
   useButton: {
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 12,
+    minWidth: 140,
+    alignItems: 'center',
   },
   disabled: {
-    opacity: 0.5,
+    opacity: 0.7,
   },
   useButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
+  // Progress bar
+  progressTrack: {
+    width: 140,
+    height: 4,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  // Notes sheet
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -235,8 +310,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    // Extend well below the visible bottom so the sheet background
-    // fills the gap behind the keyboard — no matter the device height.
     bottom: -500,
     paddingBottom: 500,
     borderTopLeftRadius: 20,

@@ -17,10 +17,10 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
