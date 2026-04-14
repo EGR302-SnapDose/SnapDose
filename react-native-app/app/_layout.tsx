@@ -1,3 +1,4 @@
+import { AccentColorProvider } from "@/context/accent-color";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import {
   DarkTheme,
@@ -12,30 +13,32 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          animation: "slide_from_right",
-          animationDuration: 300,
-        }}
-      >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="auth/login" />
-        <Stack.Screen name="auth/register" />
-        <Stack.Screen name="onboarding" />
-        <Stack.Screen name="(drawer)" />
-        <Stack.Screen
-          name="modal"
-          options={{
-            presentation: "modal",
-            animation: "slide_from_bottom",
-            headerShown: true,
-            title: "Modal",
+    <AccentColorProvider>
+      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            animation: "slide_from_right",
+            animationDuration: 300,
           }}
-        />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+        >
+          <Stack.Screen name="index" />
+          <Stack.Screen name="auth/login" />
+          <Stack.Screen name="auth/register" />
+          <Stack.Screen name="onboarding" />
+          <Stack.Screen name="(drawer)" />
+          <Stack.Screen
+            name="modal"
+            options={{
+              presentation: "modal",
+              animation: "slide_from_bottom",
+              headerShown: true,
+              title: "Modal",
+            }}
+          />
+        </Stack>
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </AccentColorProvider>
   );
 }
