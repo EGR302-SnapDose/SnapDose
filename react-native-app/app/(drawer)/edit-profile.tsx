@@ -22,6 +22,7 @@ import {
     StyleSheet,
     TextInput,
     TouchableOpacity,
+    useColorScheme,
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -203,6 +204,7 @@ function SectionCard({
 // Screen
 // ---------------------------------------------------------------------------
 export default function EditProfileScreen() {
+  const colorScheme = useColorScheme();
   const cardBg = colors.surfaceSubtle;
   const inputBg = colors.inputBackground;
   const textColor = colors.textPrimary;
