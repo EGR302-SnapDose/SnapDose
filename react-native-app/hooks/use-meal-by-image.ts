@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { subscribeMealByImagePath } from '@/services/meal-service';
 import { MealCarbEstimate } from '@/types/meal';
 
-export type MealStatus = 'pending' | 'processing' | 'completed' | 'error' | null;
+export type MealStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'error' | null;
 
 interface UseMealByImageReturn {
   meal: MealCarbEstimate | null;

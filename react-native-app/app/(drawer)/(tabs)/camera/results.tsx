@@ -361,6 +361,7 @@ export default function ResultsScreen() {
     };
   }, [targetStep, visualStep]);
 
+  const backendFailed = status === 'failed';
   const backendProcessing = !meal || status === 'pending' || status === 'processing';
 
   useEffect(() => {
@@ -447,17 +448,17 @@ export default function ResultsScreen() {
     }
   };
 
-  if (error || timedOut) {
+  if (error || timedOut || backendFailed) {
     return (
       <ThemedView style={styles.centered}>
         <Ionicons name="alert-circle-outline" size={48} color={c.danger} />
         <ThemedText style={[styles.errorText, { color: c.danger }]}>
-          {timedOut ? "Analysis is taking too long" : "Failed to load results"}
+          {timedOut ? "Analysis is taking too long" : "Analysis failed"}
         </ThemedText>
         <ThemedText style={[styles.errorSubtext, { color: c.muted }]}>
           {timedOut
             ? "The server may be busy. Please try again."
-            : "Something went wrong loading your results."}
+            : "Something went wrong processing your image. Please try again."}
         </ThemedText>
         <TouchableOpacity
           style={[styles.backLink, { borderColor: c.accent }]}

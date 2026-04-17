@@ -295,11 +295,13 @@ const FoodGalleryScreen = () => {
           });
         setMeals(data);
 
-        const weekStart = startOfWeek();
-        const weeklyMeals = data.filter((m) => m.createdAt >= weekStart);
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        sevenDaysAgo.setHours(0, 0, 0, 0);
+        const weekMeals = data.filter((m) => m.createdAt >= sevenDaysAgo);
         setWeekly({
-          meals: weeklyMeals.length,
-          carbs: weeklyMeals.reduce((sum, m) => sum + m.estimatedCarbs, 0),
+          meals: weekMeals.length,
+          carbs: weekMeals.reduce((sum, m) => sum + m.estimatedCarbs, 0),
         });
 
         setLoading(false);
@@ -341,7 +343,30 @@ const FoodGalleryScreen = () => {
   );
 
   const todayMeals = meals.filter((m) => m.createdAt >= startOfDay());
-  const showEmpty = !loading && !firestoreError && todayMeals.length === 0;
+
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  sevenDaysAgo.setHours(0, 0, 0, 0);
+
+  const last7DaysMeals = meals.filter(
+    (m) => m.createdAt >= sevenDaysAgo && m.createdAt < startOfDay(),
+  );
+
+  const mealsByDay = last7DaysMeals.reduce<Record<string, Meal[]>>(
+    (acc, meal) => {
+      const label = meal.createdAt.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "short",
+        day: "numeric",
+      });
+      if (!acc[label]) acc[label] = [];
+      acc[label].push(meal);
+      return acc;
+    },
+    {},
+  );
+
+  const showEmpty = !loading && !firestoreError && meals.length === 0;
 
   return (
     <ThemedView style={styles.root}>
@@ -415,6 +440,33 @@ const FoodGalleryScreen = () => {
           </View>
         )}
 
+        {Object.entries(mealsByDay).map(([dayLabel, dayMeals]) => (
+          <View key={dayLabel}>
+            <View style={styles.sectionHeader}>
+              <ThemedText style={[styles.sectionIcon, { color: muted }]}>
+                ⊟
+              </ThemedText>
+              <ThemedText style={[styles.sectionTitle, { color: muted }]}>
+                {dayLabel.toUpperCase()}
+              </ThemedText>
+            </View>
+            <View style={styles.grid}>
+              {dayMeals.map((meal) => (
+                <MealCard
+                  key={meal.id}
+                  meal={meal}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/(drawer)/(tabs)/food-gallery/meal-detail",
+                      params: { mealId: meal.id },
+                    })
+                  }
+                />
+              ))}
+            </View>
+          </View>
+        ))}
+
         {analyzing && (
           <View style={[styles.analyzingCard, { backgroundColor: cardBg }]}>
             <ActivityIndicator size="small" color={accent} />
@@ -436,7 +488,7 @@ const FoodGalleryScreen = () => {
 
       <TouchableOpacity
         style={[styles.fab, { backgroundColor: accent }]}
-        onPress={() => setCameraOpen(true)}
+        onPress={() => router.push("/(drawer)/(tabs)/camera")}
         disabled={analyzing}
       >
         {analyzing ? (
