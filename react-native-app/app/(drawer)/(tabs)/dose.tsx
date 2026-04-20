@@ -1,13 +1,3 @@
-import React, { useEffect, useState } from "react";
-import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
-import { useAccentColor } from "@/context/accent-color";
-import { useGlucose } from "@/hooks/use-glucose";
-import { refreshIOB, useIOB } from "@/hooks/use-iob";
-import { calculateDose } from "@/utils/dose-calculator";
 import { CarbsInput } from "@/components/dosing/carbs-input";
 import { CorrectionInput } from "@/components/dosing/correction-input";
 import { DoseCalculation } from "@/components/dosing/dose-calculation";
@@ -15,7 +5,13 @@ import { DoseConfirmationSheet } from "@/components/dosing/dose-confirmation-she
 import { DoseModeSelector } from "@/components/dosing/dose-mode-selector";
 import { InsulinOnBoardCard } from "@/components/dosing/insulin-on-board-card";
 import { TodayDosesList } from "@/components/dosing/today-doses-list";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
 import { auth, db } from "@/config/firebase";
+import { useAccentColor } from "@/context/accent-color";
+import { useGlucose } from "@/hooks/use-glucose";
+import { refreshIOB, useIOB } from "@/hooks/use-iob";
+import { calculateDose } from "@/utils/dose-calculator";
 import {
   collection,
   doc,
@@ -23,6 +19,9 @@ import {
   orderBy,
   query,
 } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
+import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const SNAPDOSE_API =
   "https://snapdose-api-1044774150297.us-central1.run.app/api";

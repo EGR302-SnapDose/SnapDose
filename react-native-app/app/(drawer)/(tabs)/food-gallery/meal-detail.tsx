@@ -26,6 +26,7 @@ import {
 } from "firebase/storage";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 
@@ -185,33 +186,39 @@ const MealDetailScreen = () => {
   const handleDoseConfirm = async () => {
     const user = auth.currentUser;
     if (!user || !meal) return;
-    try {
-      const doseId = Date.now().toString();
-      const time = new Date().toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      });
-      await setDoc(doc(db, "users", user.uid, "doses", doseId), {
-        id: doseId,
-        time,
-        amount: recommendedDose,
-        type: "Meal",
-        timestamp: new Date(),
-        mode: "meal",
-        correctionInsulin: null,
-        mealId,
-      });
-      setLinkedDose({
-        id: doseId,
-        amount: recommendedDose,
-        time,
-        type: "Meal",
-      });
-    } catch {
-      Alert.alert("Error", "Could not save dose. Please try again.");
+
+    // Guard against invalid dose values Firestore will reject
+    if (!isFinite(recommendedDose) || isNaN(recommendedDose)) {
+        Alert.alert("Error", "Invalid dose amount. Please check your settings.");
+        return;
     }
-  };
+
+    try {
+        const doseId = Date.now().toString();
+        const time = new Date().toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+        });
+
+        await setDoc(doc(db, "users", user.uid, "doses", doseId), {
+            id: doseId,
+            time,
+            amount: recommendedDose,
+            type: "Meal",
+            timestamp: new Date(),
+            mode: "meal",
+            correctionInsulin: null,
+            mealId: mealId ?? null,
+        });
+
+        setLinkedDose({ id: doseId, amount: recommendedDose, time, type: "Meal" });
+        setShowDoseSheet(false);
+    } catch (error) {
+        console.error("Failed to save dose:", error);
+        Alert.alert("Error", `Could not save dose: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
+};
 
   const handleDelete = () => {
     Alert.alert(

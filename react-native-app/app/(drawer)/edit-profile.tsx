@@ -1,32 +1,33 @@
 import { ThemedText } from "@/components/themed-text";
 import { colors } from "@/constants/theme";
+import { useAccentColor } from "@/context/accent-color";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import {
-    doc,
-    getDoc,
-    getFirestore,
-    serverTimestamp,
-    Timestamp,
-    updateDoc,
+  doc,
+  getDoc,
+  getFirestore,
+  serverTimestamp,
+  Timestamp,
+  updateDoc,
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    useColorScheme,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  useColorScheme,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
+ 
 // ---------------------------------------------------------------------------
 // Firebase — initialise once, re-use if already initialised
 // ---------------------------------------------------------------------------
@@ -38,11 +39,11 @@ const firebaseConfig = {
   messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
-
+ 
 const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
-
+ 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -62,7 +63,7 @@ interface EditableProfile {
   targetGlucoseMax: string;
   accentColor: string;
 }
-
+ 
 const EMPTY_FORM: EditableProfile = {
   displayName: "",
   email: "",
@@ -79,12 +80,12 @@ const EMPTY_FORM: EditableProfile = {
   targetGlucoseMax: "180",
   accentColor: "#EF4444",
 };
-
+ 
 const ACCENT_COLORS = [
   '#EF4444', '#3B82F6', '#A855F7',
   '#10B981', '#F59E0B', '#EC4899',
 ];
-
+ 
 // Safely converts a Firestore Timestamp (or anything date-like) to "YYYY-MM-DD"
 function timestampToISO(ts: unknown): string {
   if (!ts) return "";
@@ -101,14 +102,14 @@ function timestampToISO(ts: unknown): string {
     return "";
   }
 }
-
+ 
 // ---------------------------------------------------------------------------
 // Reusable UI pieces
 // ---------------------------------------------------------------------------
 function FieldLabel({ label }: { label: string }) {
   return <ThemedText style={styles.label}>{label}</ThemedText>;
 }
-
+ 
 function StyledInput({
   value,
   onChangeText,
@@ -144,7 +145,7 @@ function StyledInput({
     />
   );
 }
-
+ 
 function SegmentControl({
   options,
   selected,
@@ -182,7 +183,7 @@ function SegmentControl({
     </View>
   );
 }
-
+ 
 function SectionCard({
   title,
   children,
@@ -199,22 +200,24 @@ function SectionCard({
     </View>
   );
 }
-
+ 
 // ---------------------------------------------------------------------------
 // Screen
 // ---------------------------------------------------------------------------
 export default function EditProfileScreen() {
   const colorScheme = useColorScheme();
+  // useAccentColor() provides the same dynamic accent used in DoseConfirmationSheet
+  const accent = useAccentColor();
+ 
   const cardBg = colors.surfaceSubtle;
   const inputBg = colors.inputBackground;
   const textColor = colors.textPrimary;
-  const accentRed = colors.danger;
-
+ 
   const [form, setForm] = useState<EditableProfile>(EMPTY_FORM);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
+ 
   // ── Fetch existing profile from Firestore on mount ──────────────────────
   useEffect(() => {
     const uid = auth.currentUser?.uid;
@@ -223,18 +226,15 @@ export default function EditProfileScreen() {
       setLoadingProfile(false);
       return;
     }
-
+ 
     getDoc(doc(db, "users", uid))
       .then((snap) => {
-        if (!snap.exists()) {
-          // No doc yet — form stays blank so user can fill from scratch
-          return;
-        }
-
+        if (!snap.exists()) return;
+ 
         const data = snap.data();
         const p = data.profile ?? {};
         const ins = data.insulinSettings ?? {};
-
+ 
         setForm({
           displayName:        data.displayName ?? "",
           email:              data.email ?? auth.currentUser?.email ?? "",
@@ -258,11 +258,11 @@ export default function EditProfileScreen() {
       })
       .finally(() => setLoadingProfile(false));
   }, []);
-
+ 
   function setField<K extends keyof EditableProfile>(key: K, value: EditableProfile[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
-
+ 
   // ── Validate & write back to Firestore ───────────────────────────────────
   async function handleSave() {
     const uid = auth.currentUser?.uid;
@@ -274,7 +274,7 @@ export default function EditProfileScreen() {
       Alert.alert("Validation", "Display name cannot be empty.");
       return;
     }
-
+ 
     let dobTimestamp: Timestamp | null = null;
     if (form.dateOfBirth.trim()) {
       const parsed = new Date(form.dateOfBirth.trim());
@@ -288,7 +288,7 @@ export default function EditProfileScreen() {
       }
       dobTimestamp = Timestamp.fromDate(parsed);
     }
-
+ 
     setSaving(true);
     try {
       const feetNum   = parseInt(form.heightFeet,   10) || 0;
@@ -296,7 +296,7 @@ export default function EditProfileScreen() {
       const cmNum     = Math.round((feetNum * 12 + inchesNum) * 2.54);
       const lbsNum    = parseFloat(form.weightLbs) || 0;
       const kgNum     = Math.round(lbsNum * 0.453592 * 10) / 10;
-
+ 
       const payload: Record<string, unknown> = {
         displayName:                          form.displayName.trim(),
         accentColor:                          form.accentColor,
@@ -314,11 +314,11 @@ export default function EditProfileScreen() {
         "insulinSettings.correctionFactor":   form.correctionFactor   ? parseFloat(form.correctionFactor)   : 0,
         updatedAt:                            serverTimestamp(),
       };
-
+ 
       if (dobTimestamp) {
         payload["profile.dateOfBirth"] = dobTimestamp;
       }
-
+ 
       await updateDoc(doc(db, "users", uid), payload);
       Alert.alert("Saved", "Your profile has been updated.", [
         { text: "OK", onPress: () => router.back() },
@@ -335,7 +335,7 @@ export default function EditProfileScreen() {
       setSaving(false);
     }
   }
-
+ 
   // ── Loading state ─────────────────────────────────────────────────────────
   if (loadingProfile) {
     return (
@@ -344,13 +344,13 @@ export default function EditProfileScreen() {
         edges={["top", "bottom"]}
       >
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={accentRed} />
+          <ActivityIndicator size="large" color={accent} />
           <ThemedText style={styles.loadingText}>Loading profile...</ThemedText>
         </View>
       </SafeAreaView>
     );
   }
-
+ 
   // ── Error state ───────────────────────────────────────────────────────────
   if (loadError) {
     return (
@@ -361,7 +361,7 @@ export default function EditProfileScreen() {
         <View style={styles.centered}>
           <ThemedText style={styles.errorText}>{loadError}</ThemedText>
           <TouchableOpacity
-            style={[styles.saveButton, { backgroundColor: accentRed, marginTop: 20 }]}
+            style={[styles.saveButton, { backgroundColor: accent, marginTop: 20 }]}
             onPress={() => router.back()}
           >
             <ThemedText style={styles.saveButtonText}>Go Back</ThemedText>
@@ -370,7 +370,7 @@ export default function EditProfileScreen() {
       </SafeAreaView>
     );
   }
-
+ 
   // ── Main form ─────────────────────────────────────────────────────────────
   return (
     <SafeAreaView
@@ -389,7 +389,7 @@ export default function EditProfileScreen() {
         <ThemedText style={styles.headerTitle}>Edit Profile</ThemedText>
         <View style={{ width: 40 }} />
       </View>
-
+ 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -410,7 +410,7 @@ export default function EditProfileScreen() {
               inputBg={inputBg}
               textColor={textColor}
             />
-
+ 
             <FieldLabel label="Email (read-only)" />
             <StyledInput
               value={form.email}
@@ -421,7 +421,7 @@ export default function EditProfileScreen() {
               textColor={textColor}
               editable={false}
             />
-
+ 
             <FieldLabel label="Date of Birth (YYYY-MM-DD)" />
             <StyledInput
               value={form.dateOfBirth}
@@ -430,7 +430,7 @@ export default function EditProfileScreen() {
               inputBg={inputBg}
               textColor={textColor}
             />
-
+ 
             <FieldLabel label="Diabetes Type" />
             <SegmentControl
               options={[
@@ -439,11 +439,11 @@ export default function EditProfileScreen() {
               ]}
               selected={form.diabetesType}
               onSelect={(v) => setField("diabetesType", v)}
-              accentColor={accentRed}
+              accentColor={accent}
               pillBg={inputBg}
               textColor={textColor}
             />
-
+ 
             <FieldLabel label="Diagnosis Year" />
             <StyledInput
               value={form.diagnosisYear}
@@ -454,7 +454,7 @@ export default function EditProfileScreen() {
               textColor={textColor}
             />
           </SectionCard>
-
+ 
           {/* ── Appearance ── */}
           <SectionCard title="Appearance" cardBg={cardBg}>
             <FieldLabel label="Accent Color" />
@@ -476,7 +476,7 @@ export default function EditProfileScreen() {
               ))}
             </View>
           </SectionCard>
-
+ 
           {/* ── Physical ── */}
           <SectionCard title="Physical" cardBg={cardBg}>
             <FieldLabel label="Height" />
@@ -503,7 +503,7 @@ export default function EditProfileScreen() {
                 />
               </View>
             </View>
-
+ 
             <FieldLabel label="Weight (lbs)" />
             <StyledInput
               value={form.weightLbs}
@@ -514,7 +514,7 @@ export default function EditProfileScreen() {
               textColor={textColor}
             />
           </SectionCard>
-
+ 
           {/* ── Glucose ── */}
           <SectionCard title="Glucose" cardBg={cardBg}>
             <FieldLabel label="Glucose Unit" />
@@ -525,11 +525,11 @@ export default function EditProfileScreen() {
               ]}
               selected={form.glucoseUnit}
               onSelect={(v) => setField("glucoseUnit", v as "mg/dL" | "mmol/L")}
-              accentColor={accentRed}
+              accentColor={accent}
               pillBg={inputBg}
               textColor={textColor}
             />
-
+ 
             <FieldLabel label={`Target Glucose Range (${form.glucoseUnit})`} />
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
@@ -555,7 +555,7 @@ export default function EditProfileScreen() {
               </View>
             </View>
           </SectionCard>
-
+ 
           {/* ── Insulin Settings ── */}
           <SectionCard title="Insulin Settings" cardBg={cardBg}>
             <FieldLabel label="Insulin-to-Carb Ratio (g carbs per unit)" />
@@ -567,7 +567,7 @@ export default function EditProfileScreen() {
               inputBg={inputBg}
               textColor={textColor}
             />
-
+ 
             <FieldLabel label={`Correction Factor (${form.glucoseUnit} drop per unit)`} />
             <StyledInput
               value={form.correctionFactor}
@@ -578,12 +578,12 @@ export default function EditProfileScreen() {
               textColor={textColor}
             />
           </SectionCard>
-
+ 
           {/* ── Save ── */}
           <TouchableOpacity
             style={[
               styles.saveButton,
-              { backgroundColor: accentRed },
+              { backgroundColor: accent },
               saving && { opacity: 0.7 },
             ]}
             onPress={handleSave}
@@ -601,7 +601,7 @@ export default function EditProfileScreen() {
     </SafeAreaView>
   );
 }
-
+ 
 // ---------------------------------------------------------------------------
 // Styles
 // ---------------------------------------------------------------------------
