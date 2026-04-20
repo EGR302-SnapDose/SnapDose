@@ -1,25 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import { router, useLocalSearchParams } from 'expo-router';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { useEffect, useRef, useState } from 'react';
-import {
-  Alert,
-  Animated,
-  Dimensions,
-  Easing,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DoseConfirmationSheet } from '@/components/dosing/dose-confirmation-sheet';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { CarbEstimateDisplay } from '@/components/results/CarbEstimateDisplay';
 import { EditCarbsField } from '@/components/results/EditCarbsField';
 import { FoodsDetectedList } from '@/components/results/FoodsDetectedList';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
 import { auth, db } from '@/config/firebase';
 import { colors, Colors, radius, spacing, textStyles, typography } from '@/constants/theme';
 import { useAccentColor } from '@/context/accent-color';
@@ -28,6 +12,13 @@ import { useMealByImage } from '@/hooks/use-meal-by-image';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { updateCarbEstimate } from '@/services/meal-service';
 import { hapticError, hapticSuccess } from '@/utils/haptics';
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { router, useLocalSearchParams } from 'expo-router';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, Animated, Dimensions, Easing, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get("window");
 
@@ -347,7 +338,6 @@ export default function ResultsScreen() {
     };
   }, [targetStep, visualStep]);
 
-  const backendFailed = status === 'failed';
   const backendProcessing = !meal || status === 'pending' || status === 'processing';
 
   useEffect(() => {
@@ -434,17 +424,17 @@ export default function ResultsScreen() {
     }
   };
 
-  if (error || timedOut || backendFailed) {
+  if (error || timedOut) {
     return (
       <ThemedView style={styles.centered}>
         <Ionicons name="alert-circle-outline" size={48} color={c.danger} />
         <ThemedText style={[styles.errorText, { color: c.danger }]}>
-          {timedOut ? "Analysis is taking too long" : "Analysis failed"}
+          {timedOut ? "Analysis is taking too long" : "Failed to load results"}
         </ThemedText>
         <ThemedText style={[styles.errorSubtext, { color: c.muted }]}>
           {timedOut
             ? "The server may be busy. Please try again."
-            : "Something went wrong processing your image. Please try again."}
+            : "Something went wrong loading your results."}
         </ThemedText>
         <TouchableOpacity
           style={[styles.backLink, { borderColor: c.accent }]}

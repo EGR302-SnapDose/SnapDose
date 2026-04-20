@@ -6,31 +6,22 @@ import { useThemeColor } from "@/hooks/use-theme-color";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Image } from "expo-image";
 import {
-    launchImageLibraryAsync,
-    MediaType,
-    requestMediaLibraryPermissionsAsync,
+  launchImageLibraryAsync,
+  MediaType,
+  requestMediaLibraryPermissionsAsync,
 } from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
 import {
-    collection,
-    onSnapshot,
-    orderBy,
-    query,
-    Timestamp,
+  collection,
+  onSnapshot,
+  orderBy,
+  query,
+  Timestamp,
 } from "firebase/firestore";
 import { getDownloadURL, getStorage, ref } from "firebase/storage";
-import React, { useCallback, useEffect, useState } from "react";
-import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
-} from "react-native";
+import React, { useCallback, useEffect, useState, } from "react";
+import { ActivityIndicator, Alert, Dimensions, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
