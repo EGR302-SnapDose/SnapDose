@@ -3,6 +3,7 @@ import { colors, Colors, radius, spacing, textStyles, typography } from "@/const
 import { useAccentColor } from "@/context/accent-color";
 import { useIOB } from "@/hooks/use-iob";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { useSemanticColor } from "@/hooks/use-theme-colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { getAuth } from "firebase/auth";
@@ -353,9 +354,10 @@ function TirRingCard({
   const circ = 2 * Math.PI * r;
   const filled = percent !== null ? (percent / 100) * circ : 0;
 
+  const textTertiaryColor = useSemanticColor("textTertiary");
   const tirColor =
     percent === null
-      ? colors.textTertiary
+      ? textTertiaryColor
       : percent >= 70
       ? colors.glucoseInRange
       : percent >= 54
@@ -575,7 +577,7 @@ export function GlucoseCard() {
             {refreshing ? (
               <ActivityIndicator size="small" color={primaryColor} />
             ) : (
-              <ThemedText style={styles.refreshButton}>Refresh</ThemedText>
+              <ThemedText style={[styles.refreshButton, { color: primaryColor }]}>Refresh</ThemedText>
             )}
           </Pressable>
         </View>
@@ -600,7 +602,7 @@ export function GlucoseCard() {
           {refreshing ? (
             <ActivityIndicator size="small" color={primaryColor} />
           ) : (
-            <ThemedText style={styles.refreshButton}>Refresh</ThemedText>
+            <ThemedText style={[styles.refreshButton, { color: primaryColor }]}>Refresh</ThemedText>
           )}
         </Pressable>
       </View>
@@ -618,7 +620,7 @@ export function GlucoseCard() {
           <ThemedText style={styles.unit}>mg/dL</ThemedText>
           <View style={styles.trendContainer}>
             {renderTrendIcon(reading.trend, getGlucoseColor(reading.value))}
-            <ThemedText style={[textStyles.callout, { color: colors.textSecondary }]}>
+            <ThemedText style={[textStyles.callout, { color: graphTextColor }]}>
               {getTrendLabel(reading.trend)}
             </ThemedText>
           </View>
@@ -647,7 +649,7 @@ export function GlucoseCard() {
           label="Active IOB"
           value={`${iob.toFixed(1)}u`}
           subValue={iob > 0 ? "insulin active" : "no active insulin"}
-          accent={iob > 0 ? accent : colors.textTertiary}
+          accent={iob > 0 ? accent : graphTextColor}
           cardBg={cardBg}
         />
 
@@ -712,7 +714,6 @@ const styles = StyleSheet.create({
   },
   refreshButton: {
     fontSize: typography.sizes.subheadline,
-    color: colors.primary,
     fontWeight: "600",
   },
   readingRow: {
@@ -773,7 +774,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   timeFrameTextActive: {
-    color: colors.textInverse,
+    color: "#fff",
     opacity: 1,
   },
   graphEmpty: {

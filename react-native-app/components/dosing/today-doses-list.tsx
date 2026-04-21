@@ -1,6 +1,7 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAccentColor } from "@/context/accent-color";
+import { useSemanticColor } from "@/hooks/use-theme-colors";
 import { StyleSheet, View } from "react-native";
 
 interface Dose {
@@ -17,6 +18,7 @@ interface TodayDosesListProps {
 
 export function TodayDosesList({ doses, totalDoses }: TodayDosesListProps) {
   const accent = useAccentColor();
+  const borderColor = useSemanticColor("border");
 
   return (
     <ThemedView style={styles.container}>
@@ -24,7 +26,16 @@ export function TodayDosesList({ doses, totalDoses }: TodayDosesListProps) {
 
       <View style={[styles.listContainer, { borderColor: accent + "30" }]}>
         {doses.map((dose, index) => (
-          <View key={dose.id} style={[styles.doseRow, index !== doses.length - 1 && styles.doseRowBorder]}>
+          <View
+            key={dose.id}
+            style={[
+              styles.doseRow,
+              index !== doses.length - 1 && [
+                styles.doseRowBorder,
+                { borderBottomColor: borderColor },
+              ],
+            ]}
+          >
             <View>
               <ThemedText style={styles.time}>{dose.time}</ThemedText>
               <ThemedText style={styles.doseType}>{dose.type}</ThemedText>
@@ -69,7 +80,6 @@ const styles = StyleSheet.create({
   },
   doseRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E5E5",
   },
   time: {
     fontSize: 15,

@@ -1,6 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -34,13 +34,14 @@ export default function OnboardingLayout({
   accentColor,
 }: OnboardingLayoutProps) {
   const router = useRouter();
-  const backgroundColor = useThemeColor({ dark: '#000000' }, 'background');
-  const iconContainerColor = useThemeColor({ dark: '#1A1A1A' }, 'background');
-  const iconColor = useThemeColor({ light: '#000000', dark: '#FFFFFF' }, 'text');
-  const titleColor = useThemeColor({ light: '#000000', dark: '#FFFFFF' }, 'text');
-  const subtitleColor = useThemeColor({ light: '#555555', dark: '#888888' }, 'text');
-  const backButtonColor = useThemeColor({ light: '#E0E0E0', dark: '#2A2A2A' }, 'background');
-  const backButtonTextColor = useThemeColor({ light: '#000000', dark: '#FFFFFF' }, 'text');
+  const c = useThemeColors();
+  const backgroundColor = c.background;
+  const iconContainerColor = c.surfaceSubtle;
+  const iconColor = c.textPrimary;
+  const titleColor = c.textPrimary;
+  const subtitleColor = c.textSecondary;
+  const backButtonColor = c.buttonSecondary;
+  const backButtonTextColor = c.textPrimary;
 
   const handleBack = () => {
     if (router.canGoBack()) {

@@ -2,7 +2,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { auth, db } from "@/config/firebase";
-import { colors } from "@/constants/theme";
+import { useThemeColors } from "@/hooks/use-theme-colors";
 import { logout } from "@/services/logout-service";
 import { DrawerContentScrollView } from "@react-navigation/drawer";
 import { router, usePathname } from "expo-router";
@@ -30,9 +30,10 @@ const DRAWER_ITEMS = [
 ] as const;
 
 function CustomDrawerContent(props: any) {
-  const tint = colors.primary;
-  const iconDefault = colors.tabInactive;
-  const activeBg = colors.surfaceSubtle;
+  const c = useThemeColors();
+  const tint = c.primary;
+  const iconDefault = c.tabInactive;
+  const activeBg = c.surfaceSubtle;
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const [displayName, setDisplayName] = useState<string>("");
@@ -78,12 +79,10 @@ function CustomDrawerContent(props: any) {
           }}
           style={[
             styles.profileButton,
-            { backgroundColor: colors.dangerSurface },
+            { backgroundColor: c.dangerSurface },
           ]}
         >
-          <ThemedText
-            style={[styles.profileInitials, { color: colors.danger }]}
-          >
+          <ThemedText style={[styles.profileInitials, { color: c.danger }]}>
             {initials}
           </ThemedText>
         </TouchableOpacity>
@@ -117,8 +116,11 @@ function CustomDrawerContent(props: any) {
         })}
       </DrawerContentScrollView>
 
-      <ThemedView style={styles.footer}>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+      <ThemedView style={[styles.footer, { borderTopColor: c.border }]}>
+        <TouchableOpacity
+          style={[styles.logoutButton, { backgroundColor: c.danger }]}
+          onPress={handleLogout}
+        >
           <ThemedText style={styles.logoutText}>Logout</ThemedText>
         </TouchableOpacity>
       </ThemedView>
@@ -127,8 +129,9 @@ function CustomDrawerContent(props: any) {
 }
 
 export default function DrawerLayout() {
-  const tint = colors.primary;
-  const backgroundColor = colors.background;
+  const c = useThemeColors();
+  const tint = c.primary;
+  const backgroundColor = c.background;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -138,6 +141,11 @@ export default function DrawerLayout() {
           drawerActiveTintColor: tint,
           drawerStyle: { backgroundColor },
           headerShown: false,
+          headerStyle: { backgroundColor: c.background },
+          headerTitleStyle: { color: c.textPrimary },
+          headerTintColor: c.textPrimary,
+          headerShadowVisible: false,
+          sceneStyle: { backgroundColor: c.background },
         }}
       >
         <Drawer.Screen
@@ -151,7 +159,7 @@ export default function DrawerLayout() {
         <Drawer.Screen
           name="food-gallery"
           options={{
-            headerShown: true,
+            headerShown: false,
             title: "Food Gallery",
             drawerLabel: "Food Gallery",
           }}
@@ -202,7 +210,6 @@ const styles = StyleSheet.create({
   profileInitials: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#fff",
   },
   item: {
     flexDirection: "row",
@@ -223,10 +230,8 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 32,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#ccc",
   },
   logoutButton: {
-    backgroundColor: "#FF3B30",
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: "center",

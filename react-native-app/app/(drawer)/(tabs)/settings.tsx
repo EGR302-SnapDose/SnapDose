@@ -1,14 +1,12 @@
 import { db } from "@/config/firebase";
-import { colors, Colors } from "@/constants/theme";
 import { useAccentColor } from "@/context/accent-color";
-import { useThemeColor } from "@/hooks/use-theme-color";
-import { hapticLight } from "@/utils/haptics";
+import { useThemeColors, type ThemeColors } from "@/hooks/use-theme-colors";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { getAuth } from "firebase/auth";
 import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -48,6 +46,8 @@ function PumpSection() {
   const [loading, setLoading] = useState(true);
   const [deactivating, setDeactivating] = useState(false);
   const accent = useAccentColor();
+  const c = useThemeColors();
+  const styles = useMemo(() => makeStyles(c), [c]);
   const userId = getAuth().currentUser?.uid ?? "";
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -141,7 +141,7 @@ function PumpSection() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Insulin Pump</Text>
         <View style={[styles.row, { justifyContent: "center" }]}>
-          <ActivityIndicator size="small" color="#888" />
+          <ActivityIndicator size="small" color={c.textSecondary} />
         </View>
       </View>
     );
@@ -214,7 +214,7 @@ function PumpSection() {
               style={[
                 styles.statusDot,
                 {
-                  backgroundColor: pump.online ? "#4CAF50" : "#F44336",
+                  backgroundColor: pump.online ? c.success : c.danger,
                   opacity: pump.online ? pulseAnim : 1,
                 },
               ]}
@@ -222,7 +222,7 @@ function PumpSection() {
             <Text
               style={[
                 styles.statusText,
-                { color: pump.online ? "#4CAF50" : "#F44336" },
+                { color: pump.online ? c.success : c.danger },
               ]}
             >
               {pump.online ? "Online" : "Offline"}
@@ -239,14 +239,16 @@ function PumpSection() {
           <Text style={styles.pairButtonText}>Change Pump</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.unpairButton, { borderColor: "#F44336", flex: 1 }]}
+          style={[styles.unpairButton, { borderColor: c.danger, flex: 1 }]}
           onPress={handleDeactivate}
           disabled={deactivating}
         >
           {deactivating ? (
-            <ActivityIndicator size="small" color="#F44336" />
+            <ActivityIndicator size="small" color={c.danger} />
           ) : (
-            <Text style={styles.unpairButtonText}>Unpair</Text>
+            <Text style={[styles.unpairButtonText, { color: c.danger }]}>
+              Unpair
+            </Text>
           )}
         </TouchableOpacity>
       </View>
@@ -262,7 +264,8 @@ export default function SettingsScreen() {
   const [selectedAccentColor, setSelectedAccentColor] = useState("#3B82F6");
   const [savingColor, setSavingColor] = useState(false);
   const userId = getAuth().currentUser?.uid;
-  const currentAccent = useAccentColor();
+  const c = useThemeColors();
+  const styles = useMemo(() => makeStyles(c), [c]);
 
   const checkDexcomStatus = async () => {
     if (!userId) return;
@@ -317,6 +320,12 @@ export default function SettingsScreen() {
     }
   };
 
+  const dexcomIndicator = loading
+    ? c.textSecondary
+    : dexcomConnected
+      ? c.success
+      : c.danger;
+
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Settings</Text>
@@ -331,27 +340,10 @@ export default function SettingsScreen() {
               <View
                 style={[
                   styles.statusDot,
-                  {
-                    backgroundColor: loading
-                      ? "#888"
-                      : dexcomConnected
-                        ? "#4CAF50"
-                        : "#F44336",
-                  },
+                  { backgroundColor: dexcomIndicator },
                 ]}
               />
-              <Text
-                style={[
-                  styles.statusText,
-                  {
-                    color: loading
-                      ? "#888"
-                      : dexcomConnected
-                        ? "#4CAF50"
-                        : "#F44336",
-                  },
-                ]}
-              >
+              <Text style={[styles.statusText, { color: dexcomIndicator }]}>
                 {loading
                   ? "Checking..."
                   : dexcomConnected
@@ -432,7 +424,7 @@ export default function SettingsScreen() {
                   styles.colorOption,
                   { backgroundColor: color },
                   selectedAccentColor === color && {
-                    borderColor: "#FFF",
+                    borderColor: c.surface,
                     borderWidth: 3,
                   },
                 ]}
@@ -450,7 +442,7 @@ export default function SettingsScreen() {
         <View style={styles.row}>
           <View style={styles.rowText}>
             <Text style={styles.label}>Theme</Text>
-            <Text style={styles.status}>Light</Text>
+            <Text style={styles.status}>System</Text>
           </View>
         </View>
         <View style={styles.row}>
@@ -470,137 +462,139 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: "#fff",
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 24,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#666",
-    marginBottom: 12,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    backgroundColor: "#f8f8f8",
-    borderRadius: 10,
-    marginBottom: 8,
-  },
-  rowText: {
-    flex: 1,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  status: {
-    fontSize: 13,
-    color: "#888",
-    marginTop: 2,
-  },
-  rowRight: {
-    alignItems: "flex-end",
-    gap: 6,
-  },
-  statusBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  statusText: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  lastSeen: {
-    fontSize: 11,
-    color: "#888",
-  },
-  connectButton: {
-    backgroundColor: "#4CAF50",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  connectButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  pairButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 12,
-  },
-  pairButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  pumpActions: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 4,
-  },
-  unpairButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 12,
-    borderWidth: 1.5,
-  },
-  unpairButtonText: {
-    color: "#F44336",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  colorSection: {
-    backgroundColor: "#f8f8f8",
-    borderRadius: 10,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-  colorGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 12,
-    marginTop: 12,
-  },
-  colorOption: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 3,
-    borderColor: "transparent",
-  },
-  checkmark: {
-    fontSize: 24,
-    color: "#FFF",
-    fontWeight: "700",
-  },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 20,
+      backgroundColor: c.background,
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: "bold",
+      marginBottom: 24,
+      color: c.textPrimary,
+    },
+    section: {
+      marginBottom: 24,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: c.textSecondary,
+      marginBottom: 12,
+    },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      backgroundColor: c.surface,
+      borderRadius: 10,
+      marginBottom: 8,
+    },
+    rowText: {
+      flex: 1,
+    },
+    label: {
+      fontSize: 16,
+      fontWeight: "500",
+      color: c.textPrimary,
+    },
+    status: {
+      fontSize: 13,
+      color: c.textSecondary,
+      marginTop: 2,
+    },
+    rowRight: {
+      alignItems: "flex-end",
+      gap: 6,
+    },
+    statusBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    statusDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    statusText: {
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    lastSeen: {
+      fontSize: 11,
+      color: c.textTertiary,
+    },
+    connectButton: {
+      backgroundColor: c.success,
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 8,
+    },
+    connectButtonText: {
+      color: "#fff",
+      fontWeight: "600",
+      fontSize: 14,
+    },
+    pairButton: {
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+      alignItems: "center",
+      marginTop: 12,
+    },
+    pairButtonText: {
+      color: "#fff",
+      fontWeight: "600",
+      fontSize: 14,
+    },
+    pumpActions: {
+      flexDirection: "row",
+      gap: 10,
+      marginTop: 4,
+    },
+    unpairButton: {
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+      alignItems: "center",
+      marginTop: 12,
+      borderWidth: 1.5,
+    },
+    unpairButtonText: {
+      fontWeight: "600",
+      fontSize: 14,
+    },
+    colorSection: {
+      backgroundColor: c.surface,
+      borderRadius: 10,
+      paddingVertical: 16,
+      paddingHorizontal: 16,
+      marginBottom: 8,
+    },
+    colorGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "center",
+      gap: 12,
+      marginTop: 12,
+    },
+    colorOption: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      justifyContent: "center",
+      alignItems: "center",
+      borderWidth: 3,
+      borderColor: "transparent",
+    },
+    checkmark: {
+      fontSize: 24,
+      color: "#FFF",
+      fontWeight: "700",
+    },
+  });

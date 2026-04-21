@@ -1,5 +1,5 @@
 import { ThemedText } from "@/components/themed-text";
-import { colors } from "@/constants/theme";
+import { useThemeColors, type ThemeColors } from "@/hooks/use-theme-colors";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { getApp, getApps, initializeApp } from "firebase/app";
@@ -12,7 +12,7 @@ import {
     Timestamp,
     updateDoc,
 } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -101,31 +101,39 @@ function timestampToISO(ts: unknown): string {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Reusable UI pieces
-// ---------------------------------------------------------------------------
-function FieldLabel({ label }: { label: string }) {
-  return <ThemedText style={styles.label}>{label}</ThemedText>;
-}
+// Sub-components are defined inside `EditProfileScreen` below so they can
+// close over theme-aware `styles` / `colors` without prop-drilling.
 
-function StyledInput({
-  value,
-  onChangeText,
-  placeholder,
-  keyboardType = "default",
-  inputBg,
-  textColor,
-  editable = true,
-}: {
-  value: string;
-  onChangeText: (t: string) => void;
-  placeholder?: string;
-  keyboardType?: "default" | "numeric" | "decimal-pad" | "email-address";
-  inputBg: string;
-  textColor: string;
-  editable?: boolean;
-}) {
-  return (
+// ---------------------------------------------------------------------------
+// Screen
+// ---------------------------------------------------------------------------
+export default function EditProfileScreen() {
+  const c = useThemeColors();
+  const styles = useMemo(() => makeStyles(c), [c]);
+  const cardBg = c.surfaceSubtle;
+  const inputBg = c.inputBackground;
+  const textColor = c.textPrimary;
+  const placeholderColor = c.inputPlaceholder;
+  const accentRed = c.danger;
+
+  // Theme-aware local sub-components (close over `styles`/`c`).
+  const FieldLabel = ({ label }: { label: string }) => (
+    <ThemedText style={styles.label}>{label}</ThemedText>
+  );
+
+  const StyledInput = ({
+    value,
+    onChangeText,
+    placeholder,
+    keyboardType = "default",
+    editable = true,
+  }: {
+    value: string;
+    onChangeText: (t: string) => void;
+    placeholder?: string;
+    keyboardType?: "default" | "numeric" | "decimal-pad" | "email-address";
+    editable?: boolean;
+  }) => (
     <TextInput
       style={[
         styles.input,
@@ -135,43 +143,38 @@ function StyledInput({
       value={value}
       onChangeText={onChangeText}
       placeholder={placeholder}
-      placeholderTextColor="#888"
+      placeholderTextColor={placeholderColor}
       keyboardType={keyboardType}
       autoCorrect={false}
       autoCapitalize="none"
       editable={editable}
     />
   );
-}
 
-function SegmentControl({
-  options,
-  selected,
-  onSelect,
-  accentColor,
-  pillBg,
-  textColor,
-}: {
-  options: { label: string; value: string }[];
-  selected: string;
-  onSelect: (v: string) => void;
-  accentColor: string;
-  pillBg: string;
-  textColor: string;
-}) {
-  return (
-    <View style={[styles.segmentWrap, { backgroundColor: pillBg }]}>
+  const SegmentControl = ({
+    options,
+    selected,
+    onSelect,
+  }: {
+    options: { label: string; value: string }[];
+    selected: string;
+    onSelect: (v: string) => void;
+  }) => (
+    <View style={[styles.segmentWrap, { backgroundColor: inputBg }]}>
       {options.map((opt) => {
         const active = selected === opt.value;
         return (
           <TouchableOpacity
             key={opt.value}
-            style={[styles.segmentBtn, active && { backgroundColor: accentColor }]}
+            style={[styles.segmentBtn, active && { backgroundColor: accentRed }]}
             onPress={() => onSelect(opt.value)}
             activeOpacity={0.8}
           >
             <ThemedText
-              style={[styles.segmentText, { color: active ? "#fff" : textColor }]}
+              style={[
+                styles.segmentText,
+                { color: active ? "#fff" : textColor },
+              ]}
             >
               {opt.label}
             </ThemedText>
@@ -180,33 +183,19 @@ function SegmentControl({
       })}
     </View>
   );
-}
 
-function SectionCard({
-  title,
-  children,
-  cardBg,
-}: {
-  title: string;
-  children: React.ReactNode;
-  cardBg: string;
-}) {
-  return (
+  const SectionCard = ({
+    title,
+    children,
+  }: {
+    title: string;
+    children: React.ReactNode;
+  }) => (
     <View style={[styles.sectionCard, { backgroundColor: cardBg }]}>
       <ThemedText style={styles.sectionTitle}>{title}</ThemedText>
       {children}
     </View>
   );
-}
-
-// ---------------------------------------------------------------------------
-// Screen
-// ---------------------------------------------------------------------------
-export default function EditProfileScreen() {
-  const cardBg = colors.surfaceSubtle;
-  const inputBg = colors.inputBackground;
-  const textColor = colors.textPrimary;
-  const accentRed = colors.danger;
 
   const [form, setForm] = useState<EditableProfile>(EMPTY_FORM);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -338,7 +327,7 @@ export default function EditProfileScreen() {
   if (loadingProfile) {
     return (
       <SafeAreaView
-        style={[styles.safe, { backgroundColor: colors.background }]}
+        style={[styles.safe, { backgroundColor: c.background }]}
         edges={["top", "bottom"]}
       >
         <View style={styles.centered}>
@@ -353,7 +342,7 @@ export default function EditProfileScreen() {
   if (loadError) {
     return (
       <SafeAreaView
-        style={[styles.safe, { backgroundColor: colors.background }]}
+        style={[styles.safe, { backgroundColor: c.background }]}
         edges={["top", "bottom"]}
       >
         <View style={styles.centered}>
@@ -372,17 +361,13 @@ export default function EditProfileScreen() {
   // ── Main form ─────────────────────────────────────────────────────────────
   return (
     <SafeAreaView
-      style={[styles.safe, { backgroundColor: colors.background }]}
+      style={[styles.safe, { backgroundColor: c.background }]}
       edges={["top", "bottom"]}
     >
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: inputBg }]}>
+      <View style={[styles.header, { borderBottomColor: c.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons
-            name="chevron-back"
-            size={24}
-            color={colorScheme === "dark" ? "#fff" : "#000"}
-          />
+          <Ionicons name="chevron-back" size={24} color={c.textPrimary} />
         </TouchableOpacity>
         <ThemedText style={styles.headerTitle}>Edit Profile</ThemedText>
         <View style={{ width: 40 }} />
@@ -399,14 +384,12 @@ export default function EditProfileScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* ── Personal ── */}
-          <SectionCard title="Personal" cardBg={cardBg}>
+          <SectionCard title="Personal">
             <FieldLabel label="Display Name" />
             <StyledInput
               value={form.displayName}
               onChangeText={(v) => setField("displayName", v)}
               placeholder="Your full name"
-              inputBg={inputBg}
-              textColor={textColor}
             />
 
             <FieldLabel label="Email (read-only)" />
@@ -415,8 +398,6 @@ export default function EditProfileScreen() {
               onChangeText={() => {}}
               placeholder="—"
               keyboardType="email-address"
-              inputBg={inputBg}
-              textColor={textColor}
               editable={false}
             />
 
@@ -425,8 +406,6 @@ export default function EditProfileScreen() {
               value={form.dateOfBirth}
               onChangeText={(v) => setField("dateOfBirth", v)}
               placeholder="1990-01-25"
-              inputBg={inputBg}
-              textColor={textColor}
             />
 
             <FieldLabel label="Diabetes Type" />
@@ -437,9 +416,6 @@ export default function EditProfileScreen() {
               ]}
               selected={form.diabetesType}
               onSelect={(v) => setField("diabetesType", v)}
-              accentColor={accentRed}
-              pillBg={inputBg}
-              textColor={textColor}
             />
 
             <FieldLabel label="Diagnosis Year" />
@@ -448,13 +424,11 @@ export default function EditProfileScreen() {
               onChangeText={(v) => setField("diagnosisYear", v)}
               placeholder="2010"
               keyboardType="numeric"
-              inputBg={inputBg}
-              textColor={textColor}
             />
           </SectionCard>
 
           {/* ── Appearance ── */}
-          <SectionCard title="Appearance" cardBg={cardBg}>
+          <SectionCard title="Appearance">
             <FieldLabel label="Accent Color" />
             <View style={styles.colorGrid}>
               {ACCENT_COLORS.map((color) => (
@@ -476,7 +450,7 @@ export default function EditProfileScreen() {
           </SectionCard>
 
           {/* ── Physical ── */}
-          <SectionCard title="Physical" cardBg={cardBg}>
+          <SectionCard title="Physical">
             <FieldLabel label="Height" />
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
@@ -485,8 +459,6 @@ export default function EditProfileScreen() {
                   onChangeText={(v) => setField("heightFeet", v)}
                   placeholder="Feet"
                   keyboardType="numeric"
-                  inputBg={inputBg}
-                  textColor={textColor}
                 />
               </View>
               <View style={{ width: 10 }} />
@@ -496,8 +468,6 @@ export default function EditProfileScreen() {
                   onChangeText={(v) => setField("heightInches", v)}
                   placeholder="Inches"
                   keyboardType="numeric"
-                  inputBg={inputBg}
-                  textColor={textColor}
                 />
               </View>
             </View>
@@ -508,13 +478,11 @@ export default function EditProfileScreen() {
               onChangeText={(v) => setField("weightLbs", v)}
               placeholder="150"
               keyboardType="decimal-pad"
-              inputBg={inputBg}
-              textColor={textColor}
             />
           </SectionCard>
 
           {/* ── Glucose ── */}
-          <SectionCard title="Glucose" cardBg={cardBg}>
+          <SectionCard title="Glucose">
             <FieldLabel label="Glucose Unit" />
             <SegmentControl
               options={[
@@ -523,9 +491,6 @@ export default function EditProfileScreen() {
               ]}
               selected={form.glucoseUnit}
               onSelect={(v) => setField("glucoseUnit", v as "mg/dL" | "mmol/L")}
-              accentColor={accentRed}
-              pillBg={inputBg}
-              textColor={textColor}
             />
 
             <FieldLabel label={`Target Glucose Range (${form.glucoseUnit})`} />
@@ -536,8 +501,6 @@ export default function EditProfileScreen() {
                   onChangeText={(v) => setField("targetGlucoseMin", v)}
                   placeholder="Min (70)"
                   keyboardType="numeric"
-                  inputBg={inputBg}
-                  textColor={textColor}
                 />
               </View>
               <View style={{ width: 10 }} />
@@ -547,23 +510,19 @@ export default function EditProfileScreen() {
                   onChangeText={(v) => setField("targetGlucoseMax", v)}
                   placeholder="Max (180)"
                   keyboardType="numeric"
-                  inputBg={inputBg}
-                  textColor={textColor}
                 />
               </View>
             </View>
           </SectionCard>
 
           {/* ── Insulin Settings ── */}
-          <SectionCard title="Insulin Settings" cardBg={cardBg}>
+          <SectionCard title="Insulin Settings">
             <FieldLabel label="Insulin-to-Carb Ratio (g carbs per unit)" />
             <StyledInput
               value={form.insulinToCarbRatio}
               onChangeText={(v) => setField("insulinToCarbRatio", v)}
               placeholder="10"
               keyboardType="decimal-pad"
-              inputBg={inputBg}
-              textColor={textColor}
             />
 
             <FieldLabel label={`Correction Factor (${form.glucoseUnit} drop per unit)`} />
@@ -572,8 +531,6 @@ export default function EditProfileScreen() {
               onChangeText={(v) => setField("correctionFactor", v)}
               placeholder="50"
               keyboardType="decimal-pad"
-              inputBg={inputBg}
-              textColor={textColor}
             />
           </SectionCard>
 
@@ -603,106 +560,108 @@ export default function EditProfileScreen() {
 // ---------------------------------------------------------------------------
 // Styles
 // ---------------------------------------------------------------------------
-const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  centered: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 15,
-    opacity: 0.6,
-  },
-  errorText: {
-    fontSize: 15,
-    textAlign: "center",
-    opacity: 0.75,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  backBtn: { width: 40, alignItems: "flex-start" },
-  headerTitle: { fontSize: 17, fontWeight: "700" },
-  scroll: { flex: 1 },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 48,
-    gap: 14,
-  },
-  sectionCard: {
-    borderRadius: 18,
-    padding: 16,
-    gap: 6,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    marginBottom: 6,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: "500",
-    opacity: 0.6,
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  input: {
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    fontSize: 15,
-  },
-  row: { flexDirection: "row" },
-  segmentWrap: {
-    flexDirection: "row",
-    borderRadius: 12,
-    padding: 4,
-    gap: 4,
-  },
-  segmentBtn: {
-    flex: 1,
-    borderRadius: 9,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  segmentText: { fontSize: 14, fontWeight: "600" },
-  saveButton: {
-    borderRadius: 30,
-    paddingVertical: 16,
-    alignItems: "center",
-    marginTop: 4,
-  },
-  saveButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: 0.3,
-  },
-  colorGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    marginTop: 8,
-  },
-  colorOption: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 3,
-    borderColor: "transparent",
-  },
-  colorOptionSelected: {
-    borderColor: "#fff",
-  },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    safe: { flex: 1 },
+    centered: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+    },
+    loadingText: {
+      marginTop: 12,
+      fontSize: 15,
+      color: c.textSecondary,
+    },
+    errorText: {
+      fontSize: 15,
+      textAlign: "center",
+      color: c.textSecondary,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+    },
+    backBtn: { width: 40, alignItems: "flex-start" },
+    headerTitle: { fontSize: 17, fontWeight: "700", color: c.textPrimary },
+    scroll: { flex: 1 },
+    scrollContent: {
+      paddingHorizontal: 16,
+      paddingTop: 16,
+      paddingBottom: 48,
+      gap: 14,
+    },
+    sectionCard: {
+      borderRadius: 18,
+      padding: 16,
+      gap: 6,
+    },
+    sectionTitle: {
+      fontSize: 15,
+      fontWeight: "600",
+      marginBottom: 6,
+      color: c.textPrimary,
+    },
+    label: {
+      fontSize: 13,
+      fontWeight: "500",
+      color: c.textSecondary,
+      marginTop: 8,
+      marginBottom: 4,
+    },
+    input: {
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 13,
+      fontSize: 15,
+    },
+    row: { flexDirection: "row" },
+    segmentWrap: {
+      flexDirection: "row",
+      borderRadius: 12,
+      padding: 4,
+      gap: 4,
+    },
+    segmentBtn: {
+      flex: 1,
+      borderRadius: 9,
+      paddingVertical: 10,
+      alignItems: "center",
+    },
+    segmentText: { fontSize: 14, fontWeight: "600" },
+    saveButton: {
+      borderRadius: 30,
+      paddingVertical: 16,
+      alignItems: "center",
+      marginTop: 4,
+    },
+    saveButtonText: {
+      color: "#fff",
+      fontSize: 16,
+      fontWeight: "700",
+      letterSpacing: 0.3,
+    },
+    colorGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 12,
+      marginTop: 8,
+    },
+    colorOption: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      justifyContent: "center",
+      alignItems: "center",
+      borderWidth: 3,
+      borderColor: "transparent",
+    },
+    colorOptionSelected: {
+      borderColor: c.textPrimary,
+    },
+  });

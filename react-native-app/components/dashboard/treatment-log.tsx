@@ -390,17 +390,17 @@ function FullLogModal({
   const insets = useSafeAreaInsets();
   const accent = useAccentColor();
   const background = useThemeColor({}, 'background');
-  const cardBg = useThemeColor({ light: colors.surfaceSubtle, dark: colors.surface }, 'surface');
+  const cardBg = useThemeColor({ light: colors.surfaceSubtle, dark: Colors.dark.surface }, 'surface');
   const mutedColor = useThemeColor(
-    { light: colors.textSecondary, dark: colors.textSecondary },
+    { light: colors.textSecondary, dark: Colors.dark.icon },
     'icon',
   );
   const dividerColor = useThemeColor(
-    { light: colors.border, dark: colors.border },
+    { light: colors.border, dark: Colors.dark.border },
     'border',
   );
   const headerBorderColor = useThemeColor(
-    { light: colors.border, dark: colors.border },
+    { light: colors.border, dark: Colors.dark.border },
     'border',
   );
  

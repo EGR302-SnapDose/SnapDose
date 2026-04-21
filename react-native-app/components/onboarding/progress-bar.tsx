@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -8,15 +9,16 @@ interface ProgressBarProps {
 }
 
 export default function ProgressBar({ currentStep, totalSteps, accentColor }: ProgressBarProps) {
+  const c = useThemeColors();
   const percentage = (currentStep / totalSteps) * 100;
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.stepText}>Step {currentStep} of {totalSteps}</Text>
-        <Text style={styles.percentText}>{Math.round(percentage)}%</Text>
+        <Text style={[styles.stepText, { color: c.textSecondary }]}>Step {currentStep} of {totalSteps}</Text>
+        <Text style={[styles.percentText, { color: c.textSecondary }]}>{Math.round(percentage)}%</Text>
       </View>
-      <View style={styles.barBackground}>
+      <View style={[styles.barBackground, { backgroundColor: c.border }]}>
         <View style={[styles.barProgress, { width: `${percentage}%`, backgroundColor: accentColor }]} />
       </View>
     </View>
@@ -36,16 +38,13 @@ const styles = StyleSheet.create({
   },
   stepText: {
     fontSize: 14,
-    color: '#888',
   },
   percentText: {
     fontSize: 14,
-    color: '#888',
   },
   barBackground: {
     width: '100%',
     height: 4,
-    backgroundColor: '#333',
     borderRadius: 2,
     overflow: 'hidden',
   },

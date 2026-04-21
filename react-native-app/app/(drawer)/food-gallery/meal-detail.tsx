@@ -4,35 +4,35 @@ import { ThemedView } from "@/components/themed-view";
 import { app, auth, db } from "@/config/firebase";
 import { useAccentColor } from "@/context/accent-color";
 import { useIOB } from "@/hooks/use-iob";
-import { useThemeColor } from "@/hooks/use-theme-color";
+import { useThemeColors } from "@/hooks/use-theme-colors";
 import { deleteMealEntry, subscribeMeal } from "@/services/meal-service";
 import { MealCarbEstimate } from "@/types/meal";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-    collection,
-    doc,
-    getDocs,
-    onSnapshot,
-    query,
-    setDoc,
-    where,
+  collection,
+  doc,
+  getDocs,
+  onSnapshot,
+  query,
+  setDoc,
+  where,
 } from "firebase/firestore";
 import {
-    deleteObject,
-    getDownloadURL,
-    getStorage,
-    ref,
+  deleteObject,
+  getDownloadURL,
+  getStorage,
+  ref,
 } from "firebase/storage";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -43,24 +43,6 @@ interface LinkedDose {
   amount: number;
   time: string;
   type: string;
-}
-
-function useColors() {
-  const background = useThemeColor({}, "background");
-  const cardBg = useThemeColor(
-    { light: "#F2F2F2", dark: "#1C1C1E" },
-    "background",
-  );
-  const imageBg = useThemeColor(
-    { light: "#E0E0E0", dark: "#252525" },
-    "background",
-  );
-  const muted = useThemeColor({ light: "#888888", dark: "#888888" }, "icon");
-  const subtle = useThemeColor({ light: "#AAAAAA", dark: "#555555" }, "icon");
-  const border = useThemeColor({ light: "#CCCCCC", dark: "#333333" }, "icon");
-  const accent = useAccentColor();
-  const danger = useThemeColor({ light: "#FF3B30", dark: "#FF453A" }, "icon");
-  return { background, cardBg, imageBg, muted, subtle, border, accent, danger };
 }
 
 async function resolveGsUri(gsUri: string): Promise<string> {
@@ -101,7 +83,8 @@ function confidenceColor(
 const MealDetailScreen = () => {
   const { mealId } = useLocalSearchParams<{ mealId: string }>();
   const router = useRouter();
-  const colors = useColors();
+  const c = useThemeColors();
+  const accent = useAccentColor();
   const insets = useSafeAreaInsets();
   const insulinOnBoard = useIOB();
 
@@ -255,7 +238,7 @@ const MealDetailScreen = () => {
   if (loading) {
     return (
       <ThemedView style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.accent} />
+        <ActivityIndicator size="large" color={accent} />
       </ThemedView>
     );
   }
@@ -263,12 +246,16 @@ const MealDetailScreen = () => {
   if (loadError) {
     return (
       <ThemedView style={styles.centered}>
-        <ThemedText style={styles.notFoundTitle}>Couldn't load meal</ThemedText>
-        <ThemedText style={[styles.notFoundSubtitle, { color: colors.muted }]}>
+        <ThemedText style={styles.notFoundTitle}>
+          Couldn&apos;t load meal
+        </ThemedText>
+        <ThemedText
+          style={[styles.notFoundSubtitle, { color: c.textSecondary }]}
+        >
           Check your connection and try again.
         </ThemedText>
         <TouchableOpacity
-          style={[styles.backBtn, { borderColor: colors.border }]}
+          style={[styles.backBtn, { borderColor: c.border }]}
           onPress={() => router.back()}
         >
           <ThemedText style={styles.backBtnText}>Go back</ThemedText>
@@ -281,11 +268,13 @@ const MealDetailScreen = () => {
     return (
       <ThemedView style={styles.centered}>
         <ThemedText style={styles.notFoundTitle}>Meal not found</ThemedText>
-        <ThemedText style={[styles.notFoundSubtitle, { color: colors.muted }]}>
+        <ThemedText
+          style={[styles.notFoundSubtitle, { color: c.textSecondary }]}
+        >
           This meal may have been deleted.
         </ThemedText>
         <TouchableOpacity
-          style={[styles.backBtn, { borderColor: colors.border }]}
+          style={[styles.backBtn, { borderColor: c.border }]}
           onPress={() => router.back()}
         >
           <ThemedText style={styles.backBtnText}>Go back</ThemedText>
@@ -298,9 +287,9 @@ const MealDetailScreen = () => {
     meal.confidence.charAt(0).toUpperCase() + meal.confidence.slice(1);
   const confColor = confidenceColor(
     meal.confidence,
-    colors.accent,
-    colors.danger,
-    colors.muted,
+    accent,
+    c.danger,
+    c.textSecondary,
   );
 
   return (
@@ -310,13 +299,13 @@ const MealDetailScreen = () => {
         showsVerticalScrollIndicator={false}
       >
         <View
-          style={[styles.imageContainer, { backgroundColor: colors.imageBg }]}
+          style={[styles.imageContainer, { backgroundColor: c.surfaceSubtle }]}
         >
           {imageLoading && !imageError && (
             <ActivityIndicator
               style={StyleSheet.absoluteFill}
               size="large"
-              color={colors.accent}
+              color={accent}
             />
           )}
           {imageUrl && !imageError ? (
@@ -334,7 +323,7 @@ const MealDetailScreen = () => {
           ) : imageError ? (
             <View style={styles.imageFallback}>
               <ThemedText
-                style={[styles.imageFallbackText, { color: colors.muted }]}
+                style={[styles.imageFallbackText, { color: c.textSecondary }]}
               >
                 Image unavailable
               </ThemedText>
@@ -348,7 +337,9 @@ const MealDetailScreen = () => {
               <ThemedText style={styles.carbValue}>
                 {meal.estimated_carbs_grams}g
               </ThemedText>
-              <ThemedText style={[styles.carbLabel, { color: colors.muted }]}>
+              <ThemedText
+                style={[styles.carbLabel, { color: c.textSecondary }]}
+              >
                 total carbs
               </ThemedText>
             </View>
@@ -359,56 +350,60 @@ const MealDetailScreen = () => {
             </View>
           </View>
 
-          <ThemedText style={[styles.timestamp, { color: colors.muted }]}>
+          <ThemedText style={[styles.timestamp, { color: c.textSecondary }]}>
             {formatTimestamp(meal.created_at)}
           </ThemedText>
 
-          <View style={[styles.section, { borderTopColor: colors.border }]}>
+          <View style={[styles.section, { borderTopColor: c.border }]}>
             <ThemedText style={styles.sectionTitle}>Foods Detected</ThemedText>
             {meal.foods_detected.length > 0 ? (
               meal.foods_detected.map((food, i) => (
                 <View
                   key={i}
-                  style={[styles.foodRow, { borderBottomColor: colors.border }]}
+                  style={[styles.foodRow, { borderBottomColor: c.border }]}
                 >
                   <View
-                    style={[styles.foodDot, { backgroundColor: colors.accent }]}
+                    style={[styles.foodDot, { backgroundColor: accent }]}
                   />
                   <ThemedText style={styles.foodName}>{food}</ThemedText>
                 </View>
               ))
             ) : (
-              <ThemedText style={[styles.emptyFoods, { color: colors.muted }]}>
+              <ThemedText
+                style={[styles.emptyFoods, { color: c.textSecondary }]}
+              >
                 No foods detected
               </ThemedText>
             )}
           </View>
 
           {meal.notes ? (
-            <View style={[styles.section, { borderTopColor: colors.border }]}>
+            <View style={[styles.section, { borderTopColor: c.border }]}>
               <ThemedText style={styles.sectionTitle}>Notes</ThemedText>
-              <ThemedText style={[styles.notesText, { color: colors.muted }]}>
+              <ThemedText
+                style={[styles.notesText, { color: c.textSecondary }]}
+              >
                 {meal.notes}
               </ThemedText>
             </View>
           ) : null}
 
-          <View style={[styles.section, { borderTopColor: colors.border }]}>
+          <View style={[styles.section, { borderTopColor: c.border }]}>
             <ThemedText style={styles.sectionTitle}>Bolus</ThemedText>
             {doseLoading ? (
-              <ActivityIndicator size="small" color={colors.accent} />
+              <ActivityIndicator size="small" color={accent} />
             ) : linkedDose ? (
               <View
-                style={[styles.doseCard, { backgroundColor: colors.cardBg }]}
+                style={[styles.doseCard, { backgroundColor: c.surface }]}
               >
                 <View style={styles.doseCardRow}>
                   <ThemedText
-                    style={[styles.doseCardLabel, { color: colors.muted }]}
+                    style={[styles.doseCardLabel, { color: c.textSecondary }]}
                   >
                     Dose
                   </ThemedText>
                   <ThemedText
-                    style={[styles.doseCardValue, { color: colors.accent }]}
+                    style={[styles.doseCardValue, { color: accent }]}
                   >
                     {linkedDose.amount.toFixed(1)}u
                   </ThemedText>
@@ -416,12 +411,12 @@ const MealDetailScreen = () => {
                 <View
                   style={[
                     styles.doseCardDivider,
-                    { backgroundColor: colors.border },
+                    { backgroundColor: c.border },
                   ]}
                 />
                 <View style={styles.doseCardRow}>
                   <ThemedText
-                    style={[styles.doseCardLabel, { color: colors.muted }]}
+                    style={[styles.doseCardLabel, { color: c.textSecondary }]}
                   >
                     Type
                   </ThemedText>
@@ -432,12 +427,12 @@ const MealDetailScreen = () => {
                 <View
                   style={[
                     styles.doseCardDivider,
-                    { backgroundColor: colors.border },
+                    { backgroundColor: c.border },
                   ]}
                 />
                 <View style={styles.doseCardRow}>
                   <ThemedText
-                    style={[styles.doseCardLabel, { color: colors.muted }]}
+                    style={[styles.doseCardLabel, { color: c.textSecondary }]}
                   >
                     Time
                   </ThemedText>
@@ -448,7 +443,7 @@ const MealDetailScreen = () => {
               </View>
             ) : (
               <ThemedText
-                style={[styles.bolusPlaceholder, { color: colors.muted }]}
+                style={[styles.bolusPlaceholder, { color: c.textSecondary }]}
               >
                 No dose recorded for this meal.
               </ThemedText>
@@ -461,23 +456,21 @@ const MealDetailScreen = () => {
         style={[
           styles.footer,
           {
-            borderTopColor: colors.border,
-            backgroundColor: colors.background,
-            paddingBottom: Math.max(36, insets.bottom + 16),
+            borderTopColor: c.border,
+            backgroundColor: c.background,
+            paddingBottom: Math.max(24, insets.bottom + 12),
           },
         ]}
       >
         <TouchableOpacity
-          style={[styles.footerBtn, { borderColor: colors.danger }]}
+          style={[styles.footerBtn, { borderColor: c.danger }]}
           onPress={handleDelete}
           disabled={deleting}
         >
           {deleting ? (
-            <ActivityIndicator size="small" color={colors.danger} />
+            <ActivityIndicator size="small" color={c.danger} />
           ) : (
-            <ThemedText
-              style={[styles.footerBtnText, { color: colors.danger }]}
-            >
+            <ThemedText style={[styles.footerBtnText, { color: c.danger }]}>
               Delete
             </ThemedText>
           )}
@@ -488,12 +481,12 @@ const MealDetailScreen = () => {
             style={[
               styles.footerBtn,
               styles.footerBtnFill,
-              { backgroundColor: colors.accent },
+              { backgroundColor: accent },
             ]}
             onPress={() => setShowDoseSheet(true)}
           >
             <ThemedText
-              style={[styles.footerBtnText, { color: colors.background }]}
+              style={[styles.footerBtnText, { color: c.textInverse }]}
             >
               Dose Insulin
             </ThemedText>

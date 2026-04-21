@@ -1,6 +1,6 @@
 import NumberInput from '@/components/onboarding/number-input';
 import OnboardingLayout from '@/components/onboarding/onboarding-layout';
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { useSemanticColor } from '@/hooks/use-theme-colors';
 import { saveOnboardingData } from '@/services/user-service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
@@ -12,7 +12,7 @@ export default function Step7Screen() {
   const [targetGlucoseMax, setTargetGlucoseMax] = useState(180);
   const router = useRouter();
   const [accentColor, setAccentColor] = useState('#EF4444');
-  const separatorColor = useThemeColor({ light: '#000000', dark: '#FFFFFF' }, 'text');
+  const separatorColor = useSemanticColor('textPrimary');
 
   useEffect(() => {
     AsyncStorage.getItem('onboarding_accentColor').then((color) => {

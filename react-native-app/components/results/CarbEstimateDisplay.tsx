@@ -2,6 +2,7 @@ import { StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { MealConfidence } from '@/types/meal';
 
 interface CarbEstimateDisplayProps {
@@ -10,19 +11,19 @@ interface CarbEstimateDisplayProps {
   isLoading?: boolean;
 }
 
-const confidenceConfig = {
-  high: { label: 'High Confidence', color: '#34C759' },
-  medium: { label: 'Medium Confidence', color: '#FF9500' },
-  low: { label: 'Low Confidence', color: '#FF3B30' },
-};
-
 export function CarbEstimateDisplay({
   estimatedCarbs,
   confidence,
   isLoading,
 }: CarbEstimateDisplayProps) {
+  const c = useThemeColors();
   const cardBg = useThemeColor({ light: '#F2F2F2', dark: '#1e1e1e' }, 'background');
   const mutedColor = useThemeColor({ light: '#888888', dark: '#888888' }, 'icon');
+  const confidenceConfig = {
+    high: { label: 'High Confidence', color: c.success },
+    medium: { label: 'Medium Confidence', color: c.warning },
+    low: { label: 'Low Confidence', color: c.danger },
+  } as const;
   const { label, color } = confidenceConfig[confidence] ?? confidenceConfig['low'];
 
   return (

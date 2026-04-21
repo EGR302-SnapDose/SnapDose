@@ -1,4 +1,4 @@
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import React, { useRef, useState } from 'react';
 import { Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -27,10 +27,11 @@ export default function NumberInput({
 
   const canDecrement = min === undefined || value > min;
   const canIncrement = max === undefined || value < max;
-  const valueColor = useThemeColor({ light: '#000000', dark: '#FFFFFF' }, 'text');
-  const labelColor = useThemeColor({ light: '#555555', dark: '#888888' }, 'text');
-  const inputBackground = useThemeColor({ light: '#f0f0f0', dark: '#1A1A1A' }, 'background');
-  const inputBorder = useThemeColor({ light: '#ddd', dark: '#333' }, 'icon');
+  const c = useThemeColors();
+  const valueColor = c.textPrimary;
+  const labelColor = c.textSecondary;
+  const inputBackground = c.inputBackground;
+  const inputBorder = c.inputBorder;
 
   const handleTextChange = (text: string) => {
     setInputValue(text);
@@ -63,11 +64,23 @@ export default function NumberInput({
   return (
     <View style={styles.container}>
       <TouchableOpacity
-        style={[styles.button, !canDecrement && styles.buttonDisabled]}
+        style={[
+          styles.button,
+          { backgroundColor: c.buttonSecondary, borderColor: c.border },
+          !canDecrement && styles.buttonDisabled,
+        ]}
         onPress={onDecrement}
         disabled={!canDecrement}
       >
-        <Text style={[styles.buttonText, !canDecrement && styles.buttonTextDisabled]}>−</Text>
+        <Text
+          style={[
+            styles.buttonText,
+            { color: c.textPrimary },
+            !canDecrement && { color: c.textDisabled },
+          ]}
+        >
+          −
+        </Text>
       </TouchableOpacity>
 
       <View style={styles.valueContainer}>
@@ -93,11 +106,23 @@ export default function NumberInput({
       </View>
 
       <TouchableOpacity
-        style={[styles.button, !canIncrement && styles.buttonDisabled]}
+        style={[
+          styles.button,
+          { backgroundColor: c.buttonSecondary, borderColor: c.border },
+          !canIncrement && styles.buttonDisabled,
+        ]}
         onPress={onIncrement}
         disabled={!canIncrement}
       >
-        <Text style={[styles.buttonText, !canIncrement && styles.buttonTextDisabled]}>+</Text>
+        <Text
+          style={[
+            styles.buttonText,
+            { color: c.textPrimary },
+            !canIncrement && { color: c.textDisabled },
+          ]}
+        >
+          +
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -114,23 +139,17 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 30,
-    backgroundColor: '#2A2A2A',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#444',
   },
   buttonDisabled: {
     opacity: 0.3,
   },
   buttonText: {
     fontSize: 32,
-    color: '#FFF',
     fontWeight: '300',
     marginTop: -9,
-  },
-  buttonTextDisabled: {
-    color: '#666',
   },
   valueContainer: {
     alignItems: 'center',

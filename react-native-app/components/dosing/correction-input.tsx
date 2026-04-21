@@ -1,6 +1,7 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAccentColor } from "@/context/accent-color";
+import { useSemanticColor } from "@/hooks/use-theme-colors";
 import { useRef, useState } from "react";
 import {
     Keyboard,
@@ -18,6 +19,7 @@ interface CorrectionInputProps {
 
 export function CorrectionInput({ value, onValueChange }: CorrectionInputProps) {
   const accent = useAccentColor();
+  const inputBorderColor = useSemanticColor("inputBorder");
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState(value.toFixed(1));
   const inputRef = useRef<TextInput>(null);
@@ -66,7 +68,10 @@ export function CorrectionInput({ value, onValueChange }: CorrectionInputProps) 
           {isEditing ? (
             <TextInput
               ref={inputRef}
-              style={[styles.input, { color: accent }]}
+              style={[
+                styles.input,
+                { color: accent, borderColor: inputBorderColor },
+              ]}
               value={inputValue}
               onChangeText={handleTextChange}
               onBlur={handleBlur}
@@ -158,7 +163,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderWidth: 2,
     borderRadius: 8,
-    borderColor: "#444",
   },
   valueText: {
     fontSize: 48,

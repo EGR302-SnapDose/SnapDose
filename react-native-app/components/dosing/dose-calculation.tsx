@@ -1,6 +1,7 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAccentColor } from "@/context/accent-color";
+import { useSemanticColor } from "@/hooks/use-theme-colors";
 import { Ionicons } from "@expo/vector-icons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -29,6 +30,7 @@ export function DoseCalculation({
   onCalculate,
 }: DoseCalculationProps) {
   const accent = useAccentColor();
+  const dividerColor = useSemanticColor("border");
 
   return (
     <ThemedView style={styles.container}>
@@ -45,7 +47,7 @@ export function DoseCalculation({
           </ThemedText>
         </View>
 
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
         {mode === "meal" ? (
           <>
@@ -87,7 +89,13 @@ export function DoseCalculation({
               </ThemedText>
             </View>
 
-            <View style={[styles.breakdownRow, styles.totalRow]}>
+            <View
+              style={[
+                styles.breakdownRow,
+                styles.totalRow,
+                { borderTopColor: dividerColor },
+              ]}
+            >
               <ThemedText style={styles.totalLabel}>Adjusted dose:</ThemedText>
               <ThemedText style={[styles.totalValue, { color: accent }]}>
                 {recommendedDose.toFixed(1)}u
@@ -116,7 +124,13 @@ export function DoseCalculation({
               </ThemedText>
             </View>
 
-            <View style={[styles.breakdownRow, styles.totalRow]}>
+            <View
+              style={[
+                styles.breakdownRow,
+                styles.totalRow,
+                { borderTopColor: dividerColor },
+              ]}
+            >
               <ThemedText style={styles.totalLabel}>Net dose:</ThemedText>
               <ThemedText style={[styles.totalValue, { color: accent }]}>
                 {recommendedDose.toFixed(1)}u
@@ -177,7 +191,6 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: "#E5E5E5",
     marginVertical: 12,
   },
   breakdownRow: {
@@ -187,7 +200,6 @@ const styles = StyleSheet.create({
   },
   totalRow: {
     borderTopWidth: 1,
-    borderTopColor: "#E5E5E5",
     paddingTop: 12,
     marginTop: 8,
   },

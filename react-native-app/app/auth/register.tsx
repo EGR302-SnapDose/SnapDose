@@ -1,8 +1,9 @@
 import { ThemedView } from '@/components/themed-view';
-import { colors, layout, radius, shadows, spacing, textStyles } from '@/constants/theme';
+import { layout, radius, shadows, spacing, textStyles } from '@/constants/theme';
+import { useThemeColors, type ThemeColors } from '@/hooks/use-theme-colors';
 import { registerUser } from '@/services/auth-service';
 import { useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -17,10 +18,11 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const c = useThemeColors();
+  const styles = useMemo(() => makeStyles(c), [c]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -81,7 +83,7 @@ export default function RegisterScreen() {
                 <TextInput
                   style={[styles.input, emailFocused && styles.inputFocused]}
                   placeholder="you@example.com"
-                  placeholderTextColor={colors.inputPlaceholder}
+                  placeholderTextColor={c.inputPlaceholder}
                   value={email}
                   onChangeText={setEmail}
                   onFocus={() => setEmailFocused(true)}
@@ -100,7 +102,7 @@ export default function RegisterScreen() {
                   ref={passwordRef}
                   style={[styles.input, passwordFocused && styles.inputFocused]}
                   placeholder="••••••••"
-                  placeholderTextColor={colors.inputPlaceholder}
+                  placeholderTextColor={c.inputPlaceholder}
                   value={password}
                   onChangeText={setPassword}
                   onFocus={() => setPasswordFocused(true)}
@@ -118,7 +120,7 @@ export default function RegisterScreen() {
                   ref={confirmRef}
                   style={[styles.input, confirmFocused && styles.inputFocused]}
                   placeholder="••••••••"
-                  placeholderTextColor={colors.inputPlaceholder}
+                  placeholderTextColor={c.inputPlaceholder}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   onFocus={() => setConfirmFocused(true)}
@@ -136,7 +138,7 @@ export default function RegisterScreen() {
                 activeOpacity={0.82}
               >
                 {loading ? (
-                  <ActivityIndicator color={colors.textInverse} />
+                  <ActivityIndicator color={c.textInverse} />
                 ) : (
                   <Text style={styles.buttonText}>Create Account</Text>
                 )}
@@ -161,96 +163,97 @@ export default function RegisterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  keyboardAvoid: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: layout.screenHorizontalPadding,
-    paddingVertical: layout.screenVerticalPadding,
-  },
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
+    keyboardAvoid: {
+      flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      justifyContent: 'center',
+      paddingHorizontal: layout.screenHorizontalPadding,
+      paddingVertical: layout.screenVerticalPadding,
+    },
 
-  // ── Brand ──────────────────────────────────────────────────────────────
-  header: {
-    alignItems: 'center',
-    marginBottom: spacing[8],
-  },
-  title: {
-    ...textStyles.largeTitleBold,
-    color: colors.primary,
-    marginBottom: spacing[1],
-  },
-  subtitle: {
-    ...textStyles.callout,
-    color: colors.textSecondary,
-  },
+    // ── Brand ──────────────────────────────────────────────────────────────
+    header: {
+      alignItems: 'center',
+      marginBottom: spacing[8],
+    },
+    title: {
+      ...textStyles.largeTitleBold,
+      color: c.primary,
+      marginBottom: spacing[1],
+    },
+    subtitle: {
+      ...textStyles.callout,
+      color: c.textSecondary,
+    },
 
-  // ── Form card ──────────────────────────────────────────────────────────
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    padding: spacing[5],
-    gap: spacing[4],
-    ...shadows.card,
-  },
-  fieldGroup: {
-    gap: spacing[1],
-  },
-  fieldLabel: {
-    ...textStyles.footnoteSemibold,
-    color: colors.textSecondary,
-    marginLeft: spacing[1],
-  },
-  input: {
-    height: layout.inputHeight,
-    backgroundColor: colors.inputBackground,
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.inputBorder,
-    paddingHorizontal: spacing[4],
-    ...textStyles.body,
-    color: colors.textPrimary,
-  },
-  inputFocused: {
-    borderColor: colors.inputBorderFocus,
-    borderWidth: 1.5,
-  },
+    // ── Form card ──────────────────────────────────────────────────────────
+    card: {
+      backgroundColor: c.surface,
+      borderRadius: radius.xl,
+      padding: spacing[5],
+      gap: spacing[4],
+      ...shadows.card,
+    },
+    fieldGroup: {
+      gap: spacing[1],
+    },
+    fieldLabel: {
+      ...textStyles.footnoteSemibold,
+      color: c.textSecondary,
+      marginLeft: spacing[1],
+    },
+    input: {
+      height: layout.inputHeight,
+      backgroundColor: c.inputBackground,
+      borderRadius: radius.md,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.inputBorder,
+      paddingHorizontal: spacing[4],
+      ...textStyles.body,
+      color: c.textPrimary,
+    },
+    inputFocused: {
+      borderColor: c.inputBorderFocus,
+      borderWidth: 1.5,
+    },
 
-  // ── CTA ────────────────────────────────────────────────────────────────
-  button: {
-    height: layout.buttonHeightLg,
-    backgroundColor: colors.buttonPrimary,
-    borderRadius: radius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing[1],
-    ...shadows.sm,
-  },
-  buttonDisabled: {
-    backgroundColor: colors.buttonDisabled,
-  },
-  buttonText: {
-    ...textStyles.calloutSemibold,
-    color: colors.textInverse,
-  },
+    // ── CTA ────────────────────────────────────────────────────────────────
+    button: {
+      height: layout.buttonHeightLg,
+      backgroundColor: c.buttonPrimary,
+      borderRadius: radius.lg,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: spacing[1],
+      ...shadows.sm,
+    },
+    buttonDisabled: {
+      backgroundColor: c.buttonDisabled,
+    },
+    buttonText: {
+      ...textStyles.calloutSemibold,
+      color: c.textInverse,
+    },
 
-  // ── Login link ───────────────────────────────────────────────────────────
-  loginLink: {
-    alignItems: 'center',
-    marginTop: spacing[6],
-  },
-  linkText: {
-    ...textStyles.footnote,
-    color: colors.textSecondary,
-  },
-  linkTextBold: {
-    ...textStyles.footnoteSemibold,
-    color: colors.textLink,
-  },
-});
+    // ── Login link ───────────────────────────────────────────────────────────
+    loginLink: {
+      alignItems: 'center',
+      marginTop: spacing[6],
+    },
+    linkText: {
+      ...textStyles.footnote,
+      color: c.textSecondary,
+    },
+    linkTextBold: {
+      ...textStyles.footnoteSemibold,
+      color: c.textLink,
+    },
+  });

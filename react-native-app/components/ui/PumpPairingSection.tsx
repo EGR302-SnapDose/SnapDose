@@ -1,18 +1,20 @@
 // components/PumpPairingSection.tsx
-import React, { useState, useEffect } from 'react';
-import {
-    View,
-    Text,
-    Pressable,
-    ActivityIndicator,
-    StyleSheet,
-    Alert,
-} from 'react-native';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { getAuth } from 'firebase/auth';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
+import { getPumpStatus, PumpDevice, testPumpConnection } from '../../services/pump-service';
 import { hapticError, hapticSuccess } from '../../utils/haptics';
-import { getPumpStatus, testPumpConnection, PumpDevice } from '../../services/pump-service'
 
 export default function PumpPairingSection() {
+    const c = useThemeColors();
     const [device, setDevice] = useState<PumpDevice | null>(null);
     const [loading, setLoading] = useState(true);
     const [testing, setTesting] = useState(false);
@@ -43,10 +45,10 @@ export default function PumpPairingSection() {
     };
 
     const getStatusColor = () => {
-        if (!device) return '#888';
-        if (device.status === 'online') return '#4CAF50';
-        if (device.status === 'offline') return '#F44336';
-        return '#888';
+        if (!device) return c.textTertiary;
+        if (device.status === 'online') return c.success;
+        if (device.status === 'offline') return c.danger;
+        return c.textTertiary;
     };
 
     const getStatusText = () => {
@@ -56,12 +58,80 @@ export default function PumpPairingSection() {
         return 'Unknown';
     };
 
+    const styles = useMemo(
+        () =>
+            StyleSheet.create({
+                section: {
+                    marginBottom: 24,
+                },
+                sectionTitle: {
+                    fontSize: 16,
+                    fontWeight: '600',
+                    color: c.textSecondary,
+                    marginBottom: 12,
+                },
+                loader: {
+                    marginVertical: 16,
+                },
+                row: {
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingVertical: 12,
+                    borderBottomWidth: 1,
+                    borderBottomColor: c.border,
+                },
+                rowText: {
+                    flex: 1,
+                },
+                label: {
+                    fontSize: 16,
+                    fontWeight: '500',
+                    color: c.textPrimary,
+                },
+                value: {
+                    fontSize: 13,
+                    color: c.textTertiary,
+                    marginTop: 2,
+                },
+                statusBadge: {
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    marginTop: 2,
+                },
+                statusDot: {
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
+                },
+                statusText: {
+                    fontSize: 13,
+                    fontWeight: '600',
+                },
+                testButton: {
+                    backgroundColor: c.success,
+                    paddingVertical: 12,
+                    paddingHorizontal: 20,
+                    borderRadius: 8,
+                    alignItems: 'center',
+                    marginTop: 16,
+                },
+                testButtonText: {
+                    color: '#fff',
+                    fontWeight: '600',
+                    fontSize: 14,
+                },
+            }),
+        [c]
+    );
+
     return (
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Pump Connection</Text>
 
             {loading ? (
-                <ActivityIndicator size="small" color="#4CAF50" style={styles.loader} />
+                <ActivityIndicator size="small" color={c.success} style={styles.loader} />
             ) : (
                 <>
                     {/* Device Name Row */}
@@ -120,66 +190,3 @@ export default function PumpPairingSection() {
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    section: {
-        marginBottom: 24,
-    },
-    sectionTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#666',
-        marginBottom: 12,
-    },
-    loader: {
-        marginVertical: 16,
-    },
-    row: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    rowText: {
-        flex: 1,
-    },
-    label: {
-        fontSize: 16,
-        fontWeight: '500',
-    },
-    value: {
-        fontSize: 13,
-        color: '#888',
-        marginTop: 2,
-    },
-    statusBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        marginTop: 2,
-    },
-    statusDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-    },
-    statusText: {
-        fontSize: 13,
-        fontWeight: '600',
-    },
-    testButton: {
-        backgroundColor: '#4CAF50',
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 8,
-        alignItems: 'center',
-        marginTop: 16,
-    },
-    testButtonText: {
-        color: '#fff',
-        fontWeight: '600',
-        fontSize: 14,
-    },
-});

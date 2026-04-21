@@ -3,6 +3,7 @@ import { StyleSheet, View, TextInput, TouchableOpacity } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { useSemanticColor } from '@/hooks/use-theme-colors';
 import { Ionicons } from '@expo/vector-icons';
 
 interface EditCarbsFieldProps {
@@ -21,7 +22,7 @@ export function EditCarbsField({ initialValue, onValueChange }: EditCarbsFieldPr
   const activeBorderColor = useThemeColor({ light: '#007AFF', dark: '#0A84FF' }, 'background');
   const mutedColor = useThemeColor({ light: '#888888', dark: '#888888' }, 'icon');
   const iconColor = useThemeColor({ light: '#000', dark: '#fff' }, 'background');
-  const errorColor = '#FF3B30';
+  const errorColor = useSemanticColor('danger');
 
   // Sync if AI updates the value while not editing
   useEffect(() => {

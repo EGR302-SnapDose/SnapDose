@@ -22,6 +22,8 @@ const MAPPING = {
   'rectangle.grid.2x2': 'photo-library',
   'gearshape.fill': 'settings',
   'camera.fill': 'camera-alt',
+  'line.horizontal.3': 'menu',
+  'pill.fill': 'medication',
 } as IconMapping;
 
 /**

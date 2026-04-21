@@ -1,6 +1,7 @@
 import { ThemedText } from "@/components/themed-text";
 import { useAccentColor } from "@/context/accent-color";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { useThemeColors } from "@/hooks/use-theme-colors";
 import { hapticError, hapticHeavy, hapticSuccess } from "@/utils/haptics";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef, useState } from "react";
@@ -42,14 +43,10 @@ export function DoseConfirmationSheet({
   onCancel,
 }: DoseConfirmationSheetProps) {
   const accent = useAccentColor();
-  const backgroundColor = useThemeColor(
-    { light: "#FFFFFF", dark: "#1C1C1E" },
-    "background",
-  );
-  const borderColor = useThemeColor(
-    { light: "#E5E5E5", dark: "#2A2A2A" },
-    "icon",
-  );
+  const c = useThemeColors();
+  const backgroundColor = c.background;
+  const borderColor = c.border;
+  const dangerColor = c.danger;
   const warningBgColor = useThemeColor(
     { light: "#f6eb8a", dark: "#a08000aa" },
     "background",
@@ -217,7 +214,7 @@ export function DoseConfirmationSheet({
           ]}
           onPress={(e) => e.stopPropagation()}
         >
-          <View style={styles.handle} />
+          <View style={[styles.handle, { backgroundColor: borderColor }]} />
 
           {dosingPhase === "confirming" ? (
             <>
@@ -235,7 +232,9 @@ export function DoseConfirmationSheet({
                   </ThemedText>
                 </View>
 
-                <View style={styles.divider} />
+                <View
+                  style={[styles.divider, { backgroundColor: borderColor }]}
+                />
 
                 {mode === "meal" ? (
                   <>
@@ -284,7 +283,9 @@ export function DoseConfirmationSheet({
                   </ThemedText>
                 </View>
 
-                <View style={styles.divider} />
+                <View
+                  style={[styles.divider, { backgroundColor: borderColor }]}
+                />
 
                 <View style={styles.mathRow}>
                   <ThemedText style={styles.mathText}>
@@ -399,7 +400,7 @@ export function DoseConfirmationSheet({
                       styles.checkmarkCircle,
                       {
                         borderColor:
-                          dosingPhase === "complete" ? accent : "#FF3B30",
+                          dosingPhase === "complete" ? accent : dangerColor,
                       },
                       {
                         opacity: checkmarkOpacity,
@@ -410,7 +411,7 @@ export function DoseConfirmationSheet({
                     {dosingPhase === "complete" ? (
                       <Ionicons name="checkmark" size={48} color={accent} />
                     ) : (
-                      <Ionicons name="close" size={48} color="#FF3B30" />
+                      <Ionicons name="close" size={48} color={dangerColor} />
                     )}
                   </Animated.View>
                 )}
@@ -420,12 +421,12 @@ export function DoseConfirmationSheet({
                 <Pressable
                   style={[
                     styles.cancelDosingButton,
-                    { borderColor: "#FF3B30" },
+                    { borderColor: dangerColor },
                   ]}
                   onPress={handleCancelDosing}
                 >
                   <ThemedText
-                    style={[styles.cancelDosingText, { color: "#FF3B30" }]}
+                    style={[styles.cancelDosingText, { color: dangerColor }]}
                   >
                     Cancel
                   </ThemedText>
@@ -470,7 +471,6 @@ const styles = StyleSheet.create({
   handle: {
     width: 40,
     height: 4,
-    backgroundColor: "#D1D1D6",
     borderRadius: 2,
     alignSelf: "center",
     marginBottom: 24,
@@ -529,7 +529,6 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: "#E5E5E5",
     marginVertical: 10,
   },
   detailRow: {

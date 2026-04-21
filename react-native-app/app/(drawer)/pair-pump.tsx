@@ -1,7 +1,8 @@
 import { auth } from "@/config/firebase";
 import { useAccentColor } from "@/context/accent-color";
+import { useThemeColors, type ThemeColors } from "@/hooks/use-theme-colors";
 import { router } from "expo-router";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -29,6 +30,8 @@ interface PairedDevice {
 
 export default function PairPumpScreen() {
   const accent = useAccentColor();
+  const c = useThemeColors();
+  const styles = useMemo(() => makeStyles(c), [c]);
   const [step, setStep] = useState<Step>("instructions");
   const [digits, setDigits] = useState(["", "", "", "", "", ""]);
   const [pairing, setPairing] = useState(false);
@@ -188,10 +191,11 @@ export default function PairPumpScreen() {
                   style={[
                     styles.digitInput,
                     {
-                      borderColor: d ? accent : "#D1D5DB",
+                      borderColor: d ? accent : c.inputBorder,
                       color: accent,
                     },
                   ]}
+                  placeholderTextColor={c.inputPlaceholder}
                   value={d}
                   onChangeText={(v) => handleDigitChange(v, i)}
                   onKeyPress={({ nativeEvent }) =>
@@ -242,8 +246,8 @@ export default function PairPumpScreen() {
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
       <View style={styles.container}>
         <View style={styles.iconWrap}>
-          <View style={[styles.iconCircle, { backgroundColor: "#10B98120" }]}>
-            <Text style={[styles.iconText, { color: "#10B981" }]}>✓</Text>
+          <View style={[styles.iconCircle, { backgroundColor: c.successSurface }]}>
+            <Text style={[styles.iconText, { color: c.success }]}>✓</Text>
           </View>
         </View>
 
@@ -277,130 +281,131 @@ export default function PairPumpScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#fff" },
-  container: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 40,
-  },
-  iconWrap: {
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  iconText: {
-    fontSize: 36,
-    fontWeight: "700",
-  },
-  heading: {
-    fontSize: 26,
-    fontWeight: "700",
-    textAlign: "center",
-    marginBottom: 10,
-    color: "#111827",
-  },
-  sub: {
-    fontSize: 15,
-    color: "#6B7280",
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 32,
-  },
-  steps: {
-    gap: 16,
-    marginBottom: 40,
-  },
-  stepRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 14,
-  },
-  stepBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-    marginTop: 1,
-  },
-  stepBadgeText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  stepText: {
-    fontSize: 15,
-    color: "#374151",
-    lineHeight: 22,
-    flex: 1,
-  },
-  digitRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 10,
-    marginBottom: 40,
-  },
-  digitInput: {
-    width: 48,
-    height: 58,
-    borderWidth: 2,
-    borderRadius: 12,
-    fontSize: 24,
-    fontWeight: "700",
-    backgroundColor: "#F9FAFB",
-  },
-  primaryButton: {
-    height: 52,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-  primaryButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  secondaryButton: {
-    height: 48,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  secondaryButtonText: {
-    fontSize: 15,
-    color: "#6B7280",
-    fontWeight: "600",
-  },
-  deviceCard: {
-    backgroundColor: "#F9FAFB",
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    marginBottom: 32,
-  },
-  deviceRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#E5E7EB",
-  },
-  deviceLabel: {
-    fontSize: 15,
-    color: "#6B7280",
-  },
-  deviceValue: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#111827",
-  },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    safe: { flex: 1, backgroundColor: c.background },
+    container: {
+      flex: 1,
+      paddingHorizontal: 24,
+      paddingTop: 24,
+      paddingBottom: 40,
+    },
+    iconWrap: {
+      alignItems: "center",
+      marginBottom: 24,
+    },
+    iconCircle: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    iconText: {
+      fontSize: 36,
+      fontWeight: "700",
+    },
+    heading: {
+      fontSize: 26,
+      fontWeight: "700",
+      textAlign: "center",
+      marginBottom: 10,
+      color: c.textPrimary,
+    },
+    sub: {
+      fontSize: 15,
+      color: c.textSecondary,
+      textAlign: "center",
+      lineHeight: 22,
+      marginBottom: 32,
+    },
+    steps: {
+      gap: 16,
+      marginBottom: 40,
+    },
+    stepRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 14,
+    },
+    stepBadge: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+      marginTop: 1,
+    },
+    stepBadgeText: {
+      color: "#fff",
+      fontSize: 13,
+      fontWeight: "700",
+    },
+    stepText: {
+      fontSize: 15,
+      color: c.textPrimary,
+      lineHeight: 22,
+      flex: 1,
+    },
+    digitRow: {
+      flexDirection: "row",
+      justifyContent: "center",
+      gap: 10,
+      marginBottom: 40,
+    },
+    digitInput: {
+      width: 48,
+      height: 58,
+      borderWidth: 2,
+      borderRadius: 12,
+      fontSize: 24,
+      fontWeight: "700",
+      backgroundColor: c.inputBackground,
+    },
+    primaryButton: {
+      height: 52,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 12,
+    },
+    primaryButtonText: {
+      color: "#fff",
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    secondaryButton: {
+      height: 48,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    secondaryButtonText: {
+      fontSize: 15,
+      color: c.textSecondary,
+      fontWeight: "600",
+    },
+    deviceCard: {
+      backgroundColor: c.surface,
+      borderRadius: 14,
+      paddingHorizontal: 16,
+      marginBottom: 32,
+    },
+    deviceRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: 14,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+    },
+    deviceLabel: {
+      fontSize: 15,
+      color: c.textSecondary,
+    },
+    deviceValue: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: c.textPrimary,
+    },
+  });

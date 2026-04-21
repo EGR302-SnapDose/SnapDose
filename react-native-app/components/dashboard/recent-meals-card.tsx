@@ -77,7 +77,7 @@ function MealRow({ meal, isLast, dividerColor }: {
         style={styles.mealRow}
         onPress={() =>
           router.push({
-            pathname: "/(drawer)/(tabs)/food-gallery/meal-detail" as any,
+            pathname: "/(drawer)/food-gallery/meal-detail" as any,
             params: { mealId: meal.id },
           })
         }
@@ -207,7 +207,7 @@ export function RecentMealsCard() {
       <View style={styles.header}>
         <ThemedText type="subtitle">Recent Meals</ThemedText>
         <TouchableOpacity
-          onPress={() => router.push("/(drawer)/(tabs)/food-gallery" as any)}
+          onPress={() => router.push("/(drawer)/food-gallery" as any)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <ThemedText style={[styles.seeAll, { color: subtleColor }]}>

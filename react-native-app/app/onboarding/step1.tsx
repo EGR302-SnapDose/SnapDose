@@ -1,7 +1,7 @@
 import OnboardingLayout from '@/components/onboarding/onboarding-layout';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -13,10 +13,11 @@ export default function Step1Screen() {
   const [accentColor, setAccentColor] = useState('#EF4444');
   const router = useRouter();
 
-  const inputBackground = useThemeColor({ light: '#FFFFFF', dark: '#1A1A1A' }, 'background');
-  const inputColor = useThemeColor({ light: '#000000', dark: '#FFFFFF' }, 'text');
-  const inputBorderColor = useThemeColor({ light: '#CCCCCC', dark: '#333333' }, 'icon');
-  const placeholderColor = useThemeColor({ light: '#999999', dark: '#555555' }, 'icon');
+  const c = useThemeColors();
+  const inputBackground = c.inputBackground;
+  const inputColor = c.textPrimary;
+  const inputBorderColor = c.inputBorder;
+  const placeholderColor = c.inputPlaceholder;
 
   useEffect(() => {
     AsyncStorage.getItem('onboarding_accentColor').then((color) => {

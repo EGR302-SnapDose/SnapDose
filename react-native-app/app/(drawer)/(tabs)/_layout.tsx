@@ -1,14 +1,17 @@
 import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { colors } from "@/constants/theme";
+import { useThemeColors } from "@/hooks/use-theme-colors";
 import { Tabs } from "expo-router";
 import React from "react";
 
 export default function TabLayout() {
+  const c = useThemeColors();
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.tabActive,
+        tabBarActiveTintColor: c.tabActive,
+        tabBarInactiveTintColor: c.tabInactive,
+        tabBarStyle: { backgroundColor: c.tabBackground },
         headerShown: false,
         tabBarButton: HapticTab,
       }}
@@ -41,7 +44,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen name="settings" options={{ href: null }} />
-      <Tabs.Screen name="food-gallery" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -1,6 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { useSemanticColor } from '@/hooks/use-theme-colors';
 import { StoredPhoto } from '@/services/photo-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
@@ -62,6 +63,8 @@ export function PhotoPreview({
   const inputBg = useThemeColor({ light: '#fff', dark: '#2c2c2c' }, 'background');
   const textColor = useThemeColor({ light: '#000', dark: '#fff' }, 'text');
   const progressTrackBg = useThemeColor({ light: '#E5E5EA', dark: '#3A3A3C' }, 'background');
+  const dangerColor = useSemanticColor('danger');
+  const handleColor = useSemanticColor('border');
 
   // Animate progress bar whenever uploadProgress changes
   useEffect(() => {
@@ -144,7 +147,7 @@ export function PhotoPreview({
               { transform: [{ translateY }] },
             ]}
           >
-            <View style={styles.sheetHandle} />
+            <View style={[styles.sheetHandle, { backgroundColor: handleColor }]} />
             <View style={styles.notesHeader}>
               <ThemedText style={styles.notesTitle}>Notes for AI</ThemedText>
               <TouchableOpacity onPress={closeSheet}>
@@ -174,12 +177,12 @@ export function PhotoPreview({
           <Ionicons
             name={isProcessing ? 'close-outline' : 'refresh-outline'}
             size={24}
-            color={isProcessing ? (onCancel ? '#FF3B30' : mutedColor) : iconColor}
+            color={isProcessing ? (onCancel ? dangerColor : mutedColor) : iconColor}
           />
           <ThemedText
             style={[
               styles.buttonLabel,
-              isProcessing && onCancel && { color: '#FF3B30' },
+              isProcessing && onCancel && { color: dangerColor },
               isProcessing && !onCancel && { color: mutedColor },
             ]}
           >
@@ -321,7 +324,6 @@ const styles = StyleSheet.create({
   sheetHandle: {
     width: 40,
     height: 4,
-    backgroundColor: '#ccc',
     borderRadius: 2,
     alignSelf: 'center',
     marginBottom: 16,

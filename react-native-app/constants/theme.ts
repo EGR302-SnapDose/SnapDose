@@ -53,6 +53,11 @@ const palette = {
 // ---------------------------------------------------------------------------
 // Color tokens — semantic layer
 // HIG: Use color purposefully; never rely on color alone to convey meaning.
+//
+// `colors` is the LIGHT palette and remains a static export for backward
+// compatibility (so existing `import { colors }` sites keep working in light
+// mode). For code that must respond to the current color scheme, use the
+// `useThemeColors()` hook below, which returns `colors` or `darkColors`.
 // ---------------------------------------------------------------------------
 export const colors = {
   primary: palette.blue600,
@@ -116,6 +121,76 @@ export const colors = {
   tabInactive: palette.gray400,
   tabBackground: palette.white,
 } as const;
+
+// ---------------------------------------------------------------------------
+// Dark palette — maps the same semantic keys as `colors` to dark-mode values.
+// Values follow iOS dark mode system colors (systemBackground, label,
+// separator, etc.) so surfaces stay legible and text meets WCAG AA contrast.
+// ---------------------------------------------------------------------------
+export const darkColors: Record<keyof typeof colors, string> = {
+  // Brand / accent — shift one step lighter so they read on dark surfaces.
+  primary: palette.blue500,
+  primaryLight: palette.blue500,
+  primaryDark: palette.blue600,
+  primarySurface: '#0B2A52',        // blue900-ish tint
+
+  accent: palette.teal400,
+  accentLight: palette.teal400,
+  accentDark: palette.teal500,
+
+  // Glucose semantics stay clinically identifiable in both modes.
+  glucoseLow: palette.red500,
+  glucoseInRange: palette.green500,
+  glucoseHigh: palette.orange500,
+  glucoseVeryHigh: palette.red600,
+
+  success: palette.green500,
+  successSurface: '#0F2E1A',
+  warning: palette.yellow500,
+  warningSurface: '#2A2410',
+  danger: palette.red500,
+  dangerSurface: '#2E1212',
+  info: palette.blue500,
+  infoSurface: '#0B2A52',
+
+  // Surfaces — mirror iOS systemBackground / secondary / tertiary on dark.
+  background: '#000000',            // systemBackground dark
+  surface: '#1C1C1E',               // secondarySystemBackground
+  surfaceElevated: '#2C2C2E',       // tertiarySystemBackground
+  surfaceSubtle: '#1C1C1E',         // grouped secondary
+  overlay: 'rgba(0,0,0,0.6)',
+
+  // Borders — iOS separator dark (opaque approximation).
+  border: '#38383A',
+  borderStrong: '#48484A',
+  borderFocus: palette.blue500,
+
+  // Text — iOS label hierarchy dark.
+  textPrimary: palette.gray50,      // ~label
+  textSecondary: '#98989F',         // ~secondaryLabel
+  textTertiary: '#6D6D70',          // ~tertiaryLabel
+  textInverse: palette.gray900,
+  textDisabled: '#48484A',
+  textLink: palette.blue500,
+  textDanger: '#FF6A6A',            // slightly lighter red for dark bg
+
+  buttonPrimary: palette.blue500,
+  buttonPrimaryPressed: palette.blue600,
+  buttonSecondary: '#2C2C2E',
+  buttonSecondaryPressed: '#3A3A3C',
+  buttonDestructive: palette.red500,
+  buttonDestructivePressed: palette.red600,
+  buttonDisabled: '#3A3A3C',
+
+  inputBackground: '#1C1C1E',
+  inputBorder: '#48484A',
+  inputBorderFocus: palette.blue500,
+  inputPlaceholder: '#6D6D70',
+
+  tabActive: palette.blue500,
+  tabInactive: '#6D6D70',
+  tabBackground: '#1C1C1E',
+};
 
 // ---------------------------------------------------------------------------
 // Spacing — 8pt base grid, 4pt sub-grid (HIG standard)
@@ -419,9 +494,9 @@ export const glucoseRange = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// Colors (light/dark) — backward compatibility for useThemeColor hook
-// Maps legacy color names to semantic tokens. Both themes use the same
-// values since SnapDose currently only supports light mode.
+// Colors (light/dark) — backward compatibility layer for the `useThemeColor`
+// hook. Derived from the semantic `colors` / `darkColors` palettes above so
+// there is a single source of truth.
 // ---------------------------------------------------------------------------
 export const Colors = {
   light: {
@@ -437,16 +512,16 @@ export const Colors = {
     primary: colors.primary,
   },
   dark: {
-    text: palette.gray50,              // Light text for dark bg
-    background: palette.black,          // Pure black background
-    tint: palette.blue500,             // Lighter blue for visibility
-    icon: palette.gray400,             // Muted gray icons
-    tabIconDefault: palette.gray500,   // Inactive tab icons
-    tabIconSelected: palette.blue500,  // Active tab (lighter blue)
-    accent: '#34D399',                 // Brighter emerald for dark mode
-    surface: '#1A1A1A',                // Slightly elevated surface
-    border: palette.gray700,           // Visible borders on dark (#374151)
-    primary: palette.blue500,          // Primary action color
+    text: darkColors.textPrimary,
+    background: darkColors.background,
+    tint: darkColors.primary,
+    icon: darkColors.textSecondary,
+    tabIconDefault: darkColors.tabInactive,
+    tabIconSelected: darkColors.tabActive,
+    accent: darkColors.accent,
+    surface: darkColors.surface,
+    border: darkColors.border,
+    primary: darkColors.primary,
   },
 } as const;
 
