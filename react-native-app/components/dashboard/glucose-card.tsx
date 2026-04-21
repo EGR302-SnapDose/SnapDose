@@ -1,5 +1,12 @@
 import { auth, db } from "@/config/firebase";
-import { colors, Colors, radius, spacing, textStyles, typography } from "@/constants/theme";
+import {
+  colors,
+  Colors,
+  radius,
+  spacing,
+  textStyles,
+  typography,
+} from "@/constants/theme";
 import { useAccentColor } from "@/context/accent-color";
 import { useIOB } from "@/hooks/use-iob";
 import { useThemeColor } from "@/hooks/use-theme-color";
@@ -9,11 +16,11 @@ import { getAuth } from "firebase/auth";
 import { collection, getDocs, limit, orderBy, query } from "firebase/firestore";
 import { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Dimensions,
-    Pressable,
-    StyleSheet,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  Pressable,
+  StyleSheet,
+  View,
 } from "react-native";
 import Svg, {
   Circle,
@@ -40,22 +47,24 @@ const HIGH_THRESHOLD = 180;
 
 function renderTrendIcon(trend: string, color: string) {
   const iconMap: Record<string, { name: string; count: number }> = {
-    'doubleUp': { name: 'chevron-up', count: 2 },
-    'singleUp': { name: 'chevron-up', count: 1 },
-    'fortyFiveUp': { name: 'trending-up', count: 1 },
-    'flat': { name: 'remove', count: 1 },
-    'fortyFiveDown': { name: 'trending-down', count: 1 },
-    'singleDown': { name: 'chevron-down', count: 1 },
-    'doubleDown': { name: 'chevron-down', count: 2 },
+    doubleUp: { name: "chevron-up", count: 2 },
+    singleUp: { name: "chevron-up", count: 1 },
+    fortyFiveUp: { name: "trending-up", count: 1 },
+    flat: { name: "remove", count: 1 },
+    fortyFiveDown: { name: "trending-down", count: 1 },
+    singleDown: { name: "chevron-down", count: 1 },
+    doubleDown: { name: "chevron-down", count: 2 },
   };
 
-  const config = iconMap[trend] || { name: 'help', count: 1 };
+  const config = iconMap[trend] || { name: "help", count: 1 };
 
   return (
-    <View style={{ flexDirection: 'row', gap: 2 }}>
-      {Array(config.count).fill(0).map((_, i) => (
-        <Ionicons key={i} name={config.name as any} size={20} color={color} />
-      ))}
+    <View style={{ flexDirection: "row", gap: 2 }}>
+      {Array(config.count)
+        .fill(0)
+        .map((_, i) => (
+          <Ionicons key={i} name={config.name as any} size={20} color={color} />
+        ))}
     </View>
   );
 }
@@ -142,7 +151,19 @@ function computeTimeInRange(records: EgvRecord[]): number | null {
   return Math.round((inRange.length / todayRecords.length) * 100);
 }
 
-function GlucoseGraph({ records, accent, borderColor, textColor, timeFrameHours = 24 }: { records: EgvRecord[]; accent?: string; borderColor?: string; textColor?: string; timeFrameHours?: number }) {
+function GlucoseGraph({
+  records,
+  accent,
+  borderColor,
+  textColor,
+  timeFrameHours = 24,
+}: {
+  records: EgvRecord[];
+  accent?: string;
+  borderColor?: string;
+  textColor?: string;
+  timeFrameHours?: number;
+}) {
   const screenWidth = Dimensions.get("window").width;
   const cardPadding = 32;
   const svgWidth = screenWidth - cardPadding - 2;
@@ -158,7 +179,11 @@ function GlucoseGraph({ records, accent, borderColor, textColor, timeFrameHours 
   const cutoffTime = now - timeFrameHours * 60 * 60 * 1000;
 
   const validRecords = records.filter(
-    (r) => r.value !== null && r.value >= 39 && r.value <= 401 && new Date(r.systemTime).getTime() >= cutoffTime
+    (r) =>
+      r.value !== null &&
+      r.value >= 39 &&
+      r.value <= 401 &&
+      new Date(r.systemTime).getTime() >= cutoffTime,
   );
 
   if (validRecords.length < 2) {
@@ -203,7 +228,8 @@ function GlucoseGraph({ records, accent, borderColor, textColor, timeFrameHours 
   startHour.setHours(startHour.getHours() + 1);
 
   // Adjust label interval based on time frame
-  const labelIntervalHours = timeFrameHours <= 2 ? 0.5 : timeFrameHours <= 6 ? 1 : 2;
+  const labelIntervalHours =
+    timeFrameHours <= 2 ? 0.5 : timeFrameHours <= 6 ? 1 : 2;
   const labelIntervalMs = labelIntervalHours * 60 * 60 * 1000;
 
   for (let t = startHour.getTime(); t < maxTime; t += labelIntervalMs) {
@@ -213,7 +239,10 @@ function GlucoseGraph({ records, accent, borderColor, textColor, timeFrameHours 
     const ampm = hr >= 12 ? "pm" : "am";
     const hr12 = hr % 12 || 12;
     // Show minutes for sub-hour intervals
-    const label = labelIntervalHours < 1 ? `${hr12}:${min.toString().padStart(2, '0')}` : `${hr12}${ampm}`;
+    const label =
+      labelIntervalHours < 1
+        ? `${hr12}:${min.toString().padStart(2, "0")}`
+        : `${hr12}${ampm}`;
     hourLabels.push({ x: scaleX(t), label });
   }
 
@@ -322,9 +351,7 @@ function InfoCard({
         />
       ) : (
         <>
-          <ThemedText style={infoStyles.value}>
-            {value}
-          </ThemedText>
+          <ThemedText style={infoStyles.value}>{value}</ThemedText>
           {subValue ? (
             <ThemedText style={infoStyles.subValue}>{subValue}</ThemedText>
           ) : null}
@@ -357,10 +384,10 @@ function TirRingCard({
     percent === null
       ? colors.textTertiary
       : percent >= 70
-      ? colors.glucoseInRange
-      : percent >= 54
-      ? colors.glucoseHigh
-      : colors.glucoseLow;
+        ? colors.glucoseInRange
+        : percent >= 54
+          ? colors.glucoseHigh
+          : colors.glucoseLow;
 
   return (
     <View style={[infoStyles.card, { backgroundColor: cardBg }]}>
@@ -372,7 +399,7 @@ function TirRingCard({
           style={{ marginTop: 4 }}
         />
       ) : (
-        <View style={infoStyles.tirRow}>
+        <View style={{ gap: 6, marginTop: 2 }}>
           <Svg width={size} height={size}>
             <Circle
               cx={size / 2}
@@ -409,27 +436,30 @@ function TirRingCard({
 }
 
 export function GlucoseCard() {
-  const borderColor = useThemeColor({light: colors.border, dark: Colors.dark.border}, "border");
+  const borderColor = useThemeColor(
+    { light: colors.border, dark: Colors.dark.border },
+    "border",
+  );
   const accent = useAccentColor();
   const cardBg = useThemeColor(
     { light: colors.surfaceSubtle, dark: Colors.dark.surface },
-    "surface"
+    "surface",
   );
   const graphBorderColor = useThemeColor(
     { light: colors.border, dark: Colors.dark.border },
-    "border"
+    "border",
   );
   const graphTextColor = useThemeColor(
     { light: colors.textSecondary, dark: Colors.dark.icon },
-    "icon"
+    "icon",
   );
   const primaryColor = useThemeColor(
     { light: colors.primary, dark: Colors.dark.primary },
-    "primary"
+    "primary",
   );
   const trackColor = useThemeColor(
     { light: colors.border, dark: Colors.dark.border },
-    "border"
+    "border",
   );
 
   const iob = useIOB();
@@ -618,7 +648,9 @@ export function GlucoseCard() {
           <ThemedText style={styles.unit}>mg/dL</ThemedText>
           <View style={styles.trendContainer}>
             {renderTrendIcon(reading.trend, getGlucoseColor(reading.value))}
-            <ThemedText style={[textStyles.callout, { color: colors.textSecondary }]}>
+            <ThemedText
+              style={[textStyles.callout, { color: colors.textSecondary }]}
+            >
               {getTrendLabel(reading.trend)}
             </ThemedText>
           </View>
@@ -685,7 +717,13 @@ export function GlucoseCard() {
 
       {/* Graph */}
       <View style={styles.graphContainer}>
-        <GlucoseGraph records={records} accent={accent} borderColor={graphBorderColor} textColor={graphTextColor} timeFrameHours={timeFrame} />
+        <GlucoseGraph
+          records={records}
+          accent={accent}
+          borderColor={graphBorderColor}
+          textColor={graphTextColor}
+          timeFrameHours={timeFrame}
+        />
       </View>
     </ThemedView>
   );
@@ -729,8 +767,8 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   trendContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing[2],
   },
   lastUpdated: {
@@ -809,7 +847,7 @@ const infoStyles = StyleSheet.create({
     marginBottom: spacing[1] / 2,
   },
   value: {
-    fontSize: typography.sizes.title3,
+    fontSize: 18,
     fontWeight: "700",
     lineHeight: 22,
   },
