@@ -212,7 +212,6 @@ const MealDetailScreen = () => {
             mealId: mealId ?? null,
         });
 
-        setLinkedDose({ id: doseId, amount: recommendedDose, time, type: "Meal" });
         setShowDoseSheet(false);
     } catch (error) {
         console.error("Failed to save dose:", error);
@@ -480,23 +479,20 @@ const MealDetailScreen = () => {
             </ThemedText>
           )}
         </TouchableOpacity>
-
-        {!linkedDose && !doseLoading && (
-          <TouchableOpacity
-            style={[
-              styles.footerBtn,
-              styles.footerBtnFill,
-              { backgroundColor: colors.accent },
-            ]}
-            onPress={() => setShowDoseSheet(true)}
-          >
-            <ThemedText
-              style={[styles.footerBtnText, { color: colors.background }]}
+        <TouchableOpacity
+          style={[
+            styles.footerBtn, 
+            styles.footerBtnFill, 
+            { backgroundColor: colors.accent }
+          ]}
+          onPress={() => setShowDoseSheet(true)}
+      >
+          <ThemedText 
+            style={[styles.footerBtnText, { color: colors.background }]}
             >
               Dose Insulin
-            </ThemedText>
-          </TouchableOpacity>
-        )}
+          </ThemedText>
+        </TouchableOpacity>
       </View>
 
       <DoseConfirmationSheet

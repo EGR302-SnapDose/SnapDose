@@ -2,14 +2,15 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { auth, db } from "@/config/firebase";
-import { colors } from "@/constants/theme";
+import { Colors, colors } from "@/constants/theme";
 import { logout } from "@/services/logout-service";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { DrawerContentScrollView } from "@react-navigation/drawer";
 import { router, usePathname } from "expo-router";
 import { Drawer } from "expo-router/drawer";
 import { doc, getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, TouchableOpacity, useColorScheme, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -30,12 +31,14 @@ const DRAWER_ITEMS = [
 ] as const;
 
 function CustomDrawerContent(props: any) {
-  const tint = colors.primary;
-  const iconDefault = colors.tabInactive;
-  const activeBg = colors.surfaceSubtle;
+  const colorScheme = useColorScheme();
+  const tint = Colors[colorScheme ?? "light"].tint;
+  const iconDefault = Colors[colorScheme ?? "light"].icon;
+  const activeBg = colorScheme === "dark" ? "#1e1e1e" : "#f0f0f0";
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const [displayName, setDisplayName] = useState<string>("");
+  const [accentColor, setAccentColor] = useState<string>("#e84040");
 
   useEffect(() => {
     const uid = auth.currentUser?.uid;
@@ -46,7 +49,12 @@ function CustomDrawerContent(props: any) {
         if (name) setDisplayName(name);
       }
     });
+    AsyncStorage.getItem("onboarding_accentColor").then((color) => {
+            if (color) setAccentColor(color);
+        });
   }, []);
+
+  const firstName = displayName.split(" ")[0] || "";
 
   const initials = displayName
     ? displayName
@@ -56,6 +64,7 @@ function CustomDrawerContent(props: any) {
         .toUpperCase()
         .slice(0, 2)
     : "?";
+    
 
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to log out?", [
@@ -71,23 +80,30 @@ function CustomDrawerContent(props: any) {
   return (
     <ThemedView style={{ flex: 1 }}>
       <View style={[styles.drawerHeader, { paddingTop: insets.top }]}>
-        <TouchableOpacity
-          onPress={() => {
-            props.navigation.closeDrawer();
-            router.navigate("/profile" as any);
-          }}
-          style={[
-            styles.profileButton,
-            { backgroundColor: colors.dangerSurface },
-          ]}
-        >
-          <ThemedText
-            style={[styles.profileInitials, { color: colors.danger }]}
+        <View style={styles.profileRow}>
+          <TouchableOpacity
+            onPress={() => {
+              props.navigation.closeDrawer();
+              router.navigate("/profile" as any);
+            }}
+            style={[
+              styles.profileButton,
+              {
+                backgroundColor: accentColor + "25",
+              },
+            ]}
           >
-            {initials}
-          </ThemedText>
-        </TouchableOpacity>
-      </View>
+            <ThemedText style={[styles.profileInitials, { color: accentColor }]}>
+                {initials}
+              </ThemedText>
+            </TouchableOpacity>
+            {firstName ? (
+              <ThemedText style={[styles.helloText, { color: accentColor }]}>
+                Hello, {firstName}!
+              </ThemedText>
+            ) : null}
+          </View>
+        </View>
       <DrawerContentScrollView
         {...props}
         scrollEnabled={false}
@@ -189,6 +205,17 @@ export default function DrawerLayout() {
 const styles = StyleSheet.create({
   drawerHeader: {
     paddingLeft: 24,
+  },
+  profileRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 15,
+    marginBottom: 4,
+    gap: 12,
+  },
+  helloText: {
+    fontSize: 17,
+    fontWeight: "600",
   },
   profileButton: {
     marginTop: 15,
